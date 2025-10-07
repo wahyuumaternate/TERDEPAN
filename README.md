@@ -203,8 +203,7 @@ Jika mengalami kesulitan dalam penggunaan TERDEPAN, silakan hubungi:
 ## Kontributor
 
 - Tim Heartware Digital
-- Tim IT BAPPEDA Maluku Utara
-- Divisi Pengembangan Aplikasi Diskominfo Maluku Utara
+- BAPPEDA Maluku Utara
 
 ---
 
