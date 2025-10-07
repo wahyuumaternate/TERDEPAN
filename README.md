@@ -197,10 +197,8 @@ Komposisi tim Heartware Digital yang terlibat dalam pengembangan TERDEPAN:
 
 Jika mengalami kesulitan dalam penggunaan TERDEPAN, silakan hubungi:
 
-- **Technical Support**: support@heartware.digital
-- **Administrator BAPPEDA**: admin@terdepan-bappeda.malutprov.go.id
-- **Heartware Digital**: info@heartware.digital
-- **Helpdesk**: (0921) 3121358
+- **Email**: heartwaredigital@gmail.com
+- **WA**: +62 822-6086-8130
 
 ## Kontributor
 
