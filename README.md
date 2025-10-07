@@ -106,7 +106,7 @@ Sistem TERDEPAN telah disesuaikan dengan struktur organisasi BAPPEDA Maluku Utar
 
 ```bash
 # Clone repository
-git clone https://github.com/bappeda-malut/terdepan.git
+git clone https://github.com/wahyuumaternate/TERDEPAN.git
 cd terdepan
 
 # Install dependencies
@@ -130,7 +130,6 @@ php artisan serve
 
 ## Panduan Penggunaan
 
-Dokumentasi lengkap tersedia di dalam aplikasi pada menu "Bantuan" atau kunjungi dokumentasi online di [docs.terdepan-bappeda.malutprov.go.id](https://docs.terdepan-bappeda.malutprov.go.id).
 
 Beberapa panduan cepat:
 1. Login menggunakan NIP (untuk ASN) atau NIK (untuk Tenaga Teknis)
