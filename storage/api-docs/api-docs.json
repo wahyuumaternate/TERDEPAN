@@ -1,0 +1,461 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "TERDEPAN API Documentation",
+        "description": "Dokumentasi API Sistem TERDEPAN (e-Kinerja BAPPEDA)",
+        "contact": {
+            "email": "dev@terdepan.local"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api/v1",
+            "description": "API v1"
+        }
+    ],
+    "paths": {
+        "/api/v1/master-bidang": {
+            "get": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "List semua bidang",
+                "operationId": "32bda03dd3c9f257cd3a846a6fb8f511",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Tambah bidang",
+                "operationId": "49fe2406709385aca8e79ed7bece7288",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-bidang/{id}": {
+            "get": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Detail bidang",
+                "operationId": "52f6b3488a39f96d2bf7a59f886922dd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Update bidang",
+                "operationId": "fc4072d4c945f864d9e5b8ac6671ae72",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Hapus bidang",
+                "operationId": "4ef79a8601b5dfd65534cf5438db5128",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-jabatan": {
+            "get": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "List semua jabatan",
+                "operationId": "0d9d9033fb8b8d8c684ddd1e080e0291",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Tambah jabatan",
+                "operationId": "a7c03ec6bf3b34468e4a25941505bad8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-jabatan/{id}": {
+            "get": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Detail jabatan",
+                "operationId": "5de64312e4e819d3e82e5061c6dd9172",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Update jabatan",
+                "operationId": "1886a5017c9e76b6b6cbf02f6355f5c6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Hapus jabatan",
+                "operationId": "0cdf4ca36175416c2d1d5fe303f9927d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-pegawai": {
+            "get": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "List semua pegawai",
+                "operationId": "6445e9214536b5a2322d58f45fd2ed5c",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Tambah pegawai",
+                "operationId": "3b4af97856461edcec19936abb0ef0a7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-pegawai/{id}": {
+            "get": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Detail pegawai",
+                "operationId": "8aa88eda52877d0880a01f25208edb4c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Update pegawai",
+                "operationId": "22a47b4482aff0981e28c53e98c5b064",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Hapus pegawai",
+                "operationId": "fa9bb92034f26a8e4c86604145a5e2c2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-ttd-digital": {
+            "get": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "List semua TTD Digital",
+                "operationId": "4989bfd42dc7d3e345b9cf77839be6bf",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Tambah TTD Digital",
+                "operationId": "70f3f385ef65d3b3eb308f403a582454",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-ttd-digital/{id}": {
+            "get": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Detail TTD Digital",
+                "operationId": "6b8c0ad1b99a2c752d7cca52f1966c5c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Update TTD Digital",
+                "operationId": "e138ed4d507b9c868ebac24fa7360bb9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Hapus TTD Digital",
+                "operationId": "2a4b176170780c50781066b27ec4e8b9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "MasterBidang",
+            "description": "API Master Bidang"
+        },
+        {
+            "name": "MasterJabatan",
+            "description": "API Master Jabatan"
+        },
+        {
+            "name": "MasterPegawai",
+            "description": "API Master Pegawai"
+        },
+        {
+            "name": "MasterTtdDigital",
+            "description": "API Master TTD Digital"
+        }
+    ]
+}
