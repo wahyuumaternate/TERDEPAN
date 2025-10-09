@@ -788,16 +788,127 @@
                     "MasterPegawai"
                 ],
                 "summary": "Tambah pegawai",
+                "description": "Menambah data pegawai baru.",
                 "operationId": "e962a82bfc2a9dafe1f7abe25ca9865f",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {}
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nomor_identitas",
+                                    "tipe_identitas",
+                                    "nama",
+                                    "jabatan_id",
+                                    "bidang_id",
+                                    "jenis_kelamin",
+                                    "status_kepegawaian",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "nomor_identitas": {
+                                        "type": "string",
+                                        "example": "197812312005011001"
+                                    },
+                                    "tipe_identitas": {
+                                        "type": "string",
+                                        "example": "NIP"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Ahmad Pegawai"
+                                    },
+                                    "jabatan_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "bidang_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jenis_kelamin": {
+                                        "type": "string",
+                                        "enum": [
+                                            "L",
+                                            "P"
+                                        ],
+                                        "example": "L"
+                                    },
+                                    "status_kepegawaian": {
+                                        "type": "string",
+                                        "example": "Kontrak"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "pegawai@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pegawai berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nomor_identitas": {
+                                                    "type": "string",
+                                                    "example": "197812312005011001"
+                                                },
+                                                "tipe_identitas": {
+                                                    "type": "string",
+                                                    "example": "NIP"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Pegawai"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "pegawai@email.com"
+                                                },
+                                                "jabatan_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [
@@ -813,11 +924,13 @@
                     "MasterPegawai"
                 ],
                 "summary": "Detail pegawai",
+                "description": "Mengambil detail data pegawai beserta relasi jabatan, bidang, atasan langsung, dan ttd digital.",
                 "operationId": "69b788b6a0770ff5bf8fd4c496073780",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID pegawai",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -826,7 +939,64 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail pegawai"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nomor_identitas": {
+                                                    "type": "string",
+                                                    "example": "197812312005011001"
+                                                },
+                                                "tipe_identitas": {
+                                                    "type": "string",
+                                                    "example": "NIP"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Pegawai"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "pegawai@email.com"
+                                                },
+                                                "jabatan": {
+                                                    "type": "object"
+                                                },
+                                                "bidang": {
+                                                    "type": "object"
+                                                },
+                                                "atasanLangsung": {
+                                                    "type": "object"
+                                                },
+                                                "ttdDigital": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pegawai tidak ditemukan"
                     }
                 },
                 "security": [
@@ -840,11 +1010,13 @@
                     "MasterPegawai"
                 ],
                 "summary": "Update pegawai",
+                "description": "Mengupdate data pegawai berdasarkan ID. Hanya field yang aman diubah: nama, jabatan_id, bidang_id, jenis_kelamin, status_kepegawaian, email, no_telepon, pangkat, golongan, gelar_depan, gelar_belakang, tanggal_lahir, alamat, status_aktif, tanggal_masuk, tanggal_keluar, password.",
                 "operationId": "f0699a9fdf7622ad5500eeab66423725",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID pegawai",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -854,12 +1026,154 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {}
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Ahmad Pegawai"
+                                    },
+                                    "jabatan_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "bidang_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jenis_kelamin": {
+                                        "type": "string",
+                                        "enum": [
+                                            "L",
+                                            "P"
+                                        ],
+                                        "example": "L"
+                                    },
+                                    "status_kepegawaian": {
+                                        "type": "string",
+                                        "example": "Kontrak"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "pegawai@email.com"
+                                    },
+                                    "no_telepon": {
+                                        "type": "string",
+                                        "example": "08123456789"
+                                    },
+                                    "pangkat": {
+                                        "type": "string",
+                                        "example": "Penata"
+                                    },
+                                    "golongan": {
+                                        "type": "string",
+                                        "example": "III/a"
+                                    },
+                                    "gelar_depan": {
+                                        "type": "string",
+                                        "example": "Dr."
+                                    },
+                                    "gelar_belakang": {
+                                        "type": "string",
+                                        "example": "M.Si."
+                                    },
+                                    "tanggal_lahir": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1980-01-01"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jl. Contoh No. 1"
+                                    },
+                                    "status_aktif": {
+                                        "type": "string",
+                                        "example": "Aktif"
+                                    },
+                                    "tanggal_masuk": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2020-01-01"
+                                    },
+                                    "tanggal_keluar": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2030-01-01"
+                                    },
+                                    "atasan_langsung_id": {
+                                        "description": "ID pegawai atasan langsung",
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pegawai berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nomor_identitas": {
+                                                    "type": "string",
+                                                    "example": "197812312005011001"
+                                                },
+                                                "tipe_identitas": {
+                                                    "type": "string",
+                                                    "example": "NIP"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Pegawai"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "pegawai@email.com"
+                                                },
+                                                "jabatan_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pegawai tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [
