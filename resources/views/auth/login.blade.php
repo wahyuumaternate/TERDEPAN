@@ -73,9 +73,10 @@
 
                     <!-- NIP/NIK -->
                     <div>
-                        <label for="nomor_identitas" class="block text-sm font-medium text-gray-900 mb-2">NIP / NIK</label>
-                        <input id="nomor_identitas" type="text" name="nomor_identitas" value="{{ old('nomor_identitas') }}" required autofocus
-                            placeholder="Masukkan NIP atau NIK Anda"
+                        <label for="nomor_identitas" class="block text-sm font-medium text-gray-900 mb-2">NIP /
+                            NIK</label>
+                        <input id="nomor_identitas" type="text" name="nomor_identitas" value="197001011990011001"
+                            required autofocus placeholder="Masukkan NIP atau NIK Anda"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         <x-input-error :messages="$errors->get('nomor_identitas')" class="mt-2" />
                     </div>
@@ -94,7 +95,7 @@
 
                         <div class="relative">
                             <input id="password" type="password" name="password" required
-                                placeholder="Masukkan kata sandi Anda"
+                                placeholder="Masukkan kata sandi Anda" value="password123"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12" />
 
                             <!-- Toggle Eye -->
@@ -104,8 +105,7 @@
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5
                                            c4.478 0 8.268 2.943 9.542 7
                                            -1.274 4.057-5.064 7-9.542 7
                                            -4.477 0-8.268-2.943-9.542-7z" />

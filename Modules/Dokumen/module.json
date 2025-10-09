@@ -1,0 +1,11 @@
+{
+    "name": "Dokumen",
+    "alias": "dokumen",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Dokumen\\Providers\\DokumenServiceProvider"
+    ],
+    "files": []
+}
