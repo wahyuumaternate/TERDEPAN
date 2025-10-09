@@ -423,16 +423,105 @@
                     "MasterJabatan"
                 ],
                 "summary": "Tambah jabatan",
+                "description": "Menambah data jabatan baru.",
                 "operationId": "727ce5cbf9f1551cd4c39573c5e6a85f",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {}
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "kode",
+                                    "nama",
+                                    "level"
+                                ],
+                                "properties": {
+                                    "kode": {
+                                        "type": "string",
+                                        "example": "JAB001"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Kepala Bidang"
+                                    },
+                                    "level": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "is_struktural": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "bebas_nilai_kinerja": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Jabatan berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "JAB001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Kepala Bidang"
+                                                },
+                                                "level": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "is_struktural": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "bebas_nilai_kinerja": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [
@@ -448,11 +537,13 @@
                     "MasterJabatan"
                 ],
                 "summary": "Detail jabatan",
+                "description": "Mengambil detail data jabatan beserta relasi pegawai.",
                 "operationId": "8c23f89d2172f5f696d769ace0fc7a59",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID jabatan",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -461,7 +552,66 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail jabatan"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "JAB001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Kepala Bidang"
+                                                },
+                                                "level": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "is_struktural": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "bebas_nilai_kinerja": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "pegawai": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Jabatan tidak ditemukan"
                     }
                 },
                 "security": [
@@ -475,11 +625,13 @@
                     "MasterJabatan"
                 ],
                 "summary": "Update jabatan",
+                "description": "Mengupdate data jabatan berdasarkan ID.",
                 "operationId": "e817a90706c422a34f70e2bb63a57b4a",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID jabatan",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -489,12 +641,94 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {}
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Kepala Bidang"
+                                    },
+                                    "level": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "is_struktural": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "bebas_nilai_kinerja": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Jabatan berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "JAB001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Kepala Bidang"
+                                                },
+                                                "level": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "is_struktural": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "bebas_nilai_kinerja": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Jabatan tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [
