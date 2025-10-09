@@ -13,14 +13,16 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Get(
- *     path="/api/v1/master-bidang",
+ *     path="/master-bidang",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="List semua bidang",
  *     @OA\Response(response=200, description="OK")
  * )
  *
  * @OA\Get(
- *     path="/api/v1/master-bidang/{id}",
+ *     path="/master-bidang/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Detail bidang",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -28,7 +30,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Post(
- *     path="/api/v1/master-bidang",
+ *     path="/master-bidang",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Tambah bidang",
  *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="application/json")),
@@ -36,7 +39,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Put(
- *     path="/api/v1/master-bidang/{id}",
+ *     path="/master-bidang/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Update bidang",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -45,7 +49,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Delete(
- *     path="/api/v1/master-bidang/{id}",
+ *     path="/master-bidang/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Hapus bidang",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -56,45 +61,136 @@ class MasterBidangController extends Controller
 {
     public function index()
     {
-        return response()->json(MasterBidang::with('pegawai')->get());
+        try {
+            $data = MasterBidang::with('pegawai')->get();
+            return response()->json([
+                'status' => true,
+                'message' => 'List semua bidang',
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
     }
 
     public function show($id)
     {
-        $bidang = MasterBidang::with('pegawai')->findOrFail($id);
-        return response()->json($bidang);
+        try {
+            $bidang = MasterBidang::with('pegawai')->findOrFail($id);
+            return response()->json([
+                'status' => true,
+                'message' => 'Detail bidang',
+                'data' => $bidang
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Bidang tidak ditemukan',
+                'data' => null
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'kode' => 'required|unique:master_bidang,kode',
-            'nama' => 'required',
-            'deskripsi' => 'nullable',
-            'warna' => 'nullable',
-            'is_active' => 'boolean',
-        ]);
-        $bidang = MasterBidang::create($data);
-        return response()->json($bidang, 201);
+        try {
+            $data = $request->validate([
+                'kode' => 'required|unique:master_bidang,kode',
+                'nama' => 'required',
+                'deskripsi' => 'nullable',
+                'warna' => 'nullable',
+                'is_active' => 'boolean',
+            ]);
+            $bidang = MasterBidang::create($data);
+            return response()->json([
+                'status' => true,
+                'message' => 'Bidang berhasil ditambah',
+                'data' => $bidang
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $bidang = MasterBidang::findOrFail($id);
-        $data = $request->validate([
-            'nama' => 'sometimes',
-            'deskripsi' => 'sometimes',
-            'warna' => 'sometimes',
-            'is_active' => 'sometimes|boolean',
-        ]);
-        $bidang->update($data);
-        return response()->json($bidang);
+        try {
+            $bidang = MasterBidang::findOrFail($id);
+            $data = $request->validate([
+                'nama' => 'sometimes',
+                'deskripsi' => 'sometimes',
+                'warna' => 'sometimes',
+                'is_active' => 'sometimes|boolean',
+            ]);
+            $bidang->update($data);
+            return response()->json([
+                'status' => true,
+                'message' => 'Bidang berhasil diupdate',
+                'data' => $bidang
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Bidang tidak ditemukan',
+                'data' => null
+            ], 404);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
     }
 
     public function destroy($id)
     {
-        $bidang = MasterBidang::findOrFail($id);
-        $bidang->delete();
-        return response()->json(['message' => 'Deleted']);
+        try {
+            $bidang = MasterBidang::findOrFail($id);
+            $bidang->delete();
+            return response()->json([
+                'status' => true,
+                'message' => 'Bidang berhasil dihapus',
+                'data' => null
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Bidang tidak ditemukan',
+                'data' => null
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
     }
 }

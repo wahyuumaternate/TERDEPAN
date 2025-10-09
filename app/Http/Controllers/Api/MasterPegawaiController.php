@@ -13,14 +13,16 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Get(
- *     path="/api/v1/master-pegawai",
+ *     path="/master-pegawai",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterPegawai"},
  *     summary="List semua pegawai",
  *     @OA\Response(response=200, description="OK")
  * )
  *
  * @OA\Get(
- *     path="/api/v1/master-pegawai/{id}",
+ *     path="/master-pegawai/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterPegawai"},
  *     summary="Detail pegawai",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -28,7 +30,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Post(
- *     path="/api/v1/master-pegawai",
+ *     path="/master-pegawai",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterPegawai"},
  *     summary="Tambah pegawai",
  *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="application/json")),
@@ -36,7 +39,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Put(
- *     path="/api/v1/master-pegawai/{id}",
+ *     path="/master-pegawai/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterPegawai"},
  *     summary="Update pegawai",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -45,7 +49,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Delete(
- *     path="/api/v1/master-pegawai/{id}",
+ *     path="/master-pegawai/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterPegawai"},
  *     summary="Hapus pegawai",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -56,13 +61,22 @@ class MasterPegawaiController extends Controller
 {
     public function index()
     {
-        return response()->json(MasterPegawai::with(['jabatan', 'bidang', 'atasanLangsung', 'ttdDigital'])->get());
+        $data = MasterPegawai::with(['jabatan', 'bidang', 'atasanLangsung', 'ttdDigital'])->get();
+        return response()->json([
+            'status' => true,
+            'message' => 'List semua pegawai',
+            'data' => $data
+        ]);
     }
 
     public function show($id)
     {
         $pegawai = MasterPegawai::with(['jabatan', 'bidang', 'atasanLangsung', 'ttdDigital'])->findOrFail($id);
-        return response()->json($pegawai);
+        return response()->json([
+            'status' => true,
+            'message' => 'Detail pegawai',
+            'data' => $pegawai
+        ]);
     }
 
     public function store(Request $request)
@@ -78,7 +92,11 @@ class MasterPegawaiController extends Controller
         ]);
         $data['password'] = bcrypt($data['password']);
         $pegawai = MasterPegawai::create($data);
-        return response()->json($pegawai, 201);
+        return response()->json([
+            'status' => true,
+            'message' => 'Pegawai berhasil ditambah',
+            'data' => $pegawai
+        ], 201);
     }
 
     public function update(Request $request, $id)
@@ -95,13 +113,21 @@ class MasterPegawaiController extends Controller
             $data['password'] = bcrypt($data['password']);
         }
         $pegawai->update($data);
-        return response()->json($pegawai);
+        return response()->json([
+            'status' => true,
+            'message' => 'Pegawai berhasil diupdate',
+            'data' => $pegawai
+        ]);
     }
 
     public function destroy($id)
     {
         $pegawai = MasterPegawai::findOrFail($id);
         $pegawai->delete();
-        return response()->json(['message' => 'Deleted']);
+        return response()->json([
+            'status' => true,
+            'message' => 'Pegawai berhasil dihapus',
+            'data' => null
+        ]);
     }
 }

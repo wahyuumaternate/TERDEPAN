@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class MasterPegawai extends Model
+class MasterPegawai extends Authenticatable
 {
-    Use HasRoles, Notifiable;
+    Use HasApiTokens, HasRoles, Notifiable;
     
     protected $table = 'master_pegawai';
     protected $guarded = [];

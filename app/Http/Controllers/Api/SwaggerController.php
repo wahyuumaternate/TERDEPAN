@@ -16,6 +16,13 @@ namespace App\Http\Controllers\Api;
  *     url="/api/v1",
  *     description="API v1"
  * )
+ * 
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT"
+ * )
  */
 class SwaggerController
 {

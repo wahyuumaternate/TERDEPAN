@@ -13,14 +13,16 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Get(
- *     path="/api/v1/master-jabatan",
+ *     path="/master-jabatan",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterJabatan"},
  *     summary="List semua jabatan",
  *     @OA\Response(response=200, description="OK")
  * )
  *
  * @OA\Get(
- *     path="/api/v1/master-jabatan/{id}",
+ *     path="/master-jabatan/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterJabatan"},
  *     summary="Detail jabatan",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -28,7 +30,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Post(
- *     path="/api/v1/master-jabatan",
+ *     path="/master-jabatan",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterJabatan"},
  *     summary="Tambah jabatan",
  *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="application/json")),
@@ -36,7 +39,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Put(
- *     path="/api/v1/master-jabatan/{id}",
+ *     path="/master-jabatan/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterJabatan"},
  *     summary="Update jabatan",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -45,7 +49,8 @@ use Illuminate\Http\Request;
  * )
  *
  * @OA\Delete(
- *     path="/api/v1/master-jabatan/{id}",
+ *     path="/master-jabatan/{id}",
+ *     security={{"bearerAuth":{}}},
  *     tags={"MasterJabatan"},
  *     summary="Hapus jabatan",
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
@@ -56,13 +61,22 @@ class MasterJabatanController extends Controller
 {
     public function index()
     {
-        return response()->json(MasterJabatan::with('pegawai')->get());
+        $data = MasterJabatan::with('pegawai')->get();
+        return response()->json([
+            'status' => true,
+            'message' => 'List semua jabatan',
+            'data' => $data
+        ]);
     }
 
     public function show($id)
     {
         $jabatan = MasterJabatan::with('pegawai')->findOrFail($id);
-        return response()->json($jabatan);
+        return response()->json([
+            'status' => true,
+            'message' => 'Detail jabatan',
+            'data' => $jabatan
+        ]);
     }
 
     public function store(Request $request)
@@ -76,7 +90,11 @@ class MasterJabatanController extends Controller
             'is_active' => 'boolean',
         ]);
         $jabatan = MasterJabatan::create($data);
-        return response()->json($jabatan, 201);
+        return response()->json([
+            'status' => true,
+            'message' => 'Jabatan berhasil ditambah',
+            'data' => $jabatan
+        ], 201);
     }
 
     public function update(Request $request, $id)
@@ -90,13 +108,21 @@ class MasterJabatanController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
         $jabatan->update($data);
-        return response()->json($jabatan);
+        return response()->json([
+            'status' => true,
+            'message' => 'Jabatan berhasil diupdate',
+            'data' => $jabatan
+        ]);
     }
 
     public function destroy($id)
     {
         $jabatan = MasterJabatan::findOrFail($id);
         $jabatan->delete();
-        return response()->json(['message' => 'Deleted']);
+        return response()->json([
+            'status' => true,
+            'message' => 'Jabatan berhasil dihapus',
+            'data' => null
+        ]);
     }
 }
