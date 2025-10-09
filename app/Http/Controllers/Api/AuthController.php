@@ -13,7 +13,7 @@ use App\Models\MasterPegawai;
  * @OA\Tag(
  *     name="Auth",
  *     description="API Authentication"
- * )
+ *     )
  * 
  *     @OA\Post(
  *     path="/login",
@@ -29,7 +29,15 @@ use App\Models\MasterPegawai;
  *     ),
  *     @OA\Response(response=200, description="Login sukses, return token"),
  *     @OA\Response(response=401, description="Unauthorized")
- * )
+ *     )
+ * 
+ *    @OA\Delete(
+ *     path="/logout",
+ *     tags={"Auth"},
+ *     summary="Logout user (MasterPegawai)",
+ *     @OA\Response(response=200, description="Login sukses, return token"),
+ *     @OA\Response(response=401, description="Unauthorized")
+ *     )
  */
 class AuthController extends Controller
 {
@@ -61,9 +69,48 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Login sukses',
             'data' => [
+                'access_token' => $token,
+                'token_type' => 'Bearer',
                 'user' => $pegawai,
-                'token' => $token,
             ]
         ]);
+
+        // // 1️⃣ Cek kredensial
+        // if (!Auth::attempt($credentials)) {
+        //     return response()->json(['message' => 'Invalid credentials'], 401);
+        // }
+
+        // // 2️⃣ Ambil user
+        // $user = Auth::user();
+
+        // // 3️⃣ Hapus token lama (opsional)
+        // $user->tokens()->delete();
+
+        // // 4️⃣ Buat token baru
+        // $token = $user->createToken('api-token')->plainTextToken;
+
+        // // 5️⃣ Kembalikan respons JSON
+        // return response()->json([
+        //     'status' => true,
+        //     'message' => 'Login sukses',
+        //     'data' => [
+        //         'access_token' => $token,
+        //         'token_type' => 'Bearer',
+        //         'user' => $user,
+        //     ]
+        // ]);
     }
+
+    // public function logout(Request $request)
+    // {
+    //     // Hapus token saat ini
+    //     $request->user()->currentAccessToken()->delete();
+
+    //     return response()->json(['message' => 'Logged out successfully']);
+    // }
+
+    // public function me(Request $request)
+    // {
+    //     return response()->json($request->user());
+    // }
 }

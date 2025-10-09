@@ -56,6 +56,23 @@
                 }
             }
         },
+        "/logout": {
+            "delete": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout user (MasterPegawai)",
+                "operationId": "77804f17cec28bcf3a347376362b98a4",
+                "responses": {
+                    "200": {
+                        "description": "Login sukses, return token"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
         "/master-bidang": {
             "get": {
                 "tags": [

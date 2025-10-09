@@ -145,7 +145,7 @@ class MasterBidangController extends Controller
     public function index()
     {
         try {
-            $data = MasterBidang::with('pegawai')->get();
+            $data = MasterBidang::all();
             return response()->json([
                 'status' => true,
                 'message' => 'List semua bidang',
@@ -163,7 +163,7 @@ class MasterBidangController extends Controller
     public function show($id)
     {
         try {
-            $bidang = MasterBidang::with('pegawai')->findOrFail($id);
+            $bidang = MasterBidang::findOrFail($id);
             return response()->json([
                 'status' => true,
                 'message' => 'Detail bidang',

@@ -150,7 +150,7 @@ class MasterJabatanController extends Controller
     public function index()
     {
         try {
-            $data = MasterJabatan::with('pegawai')->get();
+            $data = MasterJabatan::all();
             return response()->json([
                 'status' => true,
                 'message' => 'List semua jabatan',
@@ -168,7 +168,7 @@ class MasterJabatanController extends Controller
     public function show($id)
     {
         try {
-            $jabatan = MasterJabatan::with('pegawai')->findOrFail($id);
+            $jabatan = MasterJabatan::findOrFail($id);
             return response()->json([
                 'status' => true,
                 'message' => 'Detail jabatan',
