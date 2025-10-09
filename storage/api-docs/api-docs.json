@@ -20,7 +20,7 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Login user (MasterPegawai)",
+                "summary": "Login user (MasterPegawai) menggunakan NIP atau NIK",
                 "operationId": "a3674f0652b564b652bd25c2326691d7",
                 "requestBody": {
                     "required": true,
@@ -28,13 +28,13 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "email",
+                                    "nomor_identitas",
                                     "password"
                                 ],
                                 "properties": {
-                                    "email": {
+                                    "nomor_identitas": {
                                         "type": "string",
-                                        "example": "admin@gmail.com"
+                                        "example": "197001011990011001"
                                     },
                                     "password": {
                                         "type": "string",
@@ -79,16 +79,96 @@
                     "MasterBidang"
                 ],
                 "summary": "Tambah bidang",
+                "description": "Menambah data bidang baru.",
                 "operationId": "dd8e1522f9b20afffb9959731ff993e8",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {}
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "kode",
+                                    "nama"
+                                ],
+                                "properties": {
+                                    "kode": {
+                                        "type": "string",
+                                        "example": "BID001"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Bidang Perencanaan Ekonomi"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Deskripsi bidang"
+                                    },
+                                    "warna": {
+                                        "type": "string",
+                                        "example": "#FF0000"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bidang berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "BID001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Bidang Perencanaan Ekonomi"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "example": "Deskripsi bidang"
+                                                },
+                                                "warna": {
+                                                    "type": "string",
+                                                    "example": "#FF0000"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [
@@ -104,11 +184,13 @@
                     "MasterBidang"
                 ],
                 "summary": "Detail bidang",
+                "description": "Mengambil detail data bidang beserta relasi pegawai.",
                 "operationId": "aad5c48c232ce1cbbfa2df39189480c3",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID bidang",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -117,7 +199,62 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail bidang"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "BID001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Bidang Perencanaan Ekonomi"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "example": "Deskripsi bidang"
+                                                },
+                                                "warna": {
+                                                    "type": "string",
+                                                    "example": "#FF0000"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "pegawai": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Bidang tidak ditemukan"
                     }
                 },
                 "security": [
@@ -131,11 +268,13 @@
                     "MasterBidang"
                 ],
                 "summary": "Update bidang",
+                "description": "Mengupdate data bidang berdasarkan ID.",
                 "operationId": "2c7423dc0054cbea83242f7097fde377",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID bidang",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -145,12 +284,86 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {}
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Bidang Perencanaan Ekonomi"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Deskripsi bidang"
+                                    },
+                                    "warna": {
+                                        "type": "string",
+                                        "example": "#FF0000"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bidang berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "BID001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Bidang Perencanaan Ekonomi"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "example": "Deskripsi bidang"
+                                                },
+                                                "warna": {
+                                                    "type": "string",
+                                                    "example": "#FF0000"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Bidang tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [

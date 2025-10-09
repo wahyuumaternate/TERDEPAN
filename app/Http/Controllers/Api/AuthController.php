@@ -15,15 +15,15 @@ use App\Models\MasterPegawai;
  *     description="API Authentication"
  * )
  * 
- * @OA\Post(
+ *     @OA\Post(
  *     path="/login",
  *     tags={"Auth"},
- *     summary="Login user (MasterPegawai)",
+ *     summary="Login user (MasterPegawai) menggunakan NIP atau NIK",
  *     @OA\RequestBody(
  *         required=true,
  *         @OA\JsonContent(
- *             required={"email","password"},
- *             @OA\Property(property="email", type="string", example="admin@gmail.com"),
+ *             required={"nomor_identitas","password"},
+ *             @OA\Property(property="nomor_identitas", type="string", example="197001011990011001"),
  *             @OA\Property(property="password", type="string", example="password123")
  *         )
  *     ),
@@ -36,11 +36,14 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'nomor_identitas' => 'required',
             'password' => 'required',
         ]);
 
-        $pegawai = MasterPegawai::where('email', $credentials['email'])->first();
+        // Cari berdasarkan NIP atau NIK
+        $pegawai = MasterPegawai::where('nomor_identitas', $credentials['nomor_identitas'])
+            ->first();
+
         if (!$pegawai || !Hash::check($credentials['password'], $pegawai->password)) {
             return response()->json([
                 'status' => false,

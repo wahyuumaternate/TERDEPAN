@@ -25,8 +25,32 @@ use Illuminate\Http\Request;
  *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Detail bidang",
- *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *     @OA\Response(response=200, description="OK")
+ *     description="Mengambil detail data bidang beserta relasi pegawai.",
+ *     @OA\Parameter(
+ *         name="id",
+ *         in="path",
+ *         required=true,
+ *         description="ID bidang",
+ *         @OA\Schema(type="integer")
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="OK",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Detail bidang"),
+ *             @OA\Property(property="data", type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="kode", type="string", example="BID001"),
+ *                 @OA\Property(property="nama", type="string", example="Bidang Perencanaan Ekonomi"),
+ *                 @OA\Property(property="deskripsi", type="string", example="Deskripsi bidang"),
+ *                 @OA\Property(property="warna", type="string", example="#FF0000"),
+ *                 @OA\Property(property="is_active", type="boolean", example=true),
+ *                 @OA\Property(property="pegawai", type="array", @OA\Items(type="object"))
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(response=404, description="Bidang tidak ditemukan")
  * )
  *
  * @OA\Post(
@@ -34,8 +58,35 @@ use Illuminate\Http\Request;
  *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Tambah bidang",
- *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="application/json")),
- *     @OA\Response(response=201, description="Created")
+ *     description="Menambah data bidang baru.",
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"kode","nama"},
+ *             @OA\Property(property="kode", type="string", example="BID001"),
+ *             @OA\Property(property="nama", type="string", example="Bidang Perencanaan Ekonomi"),
+ *             @OA\Property(property="deskripsi", type="string", example="Deskripsi bidang"),
+ *             @OA\Property(property="warna", type="string", example="#FF0000"),
+ *             @OA\Property(property="is_active", type="boolean", example=true)
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=201,
+ *         description="Created",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Bidang berhasil ditambah"),
+ *             @OA\Property(property="data", type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="kode", type="string", example="BID001"),
+ *                 @OA\Property(property="nama", type="string", example="Bidang Perencanaan Ekonomi"),
+ *                 @OA\Property(property="deskripsi", type="string", example="Deskripsi bidang"),
+ *                 @OA\Property(property="warna", type="string", example="#FF0000"),
+ *                 @OA\Property(property="is_active", type="boolean", example=true)
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(response=422, description="Validasi gagal")
  * )
  *
  * @OA\Put(
@@ -43,9 +94,41 @@ use Illuminate\Http\Request;
  *     security={{"bearerAuth":{}}},
  *     tags={"MasterBidang"},
  *     summary="Update bidang",
- *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="application/json")),
- *     @OA\Response(response=200, description="OK")
+ *     description="Mengupdate data bidang berdasarkan ID.",
+ *     @OA\Parameter(
+ *         name="id",
+ *         in="path",
+ *         required=true,
+ *         description="ID bidang",
+ *         @OA\Schema(type="integer")
+ *     ),
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             @OA\Property(property="nama", type="string", example="Bidang Perencanaan Ekonomi"),
+ *             @OA\Property(property="deskripsi", type="string", example="Deskripsi bidang"),
+ *             @OA\Property(property="warna", type="string", example="#FF0000"),
+ *             @OA\Property(property="is_active", type="boolean", example=true)
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="OK",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="status", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Bidang berhasil diupdate"),
+ *             @OA\Property(property="data", type="object",
+ *                 @OA\Property(property="id", type="integer", example=1),
+ *                 @OA\Property(property="kode", type="string", example="BID001"),
+ *                 @OA\Property(property="nama", type="string", example="Bidang Perencanaan Ekonomi"),
+ *                 @OA\Property(property="deskripsi", type="string", example="Deskripsi bidang"),
+ *                 @OA\Property(property="warna", type="string", example="#FF0000"),
+ *                 @OA\Property(property="is_active", type="boolean", example=true)
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(response=404, description="Bidang tidak ditemukan"),
+ *     @OA\Response(response=422, description="Validasi gagal")
  * )
  *
  * @OA\Delete(
