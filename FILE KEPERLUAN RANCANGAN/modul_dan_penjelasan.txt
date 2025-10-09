@@ -1,0 +1,478 @@
+# Urutan Pengembangan Modul BAPPEDA
+## Step-by-Step Development Guide
+
+---
+
+## 📋 TAHAP 1: MODUL INTI (WAJIB PERTAMA)
+**Priority: CRITICAL** ⭐⭐⭐⭐⭐
+**Estimasi: 3-5 hari**
+
+### Mengapa harus pertama?
+- Semua modul lain membutuhkan data master dari modul Inti
+- Berisi: Pegawai, Jabatan, Bidang, TTD Digital
+- Tidak ada dependency ke modul lain
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make Inti
+
+# 2. Buat Migration (urutan penting!)
+php artisan module:make-migration buat_tabel_master_jabatan Inti
+php artisan module:make-migration buat_tabel_master_bidang Inti
+php artisan module:make-migration buat_tabel_master_pegawai Inti
+php artisan module:make-migration buat_tabel_master_ttd_digital Inti
+
+# 3. Buat Model/Entity
+php artisan module:make-model Jabatan Inti
+php artisan module:make-model Bidang Inti
+php artisan module:make-model Pegawai Inti
+php artisan module:make-model TtdDigital Inti
+
+# 4. Buat Seeder
+php artisan module:make-seeder JabatanSeeder Inti
+php artisan module:make-seeder BidangSeeder Inti
+php artisan module:make-seeder PegawaiSeeder Inti
+
+# 5. Jalankan Migration & Seeder
+php artisan module:migrate Inti
+php artisan module:seed Inti
+
+# 6. Buat Controller & View
+php artisan module:make-controller JabatanController Inti
+php artisan module:make-controller BidangController Inti
+php artisan module:make-controller PegawaiController Inti
+php artisan module:make-controller TtdDigitalController Inti
+```
+
+### Checklist ✅
+- [ ] Migration berhasil dijalankan
+- [ ] Seeder data master sudah terisi
+- [ ] CRUD Jabatan berfungsi
+- [ ] CRUD Bidang berfungsi
+- [ ] CRUD Pegawai berfungsi
+- [ ] Upload TTD Digital berfungsi
+- [ ] Relasi antar tabel sudah benar
+
+---
+
+## 📋 TAHAP 2: MODUL DOKUMEN
+**Priority: HIGH** ⭐⭐⭐⭐
+**Estimasi: 2-3 hari**
+
+### Mengapa tahap 2?
+- Butuh data Bidang dan Pegawai dari modul Inti
+- Akan digunakan oleh modul PerjanjianKinerja dan Penugasan
+- Relatif independen dari modul E-Kinerja
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make Dokumen
+
+# 2. Buat Migration
+php artisan module:make-migration buat_tabel_doc_kategori Dokumen
+php artisan module:make-migration buat_tabel_doc_dokumen Dokumen
+
+# 3. Buat Model/Entity
+php artisan module:make-model Kategori Dokumen
+php artisan module:make-model Dokumen Dokumen
+
+# 4. Buat Seeder
+php artisan module:make-seeder KategoriDokumenSeeder Dokumen
+
+# 5. Jalankan Migration & Seeder
+php artisan module:migrate Dokumen
+php artisan module:seed Dokumen
+
+# 6. Buat Controller & Service
+php artisan module:make-controller KategoriController Dokumen
+php artisan module:make-controller DokumenController Dokumen
+php artisan module:make-controller UnggahController Dokumen
+```
+
+### Checklist ✅
+- [ ] Migration berhasil dijalankan
+- [ ] Kategori dokumen sudah terisi
+- [ ] Upload dokumen berfungsi
+- [ ] Download dokumen berfungsi
+- [ ] Hash file untuk integrity check
+- [ ] Soft delete berfungsi
+- [ ] Filter per Bidang berfungsi
+
+---
+
+## 📋 TAHAP 3: MODUL PERJANJIAN KINERJA
+**Priority: HIGH** ⭐⭐⭐⭐
+**Estimasi: 4-6 hari**
+
+### Mengapa tahap 3?
+- Butuh Pegawai, Jabatan, TTD Digital dari modul Inti
+- Butuh modul Dokumen untuk menyimpan file PK
+- Basis untuk modul Penugasan
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make PerjanjianKinerja
+
+# 2. Buat Migration (urutan penting!)
+php artisan module:make-migration buat_tabel_pk_template PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_template_section PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_perjanjian_kinerja PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_dokumen PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_sasaran PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_indikator PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_program PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_kegiatan PerjanjianKinerja
+php artisan module:make-migration buat_tabel_pk_sub_kegiatan PerjanjianKinerja
+
+# 3. Buat Model/Entity
+php artisan module:make-model Template PerjanjianKinerja
+php artisan module:make-model PerjanjianKinerja PerjanjianKinerja
+# ... dst untuk semua entity
+
+# 4. Jalankan Migration
+php artisan module:migrate PerjanjianKinerja
+
+# 5. Buat Controller & Service
+php artisan module:make-controller TemplateController PerjanjianKinerja
+php artisan module:make-controller PerjanjianKinerjaController PerjanjianKinerja
+```
+
+### Checklist ✅
+- [ ] Template PK dapat dibuat
+- [ ] PK dapat dibuat dari template
+- [ ] Sasaran, Indikator dapat ditambahkan
+- [ ] Program, Kegiatan dapat ditambahkan
+- [ ] Generate PDF PK berfungsi
+- [ ] TTD Digital terintegrasi
+- [ ] Dokumen PK tersimpan di modul Dokumen
+
+---
+
+## 📋 TAHAP 4: MODUL PENUGASAN
+**Priority: HIGH** ⭐⭐⭐⭐
+**Estimasi: 5-7 hari**
+
+### Mengapa tahap 4?
+- Butuh PerjanjianKinerja yang sudah jadi
+- Butuh Pegawai dari modul Inti
+- Butuh modul Dokumen untuk lampiran
+- Basis untuk modul Evaluasi
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make Penugasan
+
+# 2. Buat Migration
+php artisan module:make-migration buat_tabel_knj_tugas_pokok Penugasan
+php artisan module:make-migration buat_tabel_knj_indikator_tugas Penugasan
+php artisan module:make-migration buat_tabel_knj_tugas_harian Penugasan
+php artisan module:make-migration buat_tabel_knj_tugas_tambahan Penugasan
+php artisan module:make-migration buat_tabel_knj_penugasan_mandiri Penugasan
+php artisan module:make-migration buat_tabel_knj_progress Penugasan
+php artisan module:make-migration buat_tabel_knj_foto_bukti Penugasan
+php artisan module:make-migration buat_tabel_knj_delegasi Penugasan
+php artisan module:make-migration buat_tabel_knj_workload Penugasan
+
+# 3. Buat Model/Entity
+php artisan module:make-model TugasPokok Penugasan
+php artisan module:make-model TugasHarian Penugasan
+# ... dst
+
+# 4. Jalankan Migration
+php artisan module:migrate Penugasan
+
+# 5. Buat Controller & Service
+php artisan module:make-controller TugasPokokController Penugasan
+php artisan module:make-controller ProgressController Penugasan
+# ... dst
+```
+
+### Checklist ✅
+- [ ] Tugas Pokok dapat ditugaskan
+- [ ] Tugas Harian dapat ditugaskan
+- [ ] Tugas Tambahan dapat ditugaskan
+- [ ] Penugasan Mandiri dapat diajukan
+- [ ] Progress dapat diinput dengan foto
+- [ ] Validasi bobot (60-70%, 20-30%, max 20%)
+- [ ] Delegasi tugas berfungsi
+- [ ] Monitor workload berfungsi
+
+---
+
+## 📋 TAHAP 5: MODUL EVALUASI
+**Priority: HIGH** ⭐⭐⭐⭐
+**Estimasi: 4-5 hari**
+
+### Mengapa tahap 5?
+- Butuh semua jenis tugas dari modul Penugasan
+- Butuh Pegawai dari modul Inti
+- Sistem penilaian bergantung pada progress tugas
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make Evaluasi
+
+# 2. Buat Migration
+php artisan module:make-migration buat_tabel_knj_validasi Evaluasi
+php artisan module:make-migration buat_tabel_knj_revisi Evaluasi
+php artisan module:make-migration buat_tabel_knj_nilai_bulanan Evaluasi
+php artisan module:make-migration buat_tabel_knj_nilai_tahunan Evaluasi
+
+# 3. Buat Model/Entity
+php artisan module:make-model Validasi Evaluasi
+php artisan module:make-model Revisi Evaluasi
+php artisan module:make-model NilaiBulanan Evaluasi
+php artisan module:make-model NilaiTahunan Evaluasi
+
+# 4. Jalankan Migration
+php artisan module:migrate Evaluasi
+
+# 5. Buat Controller & Service
+php artisan module:make-controller ValidasiController Evaluasi
+php artisan module:make-controller PenilaianController Evaluasi
+```
+
+### Checklist ✅
+- [ ] Validasi tugas berfungsi
+- [ ] Revisi dapat diminta dan disubmit
+- [ ] Penalty revisi terlambat berfungsi
+- [ ] Nilai bulanan auto-calculate
+- [ ] Nilai tahunan auto-calculate
+- [ ] Kategori nilai (Sangat Baik - Sangat Kurang)
+
+---
+
+## 📋 TAHAP 6: MODUL SISTEM (PARALEL)
+**Priority: MEDIUM** ⭐⭐⭐
+**Estimasi: 2-3 hari**
+
+### Mengapa bisa paralel?
+- Relatif independen
+- Hanya butuh Pegawai untuk notifikasi dan audit
+- Bisa dikerjakan bersamaan dengan modul lain
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make Sistem
+
+# 2. Buat Migration
+php artisan module:make-migration buat_tabel_sys_notifikasi Sistem
+php artisan module:make-migration buat_tabel_sys_preferensi_notifikasi Sistem
+php artisan module:make-migration buat_tabel_sys_audit_log Sistem
+php artisan module:make-migration buat_tabel_sys_config Sistem
+
+# 3. Buat Model/Entity
+php artisan module:make-model Notifikasi Sistem
+php artisan module:make-model AuditLog Sistem
+php artisan module:make-model Config Sistem
+
+# 4. Jalankan Migration
+php artisan module:migrate Sistem
+
+# 5. Buat Middleware
+# Buat middleware AuditLogMiddleware secara manual
+```
+
+### Checklist ✅
+- [ ] Notifikasi dapat dikirim
+- [ ] Preferensi notifikasi per user
+- [ ] Audit log mencatat semua aktivitas
+- [ ] Konfigurasi sistem dapat diubah
+- [ ] Middleware audit log terintegrasi
+
+---
+
+## 📋 TAHAP 7: MODUL DASHBOARD (TERAKHIR)
+**Priority: MEDIUM** ⭐⭐⭐
+**Estimasi: 2-3 hari**
+
+### Mengapa terakhir?
+- Butuh data dari semua modul
+- Untuk menampilkan statistik dan ringkasan
+- Tidak blocking untuk modul lain
+
+### Langkah-langkah:
+```bash
+# 1. Generate Modul
+php artisan module:make Dashboard
+
+# 2. Buat Controller & Service
+php artisan module:make-controller DashboardController Dashboard
+# Buat DashboardService dan StatistikService secara manual
+
+# 3. Buat View
+# resources/views/index.blade.php
+```
+
+### Checklist ✅
+- [ ] Total dokumen ditampilkan
+- [ ] Total folder ditampilkan
+- [ ] Total pengguna ditampilkan
+- [ ] Storage terpakai ditampilkan
+- [ ] Dokumen per kategori (chart)
+- [ ] Aktivitas terbaru
+- [ ] Dokumen per bulan (chart)
+- [ ] Distribusi tipe file (chart)
+
+---
+
+## 📊 TIMELINE ESTIMASI
+
+```
+Minggu 1: Modul Inti (5 hari)
+Minggu 2: Modul Dokumen (3 hari) + Modul PerjanjianKinerja (mulai 2 hari)
+Minggu 3: Modul PerjanjianKinerja (selesai 4 hari) + Modul Penugasan (mulai 1 hari)
+Minggu 4: Modul Penugasan (selesai 6 hari)
+Minggu 5: Modul Evaluasi (5 hari)
+Minggu 6: Modul Sistem (3 hari) + Modul Dashboard (2 hari)
+
+TOTAL: ± 6 Minggu (30 hari kerja)
+```
+
+---
+
+## 🎯 TIPS PENGEMBANGAN
+
+### 1. Testing
+- Buat unit test untuk setiap Service
+- Buat feature test untuk setiap Controller
+- Test relasi database setelah migration
+
+### 2. Git Workflow
+```bash
+# Buat branch per modul
+git checkout -b feature/modul-inti
+git checkout -b feature/modul-dokumen
+# dst...
+
+# Merge setelah testing lengkap
+git checkout main
+git merge feature/modul-inti
+```
+
+### 3. Documentation
+- Dokumentasi API endpoint setiap modul
+- Dokumentasi relasi database
+- Dokumentasi business logic di Service
+
+### 4. Code Quality
+- Follow PSR-12 coding standards
+- Gunakan Repository Pattern
+- Pisahkan business logic ke Service Layer
+- Validation di Request classes
+
+---
+
+## ⚠️ CRITICAL NOTES
+
+1. **JANGAN skip modul Inti** - Semua modul bergantung padanya
+2. **URUTAN migrasi penting** - FK harus dibuat setelah parent table
+3. **Test setiap modul** sebelum lanjut ke modul berikutnya
+4. **Backup database** sebelum migrate modul baru
+5. **Commit per fitur** bukan per modul untuk rollback mudah
+
+## 📋 RINGKASAN TOTAL
+
+| Modul | Jumlah Tabel | Status |
+|-------|--------------|--------|
+| Inti | 4 | ✅ |
+| Dokumen | 2 | ✅ |
+| PerjanjianKinerja | 9 | ✅ |
+| Penugasan | 9 | ✅ |
+| Evaluasi | 4 | ✅ |
+| Sistem | 4 | ✅ |
+| Dashboard | 0 (read-only) | ✅ |
+| **TOTAL** | **32 tabel** | **✅ 100% SESUAI** |
+
+---
+
+## 🔗 VALIDASI RELASI ANTAR MODUL
+
+### Foreign Key Dependencies:
+
+```
+✅ DOC_DOKUMEN.bidang_id → MASTER_BIDANG.id (Inti)
+✅ DOC_DOKUMEN.uploaded_by → MASTER_PEGAWAI.id (Inti)
+
+✅ PK_TEMPLATE.jabatan_id → MASTER_JABATAN.id (Inti)
+✅ PK_PERJANJIAN_KINERJA.pegawai_id → MASTER_PEGAWAI.id (Inti)
+✅ PK_PERJANJIAN_KINERJA.atasan_id → MASTER_PEGAWAI.id (Inti)
+✅ PK_DOKUMEN.dokumen_id → DOC_DOKUMEN.id (Dokumen)
+
+✅ KNJ_TUGAS_POKOK.perjanjian_kinerja_id → PK_PERJANJIAN_KINERJA.id (PerjanjianKinerja)
+✅ KNJ_TUGAS_POKOK.pegawai_id → MASTER_PEGAWAI.id (Inti)
+✅ KNJ_TUGAS_POKOK.dokumen_lampiran_id → DOC_DOKUMEN.id (Dokumen)
+
+✅ KNJ_TUGAS_HARIAN.tugas_pokok_id → KNJ_TUGAS_POKOK.id (Penugasan)
+✅ KNJ_TUGAS_HARIAN.dokumen_lampiran_id → DOC_DOKUMEN.id (Dokumen)
+
+✅ KNJ_PROGRESS.dokumen_bukti_id → DOC_DOKUMEN.id (Dokumen)
+
+✅ KNJ_VALIDASI.validator_id → MASTER_PEGAWAI.id (Inti)
+
+✅ KNJ_NILAI_BULANAN.pegawai_id → MASTER_PEGAWAI.id (Inti)
+✅ KNJ_NILAI_TAHUNAN.pegawai_id → MASTER_PEGAWAI.id (Inti)
+
+✅ SYS_NOTIFIKASI.pegawai_id → MASTER_PEGAWAI.id (Inti)
+✅ SYS_AUDIT_LOG.user_id → MASTER_PEGAWAI.id (Inti)
+```
+
+**Semua relasi sudah terpetakan dengan benar! ✅**
+
+---
+
+## 🎯 KESIMPULAN
+
+### ✅ SUDAH SESUAI 100% DENGAN ERD
+
+**Struktur modul yang dibuat:**
+1. ✅ Mencakup **SEMUA 32 tabel** dari ERD
+2. ✅ Pengelompokan modul **logis dan sesuai domain**
+3. ✅ Dependency antar modul **sudah benar**
+4. ✅ Urutan pengembangan **sudah optimal**
+5. ✅ Tidak ada tabel yang **terlewat**
+6. ✅ Tidak ada tabel yang **duplikat**
+7. ✅ Relasi FK antar modul **sudah tepat**
+
+---
+
+## 🚀 SIAP UNTUK DEVELOPMENT!
+
+Struktur modul ini sudah sempurna dan siap diimplementasikan. Anda bisa mulai dengan:
+
+```bash
+# Step 1: Install Laravel Modules
+composer require nwidart/laravel-modules
+
+# Step 2: Generate Modul Inti (MULAI DI SINI!)
+php artisan module:make Inti
+
+# Step 3: Lanjut ke Modul Dokumen
+php artisan module:make Dokumen
+
+# dst...
+```
+
+---
+
+## 📝 CATATAN TAMBAHAN
+
+### Kenapa 7 Modul bukan 6?
+- **Dashboard** dipisah karena bersifat read-only dan agregasi data
+- Memudahkan pengembangan UI/UX tersendiri
+- Bisa dikembangkan oleh tim frontend secara independen
+
+### Apakah bisa digabung?
+Bisa, tapi **TIDAK DISARANKAN** karena:
+- Modul akan terlalu besar dan susah di-maintain
+- Violates Single Responsibility Principle
+- Tim tidak bisa kerja paralel
+- Testing akan lebih kompleks
+
+**Struktur 7 modul ini adalah OPTIMAL! ✅**

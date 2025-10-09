@@ -1,0 +1,750 @@
+===============================================
+PANDUAN LENGKAP CONVENTIONAL COMMITS
+===============================================
+Referensi: https://www.conventionalcommits.org/
+Versi: 1.0.0
+Update: 2024
+
+===============================================
+1. DAFTAR COMMIT TYPES
+===============================================
+
+Type        | Kegunaan                                  | Emoji | Breaking
+------------|-------------------------------------------|-------|----------
+feat        | Fitur baru                                | ✨     | No
+fix         | Perbaikan bug                             | 🐛     | No
+docs        | Perubahan dokumentasi                     | 📝     | No
+style       | Format/kode (tidak memengaruhi logika)    | 💄     | No
+refactor    | Refactor kode (tanpa ubah perilaku)       | ♻️     | No
+perf        | Peningkatan performa                      | ⚡     | No
+test        | Menambah/memperbaiki test                 | ✅     | No
+build       | Build system atau dependencies            | 🔧     | No
+ci          | CI configuration files dan scripts        | 👷     | No
+chore       | Maintenance dan tugas rutin               | 🔨     | No
+revert      | Membatalkan commit sebelumnya             | ⏪     | No
+security    | Perbaikan keamanan                        | 🔒     | Maybe
+deps        | Update dependencies                       | ⬆️     | Maybe
+config      | Perubahan konfigurasi                     | ⚙️     | Maybe
+init        | Initial commit                            | 🎉     | No
+release     | Release version baru                      | 🚀     | Maybe
+hotfix      | Critical hotfix                           | 🚑     | Maybe
+wip         | Work in progress (hindari di main)        | 🚧     | No
+merge       | Merge branches                            | 🔀     | No
+i18n        | Internationalization                      | 🌐     | No
+a11y        | Accessibility improvements                | ♿     | No
+seo         | SEO improvements                          | 🔍     | No
+db          | Database related                          | 🗃️     | Maybe
+api         | API related                               | 🔌     | Maybe
+ui          | UI/UX improvements                        | 🎨     | No
+
+===============================================
+2. PENJELASAN DETAIL SETIAP TYPE
+===============================================
+
+✨ feat (Feature)
+------------------
+Menambahkan fitur atau fungsionalitas baru ke aplikasi.
+
+Kapan digunakan:
+- Menambah endpoint API baru
+- Membuat halaman baru
+- Menambah fitur dalam form
+- Implementasi business logic baru
+
+Contoh:
+feat(auth): add social login with Google
+feat(dokumen): implement document search filter
+feat(kinerja): add monthly performance report generator
+feat(api): create REST endpoint for file upload
+feat(dashboard): add real-time statistics widget
+
+🐛 fix (Bug Fix)
+-----------------
+Memperbaiki bug atau error dalam aplikasi.
+
+Kapan digunakan:
+- Memperbaiki crash
+- Mengatasi error validation
+- Fix memory leak
+- Perbaiki logic error
+- Resolve UI/UX issues
+
+Contoh:
+fix(login): correct password validation logic
+fix(dokumen): resolve file upload size limit issue
+fix(kinerja): fix calculation error in performance scoring
+fix(api): handle null pointer exception in user service
+fix(ui): correct button alignment on mobile view
+
+📝 docs (Documentation)
+------------------------
+Perubahan pada dokumentasi saja, tidak ada kode yang berubah.
+
+Kapan digunakan:
+- Update README
+- Menambah komentar kode
+- Update API documentation
+- Tambah inline docs
+- Update CHANGELOG
+
+Contoh:
+docs(readme): add installation instructions
+docs(api): update endpoint documentation
+docs(contributing): add code review guidelines
+docs(erd): update database schema diagram
+docs(modules): add module architecture explanation
+
+💄 style (Style)
+-----------------
+Perubahan yang tidak memengaruhi arti kode (whitespace, formatting, semicolon, dll).
+
+Kapan digunakan:
+- Fix indentation
+- Remove trailing spaces
+- Format code dengan prettier
+- Reorder imports
+- Fix linting errors
+
+Contoh:
+style(app): fix code indentation
+style(controller): format code with PSR-12 standard
+style(views): organize blade template structure
+style(js): apply eslint rules
+style(css): optimize stylesheet organization
+
+♻️ refactor (Refactoring)
+--------------------------
+Perubahan kode yang tidak menambah fitur atau fix bug, hanya memperbaiki struktur.
+
+Kapan digunakan:
+- Optimize algorithm
+- Simplify logic
+- Remove duplicate code
+- Improve code readability
+- Apply design patterns
+
+Contoh:
+refactor(user-service): optimize database queries
+refactor(auth): extract validation to separate class
+refactor(controller): apply repository pattern
+refactor(helper): simplify date formatting function
+refactor(model): move business logic to service layer
+
+⚡ perf (Performance)
+----------------------
+Perubahan kode yang meningkatkan performa aplikasi.
+
+Kapan digunakan:
+- Reduce query time
+- Optimize memory usage
+- Implement caching
+- Reduce bundle size
+- Lazy loading
+
+Contoh:
+perf(dokumen): add Redis cache for document list
+perf(api): implement lazy loading for large datasets
+perf(query): optimize N+1 query problem
+perf(images): add image compression on upload
+perf(frontend): reduce JavaScript bundle size
+
+✅ test (Testing)
+------------------
+Menambah atau memperbaiki test cases.
+
+Kapan digunakan:
+- Add unit test
+- Add integration test
+- Add feature test
+- Fix failing test
+- Improve test coverage
+
+Contoh:
+test(auth): add unit tests for login service
+test(dokumen): add feature tests for upload
+test(api): add integration tests for REST endpoints
+test(validation): add test cases for form validation
+test(e2e): add end-to-end test for user flow
+
+🔧 build (Build)
+-----------------
+Perubahan yang memengaruhi build system atau external dependencies.
+
+Kapan digunakan:
+- Update composer.json
+- Change webpack config
+- Update npm packages
+- Modify docker config
+- Change build scripts
+
+Contoh:
+build(composer): update Laravel to version 11
+build(npm): upgrade Vue.js dependencies
+build(docker): optimize Docker image size
+build(webpack): add production build optimization
+build(deps): update all security patches
+
+👷 ci (Continuous Integration)
+--------------------------------
+Perubahan pada CI/CD configuration dan scripts.
+
+Kapan digunakan:
+- Update GitHub Actions
+- Modify GitLab CI
+- Change deployment script
+- Update testing pipeline
+- Add automated checks
+
+Contoh:
+ci(actions): add automated testing workflow
+ci(deploy): update production deployment script
+ci(lint): add code quality checks in pipeline
+ci(security): add dependency vulnerability scanning
+ci(coverage): add test coverage reporting
+
+🔨 chore (Chore)
+-----------------
+Maintenance tasks yang tidak mengubah src atau test files.
+
+Kapan digunakan:
+- Update .gitignore
+- Modify .env.example
+- Update editor config
+- Change folder structure
+- Cleanup unused files
+
+Contoh:
+chore(gitignore): add IDE files to gitignore
+chore(env): update environment variables template
+chore(cleanup): remove unused dependencies
+chore(config): update editor configuration
+chore(assets): optimize static assets
+
+⏪ revert (Revert)
+-------------------
+Membatalkan commit sebelumnya.
+
+Kapan digunakan:
+- Rollback commit yang bermasalah
+- Undo perubahan yang tidak diinginkan
+
+Contoh:
+revert: revert "feat(auth): add social login"
+
+This reverts commit abc123def456.
+Reason: Social login causing authentication loop
+
+🔒 security (Security)
+-----------------------
+Perbaikan yang berkaitan dengan keamanan.
+
+Kapan digunakan:
+- Fix security vulnerability
+- Update dependencies dengan CVE
+- Implement security best practices
+- Add XSS/CSRF protection
+
+Contoh:
+security(auth): fix SQL injection vulnerability
+security(api): add rate limiting to prevent DDoS
+security(cors): configure proper CORS headers
+security(deps): patch critical security vulnerabilities
+security(session): implement secure session handling
+
+===============================================
+3. STRUKTUR COMMIT MESSAGE
+===============================================
+
+Format Lengkap:
+---------------
+<type>(<scope>): <subject>
+<BLANK LINE>
+<body>
+<BLANK LINE>
+<footer>
+
+Komponen:
+---------
+1. type: Wajib (pilih dari daftar type di atas)
+2. scope: Opsional (modul/bagian yang terpengaruh)
+3. subject: Wajib (deskripsi singkat, max 50 karakter)
+4. body: Opsional (penjelasan detail perubahan)
+5. footer: Opsional (references, breaking changes)
+
+Breaking Changes:
+-----------------
+Jika commit mengandung breaking changes, tambahkan:
+- "!" setelah type/scope: feat(api)!: change response format
+- BREAKING CHANGE: di footer dengan penjelasan detail
+
+Contoh dengan Breaking Change:
+-------------------------------
+feat(api)!: change user response format
+
+Change user API response from array to object format
+to support pagination and metadata.
+
+BREAKING CHANGE: 
+GET /api/users now returns:
+{
+  "data": [...],
+  "meta": {...}
+}
+
+Previously returned: [...]
+
+Migration guide: Update client code to access users via response.data
+
+Closes #123
+Refs #45
+
+===============================================
+4. SCOPE (CAKUPAN)
+===============================================
+
+Untuk Modul Laravel:
+--------------------
+- inti: Modul Inti (master data)
+- dokumen: Modul Dokumen
+- pk: Modul Perjanjian Kinerja
+- penugasan: Modul Penugasan
+- evaluasi: Modul Evaluasi
+- sistem: Modul Sistem
+- dashboard: Modul Dashboard
+
+Untuk Layer Aplikasi:
+----------------------
+- model: Eloquent models
+- controller: Controllers
+- service: Service layer
+- repository: Repositories
+- view: Blade templates
+- middleware: Middlewares
+- request: Form requests
+- migration: Database migrations
+- seeder: Database seeders
+- route: Route definitions
+- config: Configuration files
+- helper: Helper functions
+- api: API endpoints
+- auth: Authentication
+- validation: Validation rules
+
+Untuk Fitur:
+------------
+- login: Login functionality
+- register: Registration
+- upload: File upload
+- search: Search feature
+- filter: Filtering
+- export: Export functionality
+- import: Import functionality
+- notification: Notifications
+- email: Email system
+- report: Reporting
+
+===============================================
+5. SUBJECT (JUDUL)
+===============================================
+
+Aturan:
+-------
+✅ Gunakan imperative, present tense: "add" bukan "added" atau "adds"
+✅ Jangan gunakan huruf kapital di awal
+✅ Jangan gunakan titik (.) di akhir
+✅ Maksimal 50 karakter
+✅ Ringkas tapi deskriptif
+
+Bad Examples:
+-------------
+❌ feat(auth): Added new login feature
+❌ fix(api): Fixed the bug.
+❌ docs(readme): UPDATE README FILE
+❌ feat(user): This commit adds a new user management system with CRUD operations
+
+Good Examples:
+--------------
+✅ feat(auth): add social login feature
+✅ fix(api): resolve null pointer exception
+✅ docs(readme): update installation steps
+✅ feat(user): add user CRUD operations
+
+===============================================
+6. BODY (ISI PESAN)
+===============================================
+
+Aturan:
+-------
+- Gunakan untuk menjelaskan "apa" dan "mengapa", bukan "bagaimana"
+- Wrap text di 72 karakter
+- Pisahkan dari subject dengan blank line
+- Boleh menggunakan bullet points
+- Jelaskan konteks dan motivasi perubahan
+
+Template:
+---------
+- What: Apa yang diubah
+- Why: Mengapa perubahan ini perlu
+- Impact: Dampak dari perubahan
+- Alternative: Alternatif yang dipertimbangkan (opsional)
+
+Contoh:
+-------
+feat(dokumen): implement document version control
+
+Add versioning system to track document changes over time.
+Each upload creates a new version while preserving history.
+
+Features implemented:
+- Auto-increment version number
+- Version comparison
+- Rollback to previous version
+- Version metadata (who, when, what)
+
+This resolves user requests for document audit trail
+and supports compliance requirements.
+
+Impact:
+- Database: adds doc_file.version column
+- Storage: organizes files by version
+- API: new endpoints for version management
+
+Technical decisions:
+- Used soft delete for version management
+- Implemented file deduplication using hash
+- Limited to 50 versions per document
+
+===============================================
+7. FOOTER (CATATAN KAKI)
+===============================================
+
+Digunakan untuk:
+----------------
+1. Referensi issue/ticket
+2. Breaking changes
+3. Co-authors
+4. Reviewer acknowledgments
+
+Format:
+-------
+Refs: #123, #456
+Closes: #789
+Fixes: #111
+BREAKING CHANGE: detail perubahan
+Co-authored-by: Name <email@example.com>
+Reviewed-by: Name <email@example.com>
+
+Contoh:
+-------
+feat(auth): add JWT authentication
+
+Implement JSON Web Token authentication for API.
+Replace session-based auth with stateless JWT.
+
+BREAKING CHANGE:
+All API endpoints now require Authorization header.
+Previous cookie-based authentication is deprecated.
+
+Migration:
+1. Update client to include JWT in headers
+2. Request new token via /api/auth/login
+3. Remove old session handling code
+
+Refs: #234, #235
+Closes: #123
+Co-authored-by: John Doe <john@example.com>
+
+===============================================
+8. BEST PRACTICES
+===============================================
+
+Commit Frequency:
+-----------------
+✅ Commit sering dengan perubahan kecil dan terfokus
+✅ Satu commit = satu logical change
+❌ Jangan campurkan multiple features dalam 1 commit
+❌ Jangan commit incomplete work ke main branch
+
+Commit Message:
+---------------
+✅ Tulis commit message seperti menulis email profesional
+✅ Jelaskan "why" lebih penting daripada "what"
+✅ Gunakan bahasa yang jelas dan konsisten
+✅ Hindari commit message: "fix", "update", "change" tanpa detail
+
+Code Review:
+------------
+✅ Review commit history sebelum push
+✅ Squash commits yang tidak perlu sebelum merge
+✅ Rebase untuk clean history
+✅ Gunakan interactive rebase untuk edit history
+
+Branch Naming:
+--------------
+✅ feature/add-user-authentication
+✅ fix/login-validation-error
+✅ docs/update-api-documentation
+✅ refactor/optimize-queries
+✅ hotfix/critical-security-patch
+
+Git Workflow:
+-------------
+1. Branch dari main/develop
+2. Buat feature branch dengan naming convention
+3. Commit dengan conventional commits
+4. Push dan create pull request
+5. Code review dan discussion
+6. Squash/rebase jika perlu
+7. Merge ke main/develop
+
+===============================================
+9. CONTOH LENGKAP PER MODUL
+===============================================
+
+Modul Inti:
+-----------
+feat(inti): add employee management CRUD
+fix(inti): resolve duplicate NIP validation
+test(inti): add unit tests for employee service
+refactor(inti): optimize employee query performance
+docs(inti): update entity relationship diagram
+
+Modul Dokumen:
+--------------
+feat(dokumen): implement document tagging system
+fix(dokumen): resolve file upload timeout issue
+perf(dokumen): add document list pagination
+security(dokumen): add file type validation
+test(dokumen): add upload feature tests
+
+Modul Perjanjian Kinerja:
+-------------------------
+feat(pk): add template builder for performance agreement
+fix(pk): correct performance calculation formula
+refactor(pk): extract PDF generator to service
+test(pk): add integration tests for agreement creation
+docs(pk): document PDF generation process
+
+Modul Penugasan:
+----------------
+feat(penugasan): implement task delegation feature
+fix(penugasan): resolve workload calculation bug
+perf(penugasan): optimize progress tracking query
+test(penugasan): add task assignment tests
+ui(penugasan): improve task list mobile responsiveness
+
+Modul Evaluasi:
+---------------
+feat(evaluasi): add automated monthly scoring
+fix(evaluasi): correct penalty calculation logic
+refactor(evaluasi): simplify validation service
+test(evaluasi): add scoring calculation tests
+docs(evaluasi): update evaluation process guide
+
+Modul Sistem:
+-------------
+feat(sistem): add real-time notification system
+fix(sistem): resolve audit log memory issue
+perf(sistem): implement notification queue
+security(sistem): add audit log encryption
+config(sistem): update notification preferences
+
+Modul Dashboard:
+----------------
+feat(dashboard): add performance analytics chart
+fix(dashboard): resolve data refresh issue
+perf(dashboard): implement data caching
+ui(dashboard): improve chart responsiveness
+test(dashboard): add statistics calculation tests
+
+===============================================
+10. TOOLS & AUTOMATION
+===============================================
+
+Commitizen:
+-----------
+npm install -g commitizen
+commitizen init cz-conventional-changelog --save-dev --save-exact
+
+Usage:
+git cz
+
+Commitlint:
+-----------
+npm install --save-dev @commitlint/cli @commitlint/config-conventional
+
+commitlint.config.js:
+module.exports = {
+  extends: ['@commitlint/config-conventional']
+};
+
+Husky (Git Hooks):
+------------------
+npm install --save-dev husky
+
+.husky/commit-msg:
+#!/bin/sh
+npx --no-install commitlint --edit $1
+
+Semantic Release:
+-----------------
+npm install --save-dev semantic-release
+
+Automatically:
+- Determine version bump
+- Generate changelog
+- Create GitHub release
+
+Git Alias:
+----------
+git config --global alias.cm 'commit -m'
+git config --global alias.cma 'commit --amend'
+git config --global alias.co 'checkout'
+git config --global alias.br 'branch'
+git config --global alias.st 'status'
+
+Usage:
+git cm "feat(auth): add login feature"
+
+===============================================
+11. TROUBLESHOOTING
+===============================================
+
+Q: Commit sudah push, perlu ubah message?
+A: Hindari! Jika diperlukan:
+   git commit --amend
+   git push --force-with-lease (hati-hati!)
+
+Q: Lupa scope atau salah type?
+A: git rebase -i HEAD~n (untuk edit n commit terakhir)
+
+Q: Merge conflict di commit message?
+A: git rebase --continue setelah resolve conflict
+
+Q: Banyak WIP commits, ingin clean up?
+A: git rebase -i HEAD~n, pilih 'squash' untuk gabung commits
+
+Q: Perlu revert commit tanpa menghapus history?
+A: git revert <commit-hash>
+
+===============================================
+12. CHECKLIST SEBELUM COMMIT
+===============================================
+
+Sebelum menulis commit message:
+□ Kode sudah ditest?
+□ Tidak ada console.log() atau debug code?
+□ Formatting sudah benar?
+□ Tidak ada unused imports?
+□ Commit hanya contains logical change?
+□ Breaking changes sudah didokumentasi?
+□ Migration guide disediakan (jika perlu)?
+
+Commit message quality:
+□ Type sudah benar?
+□ Scope sudah sesuai?
+□ Subject clear dan descriptive?
+□ Body menjelaskan "why"?
+□ Footer contains references?
+□ Grammar dan spelling correct?
+□ Max 50 chars untuk subject?
+□ Imperative mood untuk subject?
+
+===============================================
+13. REFERENSI & RESOURCES
+===============================================
+
+Official:
+---------
+- Conventional Commits: https://www.conventionalcommits.org/
+- Semantic Versioning: https://semver.org/
+- Keep a Changelog: https://keepachangelog.com/
+
+Tools:
+------
+- Commitizen: https://github.com/commitizen/cz-cli
+- Commitlint: https://commitlint.js.org/
+- Husky: https://typicode.github.io/husky/
+- Semantic Release: https://semantic-release.gitbook.io/
+
+Articles:
+---------
+- How to Write Good Commit Messages
+- Git Best Practices
+- Clean Git History
+
+Books:
+------
+- Pro Git by Scott Chacon
+- Git Pocket Guide by Richard E. Silverman
+
+===============================================
+TEMPLATE COMMIT MESSAGE
+===============================================
+
+<type>(<scope>): <subject>
+
+<Jelaskan apa yang diubah dan mengapa perubahan ini diperlukan>
+
+<Details tambahan, bullet points jika perlu>
+- Point 1
+- Point 2
+- Point 3
+
+<Technical decisions atau trade-offs jika ada>
+
+<Impact dan side effects>
+
+Refs: #<issue-number>
+Closes: #<issue-number>
+BREAKING CHANGE: <jika ada>
+
+===============================================
+CONTOH COMMIT LENGKAP
+===============================================
+
+feat(dokumen): implement advanced document search
+
+Add full-text search capability with multiple filters.
+Users can now search documents by:
+- Title and content
+- Date range
+- Category and tags
+- File type
+- Uploader
+
+Technical implementation:
+- Integrated Laravel Scout with Meilisearch
+- Added search indexes to documents table
+- Implemented faceted search for filters
+- Added search result highlighting
+
+Performance considerations:
+- Search queries cached for 5 minutes
+- Index updates queued for async processing
+- Added pagination for large result sets
+
+Database changes:
+- Added fulltext index on doc_dokumen(judul, deskripsi)
+- Added search_metadata JSON column
+- Added last_indexed_at timestamp
+
+Migration guide:
+1. Run: php artisan migrate
+2. Index existing documents: php artisan scout:import "Modules\Dokumen\Entities\Dokumen"
+3. Configure Meilisearch in .env
+
+Impact:
+- Improves user experience significantly
+- Reduces time to find documents by 80%
+- Enables advanced filtering capabilities
+- Search results displayed in <100ms
+
+Refs: #456, #478
+Closes: #123
+Co-authored-by: Jane Smith <jane@example.com>
+Reviewed-by: John Doe <john@example.com>
+
+===============================================
+END OF DOCUMENT
+===============================================
