@@ -25,14 +25,14 @@ class Kategori extends Model
     // Relationships
     public function jenis()
     {
-        return $this->hasMany(Jenis::class, 'kategori_id');
+        return $this->hasMany(JenisDokumen::class, 'kategori_id');
     }
     
     public function dokumen()
     {
         return $this->hasManyThrough(
             Dokumen::class,
-            Jenis::class,
+            JenisDokumen::class,
             'kategori_id', // Foreign key on Jenis table
             'jenis_id',    // Foreign key on Dokumen table
             'id',          // Local key on Kategori table

@@ -3,6 +3,7 @@
 namespace Modules\Dokumen\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Modules\Dokumen\Database\Seeders\DocJenisSeeder;
 
 class DokumenDatabaseSeeder extends Seeder
 {
@@ -11,6 +12,9 @@ class DokumenDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            KategoriDokumenSeeder::class,
+            DocJenisSeeder::class,
+        ]);
     }
 }
