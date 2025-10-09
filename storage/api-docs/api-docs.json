@@ -1,0 +1,1368 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "TERDEPAN API Documentation",
+        "description": "Dokumentasi API Sistem TERDEPAN (e-Kinerja BAPPEDA)",
+        "contact": {
+            "email": "dev@terdepan.local"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api/v1",
+            "description": "API v1"
+        }
+    ],
+    "paths": {
+        "/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user (MasterPegawai) menggunakan NIP atau NIK",
+                "operationId": "a3674f0652b564b652bd25c2326691d7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nomor_identitas",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "nomor_identitas": {
+                                        "type": "string",
+                                        "example": "197001011990011001"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login sukses, return token"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "delete": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout user (MasterPegawai)",
+                "operationId": "77804f17cec28bcf3a347376362b98a4",
+                "responses": {
+                    "200": {
+                        "description": "Login sukses, return token"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/master-bidang": {
+            "get": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "List semua bidang",
+                "operationId": "1e58580d88d989e330945619bc3805db",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Tambah bidang",
+                "description": "Menambah data bidang baru.",
+                "operationId": "dd8e1522f9b20afffb9959731ff993e8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "kode",
+                                    "nama"
+                                ],
+                                "properties": {
+                                    "kode": {
+                                        "type": "string",
+                                        "example": "BID001"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Bidang Perencanaan Ekonomi"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Deskripsi bidang"
+                                    },
+                                    "warna": {
+                                        "type": "string",
+                                        "example": "#FF0000"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bidang berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "BID001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Bidang Perencanaan Ekonomi"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "example": "Deskripsi bidang"
+                                                },
+                                                "warna": {
+                                                    "type": "string",
+                                                    "example": "#FF0000"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/master-bidang/{id}": {
+            "get": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Detail bidang",
+                "description": "Mengambil detail data bidang beserta relasi pegawai.",
+                "operationId": "aad5c48c232ce1cbbfa2df39189480c3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID bidang",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail bidang"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "BID001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Bidang Perencanaan Ekonomi"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "example": "Deskripsi bidang"
+                                                },
+                                                "warna": {
+                                                    "type": "string",
+                                                    "example": "#FF0000"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "pegawai": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Bidang tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Update bidang",
+                "description": "Mengupdate data bidang berdasarkan ID.",
+                "operationId": "2c7423dc0054cbea83242f7097fde377",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID bidang",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Bidang Perencanaan Ekonomi"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Deskripsi bidang"
+                                    },
+                                    "warna": {
+                                        "type": "string",
+                                        "example": "#FF0000"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Bidang berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "BID001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Bidang Perencanaan Ekonomi"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "example": "Deskripsi bidang"
+                                                },
+                                                "warna": {
+                                                    "type": "string",
+                                                    "example": "#FF0000"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Bidang tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "MasterBidang"
+                ],
+                "summary": "Hapus bidang",
+                "operationId": "75a26e6583ce917b5ef4fb0d5586b62a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/master-jabatan": {
+            "get": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "List semua jabatan",
+                "operationId": "fc26eedc69e2c22b341612c61fb21154",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Tambah jabatan",
+                "description": "Menambah data jabatan baru.",
+                "operationId": "727ce5cbf9f1551cd4c39573c5e6a85f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "kode",
+                                    "nama",
+                                    "level"
+                                ],
+                                "properties": {
+                                    "kode": {
+                                        "type": "string",
+                                        "example": "JAB001"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Kepala Bidang"
+                                    },
+                                    "level": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "is_struktural": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "bebas_nilai_kinerja": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Jabatan berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "JAB001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Kepala Bidang"
+                                                },
+                                                "level": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "is_struktural": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "bebas_nilai_kinerja": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/master-jabatan/{id}": {
+            "get": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Detail jabatan",
+                "description": "Mengambil detail data jabatan beserta relasi pegawai.",
+                "operationId": "8c23f89d2172f5f696d769ace0fc7a59",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID jabatan",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail jabatan"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "JAB001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Kepala Bidang"
+                                                },
+                                                "level": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "is_struktural": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "bebas_nilai_kinerja": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "pegawai": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Jabatan tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Update jabatan",
+                "description": "Mengupdate data jabatan berdasarkan ID.",
+                "operationId": "e817a90706c422a34f70e2bb63a57b4a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID jabatan",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Kepala Bidang"
+                                    },
+                                    "level": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "is_struktural": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "bebas_nilai_kinerja": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Jabatan berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "kode": {
+                                                    "type": "string",
+                                                    "example": "JAB001"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Kepala Bidang"
+                                                },
+                                                "level": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "is_struktural": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "bebas_nilai_kinerja": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Jabatan tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "MasterJabatan"
+                ],
+                "summary": "Hapus jabatan",
+                "operationId": "349b1cb33933369a1806e67f60306e8d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/master-pegawai": {
+            "get": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "List semua pegawai",
+                "operationId": "454a6cd93ceba7ec850bc2ad149612d6",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Tambah pegawai",
+                "description": "Menambah data pegawai baru.",
+                "operationId": "e962a82bfc2a9dafe1f7abe25ca9865f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nomor_identitas",
+                                    "tipe_identitas",
+                                    "nama",
+                                    "jabatan_id",
+                                    "bidang_id",
+                                    "jenis_kelamin",
+                                    "status_kepegawaian",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "nomor_identitas": {
+                                        "type": "string",
+                                        "example": "197812312005011001"
+                                    },
+                                    "tipe_identitas": {
+                                        "type": "string",
+                                        "example": "NIP"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Ahmad Pegawai"
+                                    },
+                                    "jabatan_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "bidang_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jenis_kelamin": {
+                                        "type": "string",
+                                        "enum": [
+                                            "L",
+                                            "P"
+                                        ],
+                                        "example": "L"
+                                    },
+                                    "status_kepegawaian": {
+                                        "type": "string",
+                                        "example": "Kontrak"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "pegawai@email.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pegawai berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nomor_identitas": {
+                                                    "type": "string",
+                                                    "example": "197812312005011001"
+                                                },
+                                                "tipe_identitas": {
+                                                    "type": "string",
+                                                    "example": "NIP"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Pegawai"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "pegawai@email.com"
+                                                },
+                                                "jabatan_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/master-pegawai/{id}": {
+            "get": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Detail pegawai",
+                "description": "Mengambil detail data pegawai beserta relasi jabatan, bidang, atasan langsung, dan ttd digital.",
+                "operationId": "69b788b6a0770ff5bf8fd4c496073780",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID pegawai",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail pegawai"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nomor_identitas": {
+                                                    "type": "string",
+                                                    "example": "197812312005011001"
+                                                },
+                                                "tipe_identitas": {
+                                                    "type": "string",
+                                                    "example": "NIP"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Pegawai"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "pegawai@email.com"
+                                                },
+                                                "jabatan": {
+                                                    "type": "object"
+                                                },
+                                                "bidang": {
+                                                    "type": "object"
+                                                },
+                                                "atasanLangsung": {
+                                                    "type": "object"
+                                                },
+                                                "ttdDigital": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pegawai tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Update pegawai",
+                "description": "Mengupdate data pegawai berdasarkan ID. Hanya field yang aman diubah: nama, jabatan_id, bidang_id, jenis_kelamin, status_kepegawaian, email, no_telepon, pangkat, golongan, gelar_depan, gelar_belakang, tanggal_lahir, alamat, status_aktif, tanggal_masuk, tanggal_keluar, password.",
+                "operationId": "f0699a9fdf7622ad5500eeab66423725",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID pegawai",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Ahmad Pegawai"
+                                    },
+                                    "jabatan_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "bidang_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jenis_kelamin": {
+                                        "type": "string",
+                                        "enum": [
+                                            "L",
+                                            "P"
+                                        ],
+                                        "example": "L"
+                                    },
+                                    "status_kepegawaian": {
+                                        "type": "string",
+                                        "example": "Kontrak"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "pegawai@email.com"
+                                    },
+                                    "no_telepon": {
+                                        "type": "string",
+                                        "example": "08123456789"
+                                    },
+                                    "pangkat": {
+                                        "type": "string",
+                                        "example": "Penata"
+                                    },
+                                    "golongan": {
+                                        "type": "string",
+                                        "example": "III/a"
+                                    },
+                                    "gelar_depan": {
+                                        "type": "string",
+                                        "example": "Dr."
+                                    },
+                                    "gelar_belakang": {
+                                        "type": "string",
+                                        "example": "M.Si."
+                                    },
+                                    "tanggal_lahir": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1980-01-01"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jl. Contoh No. 1"
+                                    },
+                                    "status_aktif": {
+                                        "type": "string",
+                                        "example": "Aktif"
+                                    },
+                                    "tanggal_masuk": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2020-01-01"
+                                    },
+                                    "tanggal_keluar": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2030-01-01"
+                                    },
+                                    "atasan_langsung_id": {
+                                        "description": "ID pegawai atasan langsung",
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pegawai berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nomor_identitas": {
+                                                    "type": "string",
+                                                    "example": "197812312005011001"
+                                                },
+                                                "tipe_identitas": {
+                                                    "type": "string",
+                                                    "example": "NIP"
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Ahmad Pegawai"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "pegawai@email.com"
+                                                },
+                                                "jabatan_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pegawai tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "MasterPegawai"
+                ],
+                "summary": "Hapus pegawai",
+                "operationId": "f43c2809893bf90ca7b9827b5bb3d892",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/master-ttd-digital": {
+            "get": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "List semua TTD Digital",
+                "operationId": "4989bfd42dc7d3e345b9cf77839be6bf",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Tambah TTD Digital",
+                "operationId": "70f3f385ef65d3b3eb308f403a582454",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-ttd-digital/{id}": {
+            "get": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Detail TTD Digital",
+                "operationId": "6b8c0ad1b99a2c752d7cca52f1966c5c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Update TTD Digital",
+                "operationId": "e138ed4d507b9c868ebac24fa7360bb9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {}
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "MasterTtdDigital"
+                ],
+                "summary": "Hapus TTD Digital",
+                "operationId": "2a4b176170780c50781066b27ec4e8b9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "API Authentication"
+        },
+        {
+            "name": "MasterBidang",
+            "description": "API Master Bidang"
+        },
+        {
+            "name": "MasterJabatan",
+            "description": "API Master Jabatan"
+        },
+        {
+            "name": "MasterPegawai",
+            "description": "API Master Pegawai"
+        },
+        {
+            "name": "MasterTtdDigital",
+            "description": "API Master TTD Digital"
+        }
+    ]
+}

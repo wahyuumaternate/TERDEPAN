@@ -79,12 +79,15 @@ Sistem TERDEPAN telah disesuaikan dengan struktur organisasi BAPPEDA Maluku Utar
 - **Pelaksana**: Pelaksanaan tugas operasional
 - **Tenaga Teknis**: Support lintas bidang, bebas dari penilaian kinerja
 
-## Teknologi
 
-- **Backend**: Laravel 10 (PHP Framework)
+## Teknologi & Package Utama
+
+- **Backend**: Laravel 10/11 (PHP Framework)
 - **Mobile App**: Flutter (Cross-platform)
-- **Database**: MySQL
-- **Authentication**: JWT dengan NIP/NIK
+- **Database**: MySQL / PostgreSQL
+- **Authentication**: Laravel Sanctum (API Token, Bearer, NIP/NIK)
+- **Role & Permission**: Spatie Laravel Permission
+- **API Documentation**: L5-Swagger (OpenAPI/Swagger UI)
 - **Notifikasi**: Firebase Cloud Messaging, Email
 - **Integrasi**: SIMPEG untuk data pegawai
 
@@ -102,41 +105,80 @@ Sistem TERDEPAN telah disesuaikan dengan struktur organisasi BAPPEDA Maluku Utar
 - iOS 12 atau lebih tinggi
 - Akses kamera untuk dokumentasi progres
 
-## Instalasi
+git clone https://github.com/wahyuumaternate/TERDEPAN.git
+
+## Instalasi & Konfigurasi Step-by-Step
 
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone https://github.com/wahyuumaternate/TERDEPAN.git
 cd terdepan
 
-# Install dependencies
+# 2. Install dependencies
 composer install
 npm install
 npm run build
 
-# Set environment variables
+# 3. Copy environment file & generate key
 cp .env.example .env
 php artisan key:generate
 
-# Migrate database
+# 4. Konfigurasi database di file .env
+# (Pastikan DB_DATABASE, DB_USERNAME, DB_PASSWORD sudah sesuai)
+
+# 5. Jalankan migrasi database
 php artisan migrate
 
-# Seed data awal
+# 6. Jalankan seeder data awal (roles, permissions, user, jabatan, bidang, dsb)
 php artisan db:seed
 
-# Start server
+# 7. Install & Konfigurasi Package Utama
+
+# a. Laravel Sanctum (API Authentication)
+composer require laravel/sanctum
+php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+php artisan migrate
+# Tambahkan middleware 'auth:sanctum' pada route API yang membutuhkan autentikasi
+# Pastikan config/auth.php guard 'api' menggunakan driver 'sanctum'
+
+# b. Spatie Laravel Permission (Role & Permission)
+composer require spatie/laravel-permission
+php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider"
+php artisan migrate
+# Tambahkan trait HasRoles pada model User/MasterPegawai
+# Atur permission/role di seeder atau via artisan tinker
+
+# c. L5-Swagger (API Documentation)
+composer require "darkaonline/l5-swagger"
+php artisan vendor:publish --provider "L5Swagger\L5SwaggerServiceProvider"
+# Konfigurasi di config/l5-swagger.php (opsional)
+# Tambahkan anotasi OpenAPI di controller (lihat contoh di AuthController, SwaggerController)
+# Generate dokumentasi:
+php artisan l5-swagger:generate
+# Akses dokumentasi di: http://localhost:8000/api/documentation
+
+# 8. Jalankan server
 php artisan serve
 ```
 
+### Catatan Penting
+- Semua endpoint API menggunakan format response: `{status, message, data}`
+- Error handling sudah diimplementasikan di semua controller utama (try/catch)
+- Login API menggunakan NIP/NIK dan mengembalikan token Sanctum
+- Role & permission sudah disesuaikan dengan kebutuhan organisasi
+- Dokumentasi API dapat diakses via Swagger UI setelah generate
+
+
+
 ## Panduan Penggunaan
 
-
-Beberapa panduan cepat:
-1. Login menggunakan NIP (untuk ASN) atau NIK (untuk Tenaga Teknis)
-2. Gunakan dashboard sesuai peran Anda
-3. Untuk atasan: gunakan menu "Penugasan" untuk membuat tugas baru
-4. Untuk pegawai: update progres tugas secara berkala
-5. Untuk semua: monitor nilai kinerja pada dashboard
+1. Login menggunakan NIP (ASN) atau NIK (Tenaga Teknis) melalui endpoint API `/api/v1/login` (lihat dokumentasi Swagger)
+2. Gunakan token Bearer dari hasil login untuk akses endpoint lain (Authorization: Bearer {token})
+3. Gunakan dashboard sesuai peran Anda (akses di aplikasi mobile/web)
+4. Atasan: gunakan menu "Penugasan" untuk membuat tugas baru
+5. Pegawai: update progres tugas secara berkala melalui API/app
+6. Semua: monitor nilai kinerja pada dashboard
+7. Cek dokumentasi API di `/api/documentation` untuk detail endpoint, parameter, dan response
 
 ## Alur Kerja Utama
 
