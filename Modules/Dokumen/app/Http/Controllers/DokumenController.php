@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use Modules\Dokumen\Models\Dokumen;
 use Modules\Dokumen\Models\Folder;
 use Modules\Dokumen\Models\JenisDokumen;
+use Modules\Dokumen\Models\Metadata;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\DB;
+use Modules\Dokumen\Models\NomorCounter;
 
 class DokumenController extends Controller
 {
@@ -17,7 +19,7 @@ class DokumenController extends Controller
     {
         if ($request->ajax()) {
             try {
-                $query = Dokumen::with(['folder', 'jenis', 'uploader', 'files'])
+                $query = Dokumen::with(['folder', 'jenis', 'uploader', 'files', 'metadata'])
                     ->orderBy('created_at', 'desc');
 
                 if ($request->filled('kategori')) {
@@ -40,7 +42,10 @@ class DokumenController extends Controller
                         $q->where('judul', 'like', "%{$search}%")
                             ->orWhere('nomor', 'like', "%{$search}%")
                             ->orWhere('nomor_surat', 'like', "%{$search}%")
-                            ->orWhere('deskripsi', 'like', "%{$search}%");
+                            ->orWhere('deskripsi', 'like', "%{$search}%")
+                            ->orWhereHas('metadata', function ($mq) use ($search) {
+                                $mq->where('value', 'like', "%{$search}%");
+                            });
                     });
                 }
 
@@ -72,7 +77,6 @@ class DokumenController extends Controller
     public function getJenis()
     {
         try {
-            // TAMBAHKAN allowed_ext, max_size_mb, folder_pattern
             $jenis = JenisDokumen::select('id', 'nama', 'kode', 'kategori_id', 'allowed_ext', 'max_size_mb', 'folder_pattern')
                 ->orderBy('nama', 'asc')
                 ->get();
@@ -86,6 +90,7 @@ class DokumenController extends Controller
 
     public function store(Request $request)
     {
+        DB::beginTransaction();
         try {
             // Get jenis dokumen untuk validasi dinamis
             $jenis = JenisDokumen::findOrFail($request->jenis_id);
@@ -103,6 +108,10 @@ class DokumenController extends Controller
                 'deskripsi' => 'nullable|string',
                 'status' => 'required|in:Draft,Final,Archived',
                 'file' => "required|file|mimes:{$allowedExtensions}|max:{$maxSize}",
+                // Tambahkan validasi untuk metadata
+                'metadata' => 'nullable|array',
+                'metadata.*.key' => 'required|string|max:100',
+                'metadata.*.value' => 'required|string',
             ]);
 
             // Auto-create folder berdasarkan pattern
@@ -149,18 +158,34 @@ class DokumenController extends Controller
                 ]);
             }
 
+            // Simpan metadata jika ada
+            if (!empty($request->metadata)) {
+                foreach ($request->metadata as $meta) {
+                    if (isset($meta['key']) && isset($meta['value']) && !empty($meta['key']) && !empty($meta['value'])) {
+                        $dokumen->metadata()->create([
+                            'key' => $meta['key'],
+                            'value' => $meta['value'],
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Dokumen berhasil diupload',
-                'data' => $dokumen->load(['folder', 'jenis', 'uploader', 'files'])
+                'data' => $dokumen->load(['folder', 'jenis', 'uploader', 'files', 'metadata'])
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollback();
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            DB::rollback();
             Log::error('Error uploading dokumen: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -172,7 +197,7 @@ class DokumenController extends Controller
     public function edit($id)
     {
         try {
-            $dokumen = Dokumen::with(['folder', 'jenis', 'files'])->findOrFail($id);
+            $dokumen = Dokumen::with(['folder', 'jenis', 'files', 'metadata'])->findOrFail($id);
 
             // Format tanggal untuk input
             $dokumen->tanggal_dokumen = $dokumen->tanggal_dokumen->format('Y-m-d');
@@ -186,6 +211,7 @@ class DokumenController extends Controller
 
     public function update(Request $request, $id)
     {
+        DB::beginTransaction();
         try {
             $dokumen = Dokumen::findOrFail($id);
             $jenis = JenisDokumen::findOrFail($request->jenis_id);
@@ -203,6 +229,13 @@ class DokumenController extends Controller
                 'deskripsi' => 'nullable|string',
                 'status' => 'required|in:Draft,Final,Archived',
                 'file' => "nullable|file|mimes:{$allowedExtensions}|max:{$maxSize}",
+                // Tambahkan validasi untuk metadata
+                'metadata' => 'nullable|array',
+                'metadata.*.id' => 'nullable|exists:doc_metadata,id',
+                'metadata.*.key' => 'required|string|max:100',
+                'metadata.*.value' => 'required|string',
+                'metadata_delete' => 'nullable|array',
+                'metadata_delete.*' => 'exists:doc_metadata,id',
             ]);
 
             // Update data dokumen
@@ -250,12 +283,40 @@ class DokumenController extends Controller
                 ]);
             }
 
+            // Proses metadata
+            if (!empty($request->metadata)) {
+                foreach ($request->metadata as $meta) {
+                    if (isset($meta['key']) && isset($meta['value']) && !empty($meta['key']) && !empty($meta['value'])) {
+                        // Update existing or create new
+                        if (!empty($meta['id'])) {
+                            $dokumen->metadata()->where('id', $meta['id'])->update([
+                                'key' => $meta['key'],
+                                'value' => $meta['value']
+                            ]);
+                        } else {
+                            $dokumen->metadata()->create([
+                                'key' => $meta['key'],
+                                'value' => $meta['value'],
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // Delete metadata if specified
+            if (!empty($request->metadata_delete)) {
+                $dokumen->metadata()->whereIn('id', $request->metadata_delete)->delete();
+            }
+
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Dokumen berhasil diupdate',
-                'data' => $dokumen->load(['folder', 'jenis', 'uploader', 'files'])
+                'data' => $dokumen->load(['folder', 'jenis', 'uploader', 'files', 'metadata'])
             ]);
         } catch (\Exception $e) {
+            DB::rollback();
             Log::error('Error updating dokumen: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -267,7 +328,7 @@ class DokumenController extends Controller
     public function show($id)
     {
         try {
-            $dokumen = Dokumen::with(['folder', 'jenis', 'uploader', 'files'])->findOrFail($id);
+            $dokumen = Dokumen::with(['folder', 'jenis', 'uploader', 'files', 'metadata'])->findOrFail($id);
             $dokumen->increment('views');
             return response()->json($dokumen);
         } catch (\Exception $e) {
@@ -303,20 +364,26 @@ class DokumenController extends Controller
 
     public function destroy($id)
     {
+        DB::beginTransaction();
         try {
             $dokumen = Dokumen::findOrFail($id);
 
+            // Delete associated files from storage
             foreach ($dokumen->files as $file) {
                 Storage::disk('public')->delete($file->file_path);
             }
 
+            // Metadata will be automatically deleted due to cascadeOnDelete
             $dokumen->delete();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Dokumen berhasil dihapus'
             ]);
         } catch (\Exception $e) {
+            DB::rollback();
             Log::error('Error deleting dokumen: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -393,6 +460,7 @@ class DokumenController extends Controller
     /**
      * Generate nomor dokumen
      */
+
     private function generateNomorDokumen($jenisId)
     {
         try {
@@ -400,21 +468,26 @@ class DokumenController extends Controller
             if (!$jenis || !$jenis->perlu_nomor) {
                 return null;
             }
-
             $year = date('Y');
-            $lastDokumen = Dokumen::where('jenis_id', $jenisId)
-                ->whereYear('created_at', $year)
-                ->latest('id')
-                ->first();
 
-            $sequence = $lastDokumen ? (int)substr($lastDokumen->nomor, -4) + 1 : 1;
+            // Cek counter terakhir atau buat baru
+            // Perhatikan nama model diubah dari DOC_NOMOR_COUNTER ke NomorCounter
+            $counter = NomorCounter::firstOrCreate([
+                'jenis_id' => $jenisId,
+                'bidang_id' => auth()->user()->bidang_id,
+                'tahun' => $year
+            ], ['counter' => 0]);
 
+            // Tambah counter dan simpan
+            $counter->counter += 1;
+            $counter->save();
+
+            $sequence = $counter->counter;
             $user = auth()->user();
             $bidangKode = $user->bidang->kode ?? 'UMUM';
 
-            // Gunakan nomor_format dari jenis
+            // Gunakan format dari jenis
             $format = $jenis->nomor_format ?: 'SM/BAPPEDA/{bidang}/{year}/{seq}';
-
             return str_replace(
                 ['{bidang}', '{year}', '{seq}'],
                 [strtoupper($bidangKode), $year, sprintf('%04d', $sequence)],
@@ -422,7 +495,39 @@ class DokumenController extends Controller
             );
         } catch (\Exception $e) {
             Log::error('Error generating nomor dokumen: ' . $e->getMessage());
-            return 'DOC/' . date('Y') . '/' . rand(1000, 9999);
+            return 'DOC/' . date('Y') . '/' . rand(1000, 9999); // Fallback
         }
     }
+    // private function generateNomorDokumen($jenisId)
+    // {
+    //     try {
+    //         $jenis = JenisDokumen::find($jenisId);
+    //         if (!$jenis || !$jenis->perlu_nomor) {
+    //             return null;
+    //         }
+
+    //         $year = date('Y');
+    //         $lastDokumen = Dokumen::where('jenis_id', $jenisId)
+    //             ->whereYear('created_at', $year)
+    //             ->latest('id')
+    //             ->first();
+
+    //         $sequence = $lastDokumen ? (int)substr($lastDokumen->nomor, -4) + 1 : 1;
+
+    //         $user = auth()->user();
+    //         $bidangKode = $user->bidang->kode ?? 'UMUM';
+
+    //         // Gunakan nomor_format dari jenis
+    //         $format = $jenis->nomor_format ?: 'SM/BAPPEDA/{bidang}/{year}/{seq}';
+
+    //         return str_replace(
+    //             ['{bidang}', '{year}', '{seq}'],
+    //             [strtoupper($bidangKode), $year, sprintf('%04d', $sequence)],
+    //             $format
+    //         );
+    //     } catch (\Exception $e) {
+    //         Log::error('Error generating nomor dokumen: ' . $e->getMessage());
+    //         return 'DOC/' . date('Y') . '/' . rand(1000, 9999);
+    //     }
+    // }
 }

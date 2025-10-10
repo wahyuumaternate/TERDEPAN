@@ -5,14 +5,14 @@ namespace Modules\Dokumen\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Modules\Dokumen\Model\JenisDokumen as DokumenJenis;
+use Modules\Dokumen\Models\JenisDokumen;
 
 class JenisController extends Controller
 {
     public function index()
     {
-        $jenis = DokumenJenis::with('kategori')->get();
-        return response()->json($jenis);
+        $jenis = JenisDokumen::with('kategori')->get();
+        return view('dokumen::jenis.index', compact('jenis'));
     }
 
     public function create()
@@ -37,19 +37,19 @@ class JenisController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $jenis = DokumenJenis::create($request->all());
+        $jenis = JenisDokumen::create($request->all());
         return response()->json($jenis, 201);
     }
 
     public function show($id)
     {
-        $jenis = DokumenJenis::with('kategori', 'dokumen')->findOrFail($id);
+        $jenis = JenisDokumen::with('kategori', 'dokumen')->findOrFail($id);
         return response()->json($jenis);
     }
 
     public function edit($id)
     {
-        $jenis = DokumenJenis::findOrFail($id);
+        $jenis = JenisDokumen::findOrFail($id);
         return view('dokumen::jenis.edit', compact('jenis'));
     }
 
@@ -70,14 +70,14 @@ class JenisController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $jenis = DokumenJenis::findOrFail($id);
+        $jenis = JenisDokumen::findOrFail($id);
         $jenis->update($request->all());
         return response()->json($jenis);
     }
 
     public function destroy($id)
     {
-        $jenis = DokumenJenis::findOrFail($id);
+        $jenis = JenisDokumen::findOrFail($id);
         $jenis->delete();
         return response()->json(['message' => 'Jenis dokumen berhasil dihapus']);
     }

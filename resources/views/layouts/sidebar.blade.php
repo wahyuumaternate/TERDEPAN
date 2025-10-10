@@ -12,25 +12,41 @@
              </a>
          </li><!-- End Dashboard Nav -->
 
+         <!-- Bappeda Storage -->
+         <li class="nav-heading">Bappeda Storage</li>
+
          <!-- Management File / Arsip Dokumen -->
+         @php
+             $dokumenActive = request()->is('dokumen*');
+         @endphp
+
          <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#dokumen-nav" data-bs-toggle="collapse" href="#">
+             <a class="nav-link {{ $dokumenActive ? '' : 'collapsed' }}" data-bs-target="#dokumen-nav"
+                 data-bs-toggle="collapse" href="#">
                  <i class="bi bi-folder2-open"></i><span>Arsip Dokumen</span><i class="bi bi-chevron-down ms-auto"></i>
              </a>
-             <ul id="dokumen-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+             <ul id="dokumen-nav" class="nav-content collapse {{ $dokumenActive ? 'show' : '' }}"
+                 data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('dokumen') }}">
+                     <a href="{{ url('dokumen') }}" class="{{ request()->is('dokumen') ? 'active' : '' }}">
                          <i class="bi bi-circle"></i><span>Semua Dokumen</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('dokumen/kategori') }}">
+                     <a href="{{ url('dokumen/kategori') }}"
+                         class="{{ request()->is('dokumen/kategori') ? 'active' : '' }}">
                          <i class="bi bi-circle"></i><span>Kategori Dokumen</span>
                      </a>
                  </li>
-
+                 <li>
+                     <a href="{{ url('dokumen/jenis') }}" class="{{ request()->is('dokumen/jenis') ? 'active' : '' }}">
+                         <i class="bi bi-circle"></i><span>Jenis Dokumen</span>
+                     </a>
+                 </li>
              </ul>
-         </li><!-- End Management File Nav -->
+         </li>
+         <!-- End Management File Nav -->
+
 
          <!-- E-Kinerja -->
          <li class="nav-heading">E-Kinerja</li>
@@ -214,19 +230,18 @@
 
      </ul>
 
-     <!-- Storage Indicator -->
      <div class="sidebar-storage mt-auto p-3">
          <div class="text-center mb-3">
              <i class="bi bi-folder2-open text-primary" style="font-size: 3rem;"></i>
          </div>
-         <h6 class="text-center mb-2">75% In-use</h6>
+         <h6 class="text-center mb-2">{{ $percentage }}% In-use</h6>
          <div class="progress mb-2" style="height: 8px;">
-             <div class="progress-bar bg-primary" role="progressbar" style="width: 75%" aria-valuenow="75"
-                 aria-valuemin="0" aria-valuemax="100"></div>
+             <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentage }}%"
+                 aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
          </div>
          <div class="d-flex justify-content-between">
-             <small class="text-muted">600GB</small>
-             <small class="text-muted">800GB</small>
+             <small class="text-muted">{{ $used }}</small>
+             <small class="text-muted">{{ $total }}</small>
          </div>
      </div>
 
