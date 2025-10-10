@@ -6,22 +6,27 @@ use Illuminate\Support\Facades\Storage;
 
 class StorageHelper
 {
-    public static function getFolderSize(string $path): int
+    public static function getFolderSize(string $path = ''): int
     {
+        $disk = Storage::disk('public'); // gunakan disk 'public'
         $size = 0;
-        foreach (Storage::allFiles($path) as $file) {
-            $size += Storage::size($file);
+
+        foreach ($disk->allFiles($path) as $file) {
+            $size += $disk->size($file);
         }
+
         return $size;
     }
 
     public static function formatBytes(int $bytes, int $precision = 2): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        if ($bytes <= 0) return '0 B';
+
+        $pow = floor(log($bytes, 1024));
         $pow = min($pow, count($units) - 1);
-        $bytes /= (1 << (10 * $pow));
+        $bytes /= pow(1024, $pow);
+
         return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }
