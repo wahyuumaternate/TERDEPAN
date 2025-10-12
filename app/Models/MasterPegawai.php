@@ -9,8 +9,8 @@ use Spatie\Permission\Traits\HasRoles;
 
 class MasterPegawai extends Authenticatable
 {
-    Use HasApiTokens, HasRoles, Notifiable;
-    
+    use HasApiTokens, HasRoles, Notifiable;
+
     protected $table = 'master_pegawai';
     protected $guarded = [];
 
@@ -37,5 +37,13 @@ class MasterPegawai extends Authenticatable
     public function ttdDigital()
     {
         return $this->hasMany(MasterTtdDigital::class, 'pegawai_id');
+    }
+
+    /**
+     * Get the logs for the dokumen.
+     */
+    public function logs()
+    {
+        return $this->hasMany(\Modules\Dokumen\Models\Log::class, 'dokumen_id');
     }
 }

@@ -460,15 +460,16 @@
                 $('#formUploadDokumen')[0].reset();
                 $('#metadataContainer').empty();
                 metadataCounter = 0;
-                // Reset ke default
                 $('#file + .form-text').html('Format: PDF, DOCX, XLSX (Max: 10MB)');
             });
 
             // Reset form edit saat modal ditutup
             $('#modalEditDokumen').on('hidden.bs.modal', function() {
+                $('#formEditDokumen')[0].reset();
                 $('#editMetadataContainer').empty();
                 deletedMetadataIds = [];
                 $('#metadata_delete').val('');
+                metadataCounter = 0;
             });
 
             // View mode toggle
@@ -485,9 +486,11 @@
                     $('#tableView').show();
                     $('#gridView').hide();
 
-                    if (!dataTable) {
-                        initializeDataTable();
-                    }
+                    setTimeout(function() {
+                        if (!dataTable) {
+                            initializeDataTable();
+                        }
+                    }, 100);
                 }
             });
 
@@ -543,6 +546,7 @@
                             showConfirmButton: false
                         });
 
+                        // Reload data setelah upload berhasil
                         loadDokumen();
                     },
                     error: function(xhr) {
@@ -612,6 +616,7 @@
                         $('#editMetadataContainer').empty();
                         deletedMetadataIds = [];
                         $('#metadata_delete').val('');
+                        metadataCounter = 0;
 
                         Swal.fire({
                             icon: 'success',
@@ -621,6 +626,7 @@
                             showConfirmButton: false
                         });
 
+                        // Reload data setelah update berhasil
                         loadDokumen();
                     },
                     error: function(xhr) {
@@ -676,14 +682,15 @@
             });
         });
 
-        // Initialize Metadata Handling
+        // ============================================
+        // METADATA HANDLING FUNCTIONS
+        // ============================================
+
         function initMetadataHandling() {
-            // Add metadata button for upload form
             $('#btnAddMetadata').click(function() {
                 addMetadataField();
             });
 
-            // Add metadata button for edit form
             $('#btnAddEditMetadata').click(function() {
                 addEditMetadataField();
             });
@@ -713,23 +720,22 @@
             $(`#metadata-row-${counter}`).remove();
         }
 
-        // Function for handling edit form metadata
         function addEditMetadataField(existingMeta = null) {
             metadataCounter++;
 
             let html = `
                 <div class="row mb-2 metadata-row" id="edit-metadata-row-${metadataCounter}">
                     <div class="col-md-5">
-                        <input type="text" class="form-control" name="metadata[${metadataCounter}][key]" 
+                        <input type="text" class="form-control" name="metadata[${metadataCounter}][key]"
                             placeholder="Kunci" value="${existingMeta ? existingMeta.key : ''}" required>
                     </div>
                     <div class="col-md-6">
-                        <input type="text" class="form-control" name="metadata[${metadataCounter}][value]" 
+                        <input type="text" class="form-control" name="metadata[${metadataCounter}][value]"
                             placeholder="Nilai" value="${existingMeta ? existingMeta.value : ''}" required>
                     </div>
                     <div class="col-md-1">
-                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                            ${existingMeta ? `onclick="deleteMetadata(${existingMeta.id}, ${metadataCounter})"` 
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                            ${existingMeta ? `onclick="deleteMetadata(${existingMeta.id}, ${metadataCounter})"`
                                         : `onclick="removeEditMetadataField(${metadataCounter})"`}>
                             <i class="bi bi-trash"></i>
                         </button>
@@ -737,13 +743,9 @@
                 </div>
             `;
 
-            // If this is existing metadata, add the ID
             if (existingMeta) {
                 html = html.replace(`name="metadata[${metadataCounter}][key]"`,
-                    `name="metadata[${metadataCounter}][key]" 
-                                 data-id="${existingMeta.id}"`);
-                html = html.replace(`name="metadata[${metadataCounter}][value]"`,
-                    `name="metadata[${metadataCounter}][value]"`);
+                    `name="metadata[${metadataCounter}][key]" data-id="${existingMeta.id}"`);
                 html = html + `<input type="hidden" name="metadata[${metadataCounter}][id]" value="${existingMeta.id}">`;
             }
 
@@ -761,15 +763,15 @@
         }
 
         // ============================================
-        // GLOBAL FUNCTIONS - Accessible from onclick
+        // DATA LOADING FUNCTIONS
         // ============================================
 
-        // Load Folders for dropdown
         function loadFolders() {
             console.log('Loading folders...');
             $.ajax({
                 url: '{{ route('dokumen.folders') }}',
                 type: 'GET',
+                dataType: 'json',
                 success: function(response) {
                     console.log('Folders loaded:', response);
                     let options = '<option value="">Pilih Folder</option>';
@@ -779,6 +781,7 @@
                         });
                     }
                     $('#folder_id').html(options);
+                    $('#edit_folder_id').html(options);
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading folders:', error);
@@ -787,12 +790,12 @@
             });
         }
 
-        // Load Jenis Dokumen for dropdown
         function loadJenis() {
             console.log('Loading jenis dokumen...');
             $.ajax({
                 url: '{{ route('dokumen.jenis') }}',
                 type: 'GET',
+                dataType: 'json',
                 success: function(response) {
                     console.log('Jenis loaded:', response);
                     let optionsUpload = '<option value="">Pilih Jenis</option>';
@@ -800,15 +803,14 @@
 
                     if (Array.isArray(response) && response.length > 0) {
                         response.forEach(jenis => {
-                            // Store data di option untuk digunakan nanti
                             let allowedExt = jenis.allowed_ext || 'pdf,doc,docx,xls,xlsx';
                             let maxSize = jenis.max_size_mb || 10;
 
-                            optionsUpload += `<option value="${jenis.id}" 
-                        data-allowed-ext="${allowedExt}" 
-                        data-max-size="${maxSize}">
-                        ${jenis.nama}
-                    </option>`;
+                            optionsUpload += `<option value="${jenis.id}"
+                                data-allowed-ext="${allowedExt}"
+                                data-max-size="${maxSize}">
+                                ${jenis.nama}
+                            </option>`;
                             optionsFilter += `<option value="${jenis.id}">${jenis.nama}</option>`;
                         });
                     }
@@ -817,7 +819,7 @@
                     $('#edit_jenis_id').html(optionsUpload);
                     $('#filterJenis').html(optionsFilter);
 
-                    // Set default info untuk upload form
+                    // Set default info
                     if (response.length > 0) {
                         let firstJenis = response[0];
                         let defaultExt = firstJenis.allowed_ext || 'pdf,doc,docx,xls,xlsx';
@@ -833,48 +835,15 @@
             });
         }
 
-        // Update file requirements berdasarkan jenis yang dipilih
-        function updateFileRequirements(selectElement, fileInputId, textElementSelector) {
-            let selectedOption = selectElement.find('option:selected');
-            let allowedExt = selectedOption.data('allowed-ext') || 'pdf,doc,docx,xls,xlsx';
-            let maxSize = selectedOption.data('max-size') || 10;
-
-            // Update file input accept attribute
-            let acceptTypes = allowedExt.split(',').map(ext => '.' + ext.trim()).join(',');
-            $(fileInputId).attr('accept', acceptTypes);
-
-            // Update text info
-            let extList = allowedExt.toUpperCase().replace(/,/g, ', ');
-            $(textElementSelector).html(`Format: ${extList} (Max: ${maxSize}MB)`);
-
-            console.log('File requirements updated:', {
-                allowed: allowedExt,
-                maxSize: maxSize,
-                accept: acceptTypes
-            });
-        }
-
-        // Initialize DataTable
-        function initializeDataTable() {
-            dataTable = new simpleDatatables.DataTable("#dokumenTable", {
-                searchable: true,
-                fixedHeight: false,
-                perPage: 10,
-                labels: {
-                    placeholder: "Cari dokumen...",
-                    perPage: "Data per halaman",
-                    noRows: "Tidak ada data",
-                    info: "Menampilkan {start} sampai {end} dari {rows} data",
-                }
-            });
-        }
-
-        // Load Dokumen
         function loadDokumen() {
             console.log('Loading dokumen...');
             $.ajax({
                 url: '{{ route('dokumen.index') }}',
                 type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 data: {
                     kategori: $('#filterKategori').val(),
                     jenis: $('#filterJenis').val(),
@@ -900,12 +869,31 @@
                             </td>
                         </tr>
                     `);
+
+                    $('#dokumenGridBody').html(`
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">Gagal memuat data dokumen</p>
+                            <button class="btn btn-sm btn-primary" onclick="loadDokumen()">
+                                <i class="bi bi-arrow-clockwise"></i> Coba Lagi
+                            </button>
+                        </div>
+                    `);
                 }
             });
         }
 
-        // Render Dokumen
+        // ============================================
+        // RENDER FUNCTIONS
+        // ============================================
+
         function renderDokumen(data) {
+            // Destroy DataTable terlebih dahulu jika ada
+            if (dataTable) {
+                dataTable.destroy();
+                dataTable = null;
+            }
+
             let listHtml = '';
             let gridHtml = '';
 
@@ -929,8 +917,6 @@
                     let statusBadge = getStatusBadge(item.status);
                     let fileIcon = getFileIcon(item.files && item.files.length > 0 ? item.files[0].extension :
                         'pdf');
-
-                    // Check if it has metadata
                     let metadataCount = item.metadata ? item.metadata.length : 0;
                     let metadataBadge = metadataCount > 0 ?
                         `<span class="badge bg-secondary" title="Memiliki ${metadataCount} metadata">
@@ -1010,52 +996,69 @@
                 });
             }
 
+            // Update DOM
             $('#dokumenTableBody').html(listHtml);
             $('#dokumenGridBody').html(gridHtml);
 
-            // If table is visible, initialize or refresh DataTable
-            if ($('#tableView').is(':visible') && !dataTable) {
-                initializeDataTable();
-            } else if (dataTable) {
-                dataTable.destroy();
-                initializeDataTable();
+            // Reinitialize DataTable hanya jika table view visible
+            if ($('#tableView').is(':visible')) {
+                setTimeout(function() {
+                    initializeDataTable();
+                }, 100);
             }
-
-            // Update total count display
-            $('#totalDokumen').text(data.length);
         }
 
-        // Edit Dokumen - Load data
+        function initializeDataTable() {
+            if (dataTable) {
+                dataTable.destroy();
+                dataTable = null;
+            }
+
+            dataTable = new simpleDatatables.DataTable("#dokumenTable", {
+                searchable: true,
+                fixedHeight: false,
+                perPage: 10,
+                labels: {
+                    placeholder: "Cari dokumen...",
+                    perPage: "Data per halaman",
+                    noRows: "Tidak ada data",
+                    info: "Menampilkan {start} sampai {end} dari {rows} data",
+                }
+            });
+        }
+
+        // ============================================
+        // CRUD FUNCTIONS
+        // ============================================
+
         function editDokumen(id) {
             console.log('Edit dokumen ID:', id);
             $.ajax({
                 url: `/dokumen/${id}/edit`,
                 type: 'GET',
+                dataType: 'json',
                 success: function(response) {
                     console.log('Edit data loaded:', response);
 
-                    // Reset deleted metadata tracking
+                    // Reset
                     deletedMetadataIds = [];
                     $('#metadata_delete').val('');
-
-                    // Set dokumen ID
                     $('#edit_dokumen_id').val(response.id);
 
-                    // Load folders and jenis untuk dropdown edit
+                    // Load dropdowns
                     loadEditDropdowns(response);
 
-                    // Fill form dengan data dokumen
+                    // Fill form
                     $('#edit_judul').val(response.judul);
                     $('#edit_nomor_surat').val(response.nomor_surat || '');
 
-                    // Format tanggal untuk input date (ambil 10 karakter pertama YYYY-MM-DD)
                     let tanggal = response.tanggal_dokumen ? response.tanggal_dokumen.substring(0, 10) : '';
                     $('#edit_tanggal_dokumen').val(tanggal);
 
                     $('#edit_deskripsi').val(response.deskripsi || '');
                     $('#edit_status').val(response.status);
 
-                    // Clear and load metadata
+                    // Load metadata
                     $('#editMetadataContainer').empty();
                     metadataCounter = 0;
 
@@ -1065,11 +1068,11 @@
                         });
                     }
 
-                    // Show current file info
+                    // Show current file
                     if (response.files && response.files.length > 0) {
                         let currentFile = response.files.find(f => f.is_current) || response.files[0];
                         $('#current_file_info').html(`
-                            <i class="bi bi-file-earmark-${getFileIconClass(currentFile.extension)}"></i> 
+                            <i class="bi bi-file-earmark-${getFileIconClass(currentFile.extension)}"></i>
                             <strong>${currentFile.nama_file}</strong><br>
                             <small>Ukuran: ${formatFileSize(currentFile.size_kb)} | Versi: ${currentFile.version}</small>
                         `);
@@ -1077,7 +1080,6 @@
                         $('#current_file_info').html('<small class="text-muted">Tidak ada file</small>');
                     }
 
-                    // Show modal
                     $('#modalEditDokumen').modal('show');
                 },
                 error: function(xhr) {
@@ -1091,12 +1093,12 @@
             });
         }
 
-        // Load dropdowns untuk edit modal
         function loadEditDropdowns(dokumenData) {
             // Load folders
             $.ajax({
                 url: '{{ route('dokumen.folders') }}',
                 type: 'GET',
+                dataType: 'json',
                 success: function(folders) {
                     let options = '<option value="">Pilih Folder</option>';
                     folders.forEach(folder => {
@@ -1107,10 +1109,11 @@
                 }
             });
 
-            // Load jenis dengan data attributes
+            // Load jenis
             $.ajax({
                 url: '{{ route('dokumen.jenis') }}',
                 type: 'GET',
+                dataType: 'json',
                 success: function(jenis) {
                     let options = '<option value="">Pilih Jenis</option>';
                     jenis.forEach(j => {
@@ -1118,15 +1121,14 @@
                         let allowedExt = j.allowed_ext || 'pdf,doc,docx,xls,xlsx';
                         let maxSize = j.max_size_mb || 10;
 
-                        options += `<option value="${j.id}" ${selected} 
-                            data-allowed-ext="${allowedExt}" 
+                        options += `<option value="${j.id}" ${selected}
+                            data-allowed-ext="${allowedExt}"
                             data-max-size="${maxSize}">
                             ${j.nama}
                         </option>`;
                     });
                     $('#edit_jenis_id').html(options);
 
-                    // Trigger update file requirements untuk jenis yang sudah terpilih
                     if (dokumenData.jenis_id) {
                         updateFileRequirements($('#edit_jenis_id'), '#edit_file', '#edit_file + .form-text');
                     }
@@ -1134,16 +1136,16 @@
             });
         }
 
-        // Show Detail
         function showDetail(id) {
             $.ajax({
                 url: `/dokumen/${id}`,
                 type: 'GET',
+                dataType: 'json',
                 success: function(response) {
                     let html = `
                         <div class="mb-4 p-3 rounded-3 bg-light">
                             <div class="text-center mb-3">
-                                <i class="${getFileIcon(response.files && response.files.length > 0 ? response.files[0].extension : 'pdf')}" 
+                                <i class="${getFileIcon(response.files && response.files.length > 0 ? response.files[0].extension : 'pdf')}"
                                    style="font-size: 4rem;"></i>
                             </div>
                             <h4 class="text-center mb-3">${response.judul}</h4>
@@ -1164,7 +1166,7 @@
                             <tr><th>Views/Downloads</th><td>${response.views || 0} / ${response.downloads || 0}</td></tr>
                         </table>`;
 
-                    // Add Metadata section if available
+                    // Metadata section
                     if (response.metadata && response.metadata.length > 0) {
                         html += `
                             <h5 class="mt-4 mb-3">Metadata</h5>
@@ -1187,7 +1189,6 @@
 
                         html += `</tbody></table>`;
                     }
-
                     // File information
                     if (response.files && response.files.length > 0) {
                         let currentFile = response.files.find(f => f.is_current) || response.files[0];
@@ -1202,13 +1203,13 @@
                                 </div>
                             </div>`;
 
-                        // If there are multiple versions
+                        // Multiple versions
                         if (response.files.length > 1) {
                             html += `
                                 <div class="accordion" id="fileVersions">
                                     <div class="accordion-item">
                                         <h2 class="accordion-header">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                                     data-bs-target="#collapseVersions" aria-expanded="false" aria-controls="collapseVersions">
                                                 Versi Sebelumnya (${response.files.length - 1})
                                             </button>
@@ -1226,7 +1227,6 @@
                                                     </thead>
                                                     <tbody>`;
 
-                            // Sort files by version descending
                             const oldVersions = response.files
                                 .filter(f => !f.is_current)
                                 .sort((a, b) => b.version - a.version);
@@ -1265,12 +1265,10 @@
             });
         }
 
-        // Download Dokumen
         function downloadDokumen(id) {
             window.location.href = `/dokumen/${id}/download`;
         }
 
-        // Delete Dokumen
         function deleteDokumen(id) {
             Swal.fire({
                 title: 'Apakah Anda yakin?',
@@ -1299,11 +1297,11 @@
                             });
                             loadDokumen();
                         },
-                        error: function() {
+                        error: function(xhr) {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal!',
-                                text: 'Gagal menghapus dokumen'
+                                text: xhr.responseJSON?.message || 'Gagal menghapus dokumen'
                             });
                         }
                     });
@@ -1312,8 +1310,28 @@
         }
 
         // ============================================
-        // HELPER FUNCTIONS
+        // UTILITY FUNCTIONS
         // ============================================
+
+        function updateFileRequirements(selectElement, fileInputId, textElementSelector) {
+            let selectedOption = selectElement.find('option:selected');
+            let allowedExt = selectedOption.data('allowed-ext') || 'pdf,doc,docx,xls,xlsx';
+            let maxSize = selectedOption.data('max-size') || 10;
+
+            // Update file input accept attribute
+            let acceptTypes = allowedExt.split(',').map(ext => '.' + ext.trim()).join(',');
+            $(fileInputId).attr('accept', acceptTypes);
+
+            // Update text info
+            let extList = allowedExt.toUpperCase().replace(/,/g, ', ');
+            $(textElementSelector).html(`Format: ${extList} (Max: ${maxSize}MB)`);
+
+            console.log('File requirements updated:', {
+                allowed: allowedExt,
+                maxSize: maxSize,
+                accept: acceptTypes
+            });
+        }
 
         function getStatusBadge(status) {
             const badges = {

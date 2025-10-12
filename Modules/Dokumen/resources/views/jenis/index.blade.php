@@ -49,8 +49,7 @@
                                             <h3 class="mb-0 fw-bold" id="totalJenis">{{ count($jenis) }}</h3>
                                         </div>
                                         <div class="stats-icon">
-                                            <i class="bi bi-file-earmark-text-fill"
-                                                style="font-size: 2.5rem; opacity: 0.3;"></i>
+                                            <i class="bi bi-file-earmark-text-fill" style="font-size: 2.5rem; "></i>
                                         </div>
                                     </div>
                                 </div>
@@ -64,7 +63,7 @@
                                                 {{ $jenis->where('perlu_nomor', true)->count() }}</h3>
                                         </div>
                                         <div class="stats-icon">
-                                            <i class="bi bi-hash" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                                            <i class="bi bi-hash" style="font-size: 2.5rem; "></i>
                                         </div>
                                     </div>
                                 </div>
@@ -78,7 +77,7 @@
                                                 {{ $jenis->pluck('kategori_id')->unique()->count() }}</h3>
                                         </div>
                                         <div class="stats-icon">
-                                            <i class="bi bi-folder-fill" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                                            <i class="bi bi-folder-fill" style="font-size: 2.5rem; "></i>
                                         </div>
                                     </div>
                                 </div>
@@ -513,7 +512,10 @@
 
 @push('scripts')
     <script>
+        // Replace bagian script di jenis/index.blade.php dengan yang ini
+
         let allJenis = @json($jenis);
+        let allKategori = [];
         let viewMode = 'grid';
         let dataTable = null;
 
@@ -569,24 +571,13 @@
                     dataTable.destroy();
                     dataTable = null;
                 }
+                // Render grid view dengan data terbaru
+                renderGrid(allJenis);
             } else {
                 $('#gridView').hide();
                 $('#tableView').show();
-
-                if (!dataTable) {
-                    // Initialize DataTable if not already initialized
-                    dataTable = new simpleDatatables.DataTable("#jenisTable", {
-                        searchable: true,
-                        fixedHeight: false,
-                        perPage: 10,
-                        labels: {
-                            placeholder: "Cari jenis dokumen...",
-                            perPage: "Data per halaman",
-                            noRows: "Tidak ada data",
-                            info: "Menampilkan {start} sampai {end} dari {rows} data",
-                        }
-                    });
-                }
+                // Render table view dengan data terbaru
+                renderTable(allJenis);
             }
         }
 
@@ -619,22 +610,40 @@
             $.ajax({
                 url: '{{ route('dokumen.jenis.index') }}',
                 type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
                 success: function(response) {
+                    console.log('✅ Jenis loaded:', response);
                     allJenis = response;
+
+                    // Update stats
                     updateStats(response);
-                    renderGrid(response);
+
+                    // Re-render current view
+                    if (viewMode === 'grid') {
+                        renderGrid(response);
+                    } else {
+                        renderTable(response);
+                    }
                 },
                 error: function(xhr) {
-                    $('#gridView').html(`
-                        <div class="col-12 empty-state text-center">
-                            <i class="bi bi-exclamation-triangle empty-state-icon"></i>
-                            <h4 class="text-muted mb-3">Gagal memuat jenis dokumen</h4>
-                            <p class="text-muted mb-4">Terjadi kesalahan saat mengambil data</p>
-                            <button class="btn btn-primary btn-lg" onclick="loadJenis()">
-                                <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
-                            </button>
-                        </div>
-                    `);
+                    console.error('❌ Error loading jenis:', xhr);
+
+                    if (viewMode === 'grid') {
+                        $('#gridView').html(`
+                    <div class="col-12 empty-state text-center">
+                        <i class="bi bi-exclamation-triangle empty-state-icon"></i>
+                        <h4 class="text-muted mb-3">Gagal memuat jenis dokumen</h4>
+                        <p class="text-muted mb-4">Terjadi kesalahan saat mengambil data</p>
+                        <button class="btn btn-primary btn-lg" onclick="loadJenis()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Coba Lagi
+                        </button>
+                    </div>
+                `);
+                    }
                 }
             });
         }
@@ -656,15 +665,15 @@
 
             if (!Array.isArray(data) || data.length === 0) {
                 html = `
-                    <div class="col-12 empty-state text-center">
-                        <i class="bi bi-file-earmark-x empty-state-icon"></i>
-                        <h4 class="text-muted mb-2">Belum ada jenis dokumen</h4>
-                        <p class="text-muted mb-4">Mulai dengan menambahkan jenis dokumen baru untuk mengorganisir dokumen Anda</p>
-                        <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
-                            <i class="bi bi-plus-circle me-2"></i>Tambah Jenis Dokumen Pertama
-                        </button>
-                    </div>
-                `;
+            <div class="col-12 empty-state text-center">
+                <i class="bi bi-file-earmark-x empty-state-icon"></i>
+                <h4 class="text-muted mb-2">Belum ada jenis dokumen</h4>
+                <p class="text-muted mb-4">Mulai dengan menambahkan jenis dokumen baru untuk mengorganisir dokumen Anda</p>
+                <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
+                    <i class="bi bi-plus-circle me-2"></i>Tambah Jenis Dokumen Pertama
+                </button>
+            </div>
+        `;
             } else {
                 data.forEach((item) => {
                     // Find related category
@@ -673,44 +682,44 @@
                     const lightColor = color + '20';
 
                     html += `
-                        <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
-                            <div class="card jenis-card h-100 shadow-sm" 
-                                 style="--card-color: ${color}; --card-color-light: ${lightColor};">
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <span class="badge-kode" style="border-color: ${color}; color: ${color};">
-                                            ${item.kode}
-                                        </span>
-                                    </div>
-                                    <h5 class="mb-3 fw-bold">${item.nama}</h5>
-                                    <span class="badge badge-kategori" style="background: ${lightColor}; color: ${color};">
-                                        ${kategori.nama || 'Kategori tidak ditemukan'}
-                                    </span>
-                                    ${item.perlu_nomor ? 
-                                        `<div class="mt-3">
-                                                        <span class="badge bg-success">
-                                                            <i class="bi bi-hash me-1"></i>Perlu Penomoran
-                                                        </span>
-                                                    </div>` : ''}
-                                </div>
-                                <div class="card-footer bg-transparent border-0 pb-3 px-3">
-                                    <div class="d-grid gap-2">
-                                        <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-outline-primary" onclick="showDetail(${item.id})" title="Detail">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-warning" onclick="showEditModal(${item.id})" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteJenis(${item.id})" title="Hapus">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card jenis-card h-100 shadow-sm" 
+                         style="--card-color: ${color}; --card-color-light: ${lightColor};">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <span class="badge-kode" style="border-color: ${color}; color: ${color};">
+                                    ${item.kode}
+                                </span>
+                            </div>
+                            <h5 class="mb-3 fw-bold">${item.nama}</h5>
+                            <span class="badge badge-kategori" style="background: ${lightColor}; color: ${color};">
+                                ${kategori.nama || 'Kategori tidak ditemukan'}
+                            </span>
+                            ${item.perlu_nomor ? 
+                                `<div class="mt-3">
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-hash me-1"></i>Perlu Penomoran
+                                                            </span>
+                                                        </div>` : ''}
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pb-3 px-3">
+                            <div class="d-grid gap-2">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="showDetail(${item.id})" title="Detail">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="showEditModal(${item.id})" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteJenis(${item.id})" title="Hapus">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    `;
+                    </div>
+                </div>
+            `;
                 });
             }
 
@@ -721,55 +730,70 @@
             // Destroy existing datatable if exists
             if (dataTable) {
                 dataTable.destroy();
+                dataTable = null;
             }
 
             let tbody = '';
-            data.forEach((item, index) => {
-                // Find related category
-                const kategori = allKategori.find(k => k.id === item.kategori_id) || {};
-                const color = kategori.warna || '#4154f1';
 
-                tbody += `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>
-                            <span class="badge" style="background-color: ${color};">${item.kode}</span>
-                        </td>
-                        <td><strong>${item.nama}</strong></td>
-                        <td>${kategori.nama || 'Kategori tidak ditemukan'}</td>
-                        <td>${item.nomor_format || '<span class="text-muted">-</span>'}</td>
-                        <td>${item.max_size_mb} MB</td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button class="btn btn-outline-primary" onclick="showDetail(${item.id})" title="Detail">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="btn btn-outline-warning" onclick="showEditModal(${item.id})" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-outline-danger" onclick="deleteJenis(${item.id})" title="Hapus">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody = `
+            <tr>
+                <td colspan="7" class="text-center py-5">
+                    <i class="bi bi-file-earmark-x" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">Belum ada data jenis dokumen</p>
+                </td>
+            </tr>
+        `;
+            } else {
+                data.forEach((item, index) => {
+                    // Find related category
+                    const kategori = allKategori.find(k => k.id === item.kategori_id) || {};
+                    const color = kategori.warna || '#4154f1';
+
+                    tbody += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        <span class="badge" style="background-color: ${color};">${item.kode}</span>
+                    </td>
+                    <td><strong>${item.nama}</strong></td>
+                    <td>${kategori.nama || 'Kategori tidak ditemukan'}</td>
+                    <td>${item.nomor_format || '<span class="text-muted">-</span>'}</td>
+                    <td>${item.max_size_mb} MB</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-primary" onclick="showDetail(${item.id})" title="Detail">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="showEditModal(${item.id})" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteJenis(${item.id})" title="Hapus">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                });
+            }
 
             $('#jenisTable tbody').html(tbody);
 
-            // Initialize DataTable
-            dataTable = new simpleDatatables.DataTable("#jenisTable", {
-                searchable: true,
-                fixedHeight: false,
-                perPage: 10,
-                labels: {
-                    placeholder: "Cari jenis dokumen...",
-                    perPage: "Data per halaman",
-                    noRows: "Tidak ada data",
-                    info: "Menampilkan {start} sampai {end} dari {rows} data",
-                }
-            });
+            // Initialize DataTable only if there's data
+            if (data.length > 0) {
+                dataTable = new simpleDatatables.DataTable("#jenisTable", {
+                    searchable: true,
+                    fixedHeight: false,
+                    perPage: 10,
+                    labels: {
+                        placeholder: "Cari jenis dokumen...",
+                        perPage: "Data per halaman",
+                        noRows: "Tidak ada data",
+                        info: "Menampilkan {start} sampai {end} dari {rows} data",
+                    }
+                });
+            }
         }
 
         function showCreateModal() {
@@ -851,7 +875,9 @@
                     );
                 },
                 success: function(response) {
+                    console.log('✅ Save success:', response);
                     $('#modalJenis').modal('hide');
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
@@ -860,9 +886,12 @@
                         timer: 2000,
                         showConfirmButton: false
                     });
+
+                    // IMPORTANT: Reload data to update view
                     loadJenis();
                 },
                 error: function(xhr) {
+                    console.error('❌ Save error:', xhr);
                     let errorMessage = 'Terjadi kesalahan';
 
                     if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
@@ -904,97 +933,97 @@
                     const lightColor = color + '20';
 
                     let html = `
-                        <div class="text-center mb-4 p-4 rounded-3" style="background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%);">
-                            <div class="d-inline-block p-4 rounded-circle mb-3" style="background: ${lightColor};">
-                                <i class="bi bi-file-earmark-text-fill" style="font-size: 5rem; color: ${color};"></i>
-                            </div>
-                            <h3 class="fw-bold mb-2">${response.nama}</h3>
-                            <div class="d-flex justify-content-center align-items-center flex-wrap gap-2">
-                                <span class="badge px-4 py-2" style="background: ${color}; font-size: 1.2rem;">
-                                    ${response.kode}
-                                </span>
-                                <span class="badge px-3 py-2 bg-secondary">
-                                    ${kategori.nama || 'Kategori tidak ditemukan'}
-                                </span>
-                                ${response.perlu_nomor ? 
-                                    `<span class="badge px-3 py-2 bg-success">
-                                                    <i class="bi bi-hash me-1"></i>Perlu Penomoran
-                                                </span>` : ''}
+                <div class="text-center mb-4 p-4 rounded-3" style="background: linear-gradient(135deg, ${color}15 0%, ${color}05 100%);">
+                    <div class="d-inline-block p-4 rounded-circle mb-3" style="background: ${lightColor};">
+                        <i class="bi bi-file-earmark-text-fill" style="font-size: 5rem; color: ${color};"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2">${response.nama}</h3>
+                    <div class="d-flex justify-content-center align-items-center flex-wrap gap-2">
+                        <span class="badge px-4 py-2" style="background: ${color}; font-size: 1.2rem;">
+                            ${response.kode}
+                        </span>
+                        <span class="badge px-3 py-2 bg-secondary">
+                            ${kategori.nama || 'Kategori tidak ditemukan'}
+                        </span>
+                        ${response.perlu_nomor ? 
+                            `<span class="badge px-3 py-2 bg-success">
+                                                        <i class="bi bi-hash me-1"></i>Perlu Penomoran
+                                                    </span>` : ''}
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-123 text-primary me-2"></i>
+                                    <small class="text-muted">Format Nomor</small>
+                                </div>
+                                <h5 class="mb-0 fw-bold">${response.nomor_format || '<span class="text-muted">-</span>'}</h5>
                             </div>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-123 text-primary me-2"></i>
-                                            <small class="text-muted">Format Nomor</small>
-                                        </div>
-                                        <h5 class="mb-0 fw-bold">${response.nomor_format || '<span class="text-muted">-</span>'}</h5>
-                                    </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-folder-fill text-primary me-2"></i>
+                                    <small class="text-muted">Pola Folder</small>
                                 </div>
+                                <p class="mb-0 fw-bold font-monospace">${response.folder_pattern}</p>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-folder-fill text-primary me-2"></i>
-                                            <small class="text-muted">Pola Folder</small>
-                                        </div>
-                                        <p class="mb-0 fw-bold font-monospace">${response.folder_pattern}</p>
-                                    </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-file-earmark-fill text-primary me-2"></i>
+                                    <small class="text-muted">Ekstensi yang Diizinkan</small>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-file-earmark-fill text-primary me-2"></i>
-                                            <small class="text-muted">Ekstensi yang Diizinkan</small>
-                                        </div>
-                                        <div class="d-flex flex-wrap gap-1 mt-1">
-                                            ${response.allowed_ext.split(',').map(ext => 
-                                                `<span class="badge bg-light text-dark px-2 py-1">.${ext.trim()}</span>`
-                                            ).join('')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-hdd-fill text-primary me-2"></i>
-                                            <small class="text-muted">Ukuran Maksimal</small>
-                                        </div>
-                                        <h5 class="mb-0 fw-bold">${response.max_size_mb} MB</h5>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-calendar-plus text-primary me-2"></i>
-                                            <small class="text-muted">Dibuat</small>
-                                        </div>
-                                        <p class="mb-0 fw-semibold">${formatDateTime(response.created_at)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-calendar-check text-primary me-2"></i>
-                                            <small class="text-muted">Terakhir Diupdate</small>
-                                        </div>
-                                        <p class="mb-0 fw-semibold">${formatDateTime(response.updated_at)}</p>
-                                    </div>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    ${response.allowed_ext.split(',').map(ext => 
+                                        `<span class="badge bg-light text-dark px-2 py-1">.${ext.trim()}</span>`
+                                    ).join('')}
                                 </div>
                             </div>
                         </div>
-                    `;
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-hdd-fill text-primary me-2"></i>
+                                    <small class="text-muted">Ukuran Maksimal</small>
+                                </div>
+                                <h5 class="mb-0 fw-bold">${response.max_size_mb} MB</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-calendar-plus text-primary me-2"></i>
+                                    <small class="text-muted">Dibuat</small>
+                                </div>
+                                <p class="mb-0 fw-semibold">${formatDateTime(response.created_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-calendar-check text-primary me-2"></i>
+                                    <small class="text-muted">Terakhir Diupdate</small>
+                                </div>
+                                <p class="mb-0 fw-semibold">${formatDateTime(response.updated_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
 
                     $('#detailJenisContent').html(html);
                     $('#modalDetailJenis').modal('show');
@@ -1030,6 +1059,8 @@
                             _token: '{{ csrf_token() }}'
                         },
                         success: function(response) {
+                            console.log('✅ Delete success:', response);
+
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Terhapus!',
@@ -1037,9 +1068,12 @@
                                 timer: 2000,
                                 showConfirmButton: false
                             });
+
+                            // IMPORTANT: Reload data to update view
                             loadJenis();
                         },
                         error: function(xhr) {
+                            console.error('❌ Delete error:', xhr);
                             let errorMessage = 'Gagal menghapus jenis dokumen';
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 errorMessage = xhr.responseJSON.message;

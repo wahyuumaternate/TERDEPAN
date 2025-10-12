@@ -9,9 +9,18 @@ use Modules\Dokumen\Models\JenisDokumen;
 
 class JenisController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $jenis = JenisDokumen::with('kategori')->get();
+        $jenis = JenisDokumen::with(['kategori'])
+            ->orderBy('nama', 'asc')
+            ->get();
+
+        // Check if request is AJAX or wants JSON
+        if ($request->wantsJson() || $request->ajax() || $request->expectsJson()) {
+            return response()->json($jenis);
+        }
+
+        // Return view for normal requests
         return view('dokumen::jenis.index', compact('jenis'));
     }
 

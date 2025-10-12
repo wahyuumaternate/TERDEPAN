@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Helpers\StorageHelper;
+use App\Services\NomorDokumenService;
 use Illuminate\Support\Facades\View;
 
 use Illuminate\Support\ServiceProvider;
@@ -14,6 +15,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Register NomorDokumenService sebagai singleton
+        $this->app->singleton(NomorDokumenService::class, function ($app) {
+            return new NomorDokumenService();
+        });
         //
     }
 

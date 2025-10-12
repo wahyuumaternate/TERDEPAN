@@ -19,13 +19,16 @@ return new class extends Migration
             $table->integer('max_size_mb')->default(10);
             $table->boolean('perlu_nomor')->default(false);
             $table->timestamps();
-            
+
             $table->index(['kode', 'kategori_id']);
         });
+
+       
     }
 
     public function down(): void
     {
         Schema::dropIfExists('doc_jenis');
+       
     }
 };

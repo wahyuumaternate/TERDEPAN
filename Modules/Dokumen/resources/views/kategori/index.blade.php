@@ -45,11 +45,11 @@
                                 <div class="stats-card bg-gradient-primary text-white rounded-3 p-3 shadow-sm">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <h6 class="mb-1 text-white-50">Total Kategori</h6>
+                                            <h6 class="mb-1 text-white">Total Kategori</h6>
                                             <h3 class="mb-0 fw-bold" id="totalKategori">0</h3>
                                         </div>
                                         <div class="stats-icon">
-                                            <i class="bi bi-folder-fill" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                                            <i class="bi bi-folder-fill" style="font-size: 2.5rem; "></i>
                                         </div>
                                     </div>
                                 </div>
