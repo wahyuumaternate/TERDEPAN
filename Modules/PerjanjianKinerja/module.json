@@ -1,0 +1,17 @@
+{
+    "name": "PerjanjianKinerja",
+    "alias": "perjanjian-kinerja",
+    "description": "Modul Perjanjian Kinerja - Sistem Manajemen Perjanjian Kinerja Pegawai BAPPEDA Malut",
+    "keywords": [
+        "perjanjian kinerja",
+        "performance agreement",
+        "pk",
+        "bappeda"
+    ],
+    "priority": 3,
+    "providers": [
+        "Modules\\PerjanjianKinerja\\Providers\\PerjanjianKinerjaServiceProvider"
+    ],
+    "files": [],
+    "requires": []
+}
