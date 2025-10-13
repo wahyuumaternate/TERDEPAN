@@ -43,9 +43,17 @@ class MasterJabatanSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'kode' => 'STF',
+                'nama' => 'STAF/Pelaksana',
+                'level' => 5,
+                'is_struktural' => false,
+                'bebas_nilai_kinerja' => false,
+                'is_active' => true,
+            ],
+            [
                 'kode' => 'TT',
                 'nama' => 'Tenaga Teknis',
-                'level' => 5,
+                'level' => 6,
                 'is_struktural' => false,
                 'bebas_nilai_kinerja' => true,
                 'is_active' => true,
