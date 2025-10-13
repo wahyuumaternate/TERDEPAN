@@ -8,11 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
 use Modules\PerjanjianKinerja\Models\PkTemplate;
-use Modules\PerjanjianKinerja\Models\PkDokumen;
 use App\Models\MasterPegawai;
 use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
-use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class PerjanjianKinerjaController extends Controller
