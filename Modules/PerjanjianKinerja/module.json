@@ -1,0 +1,11 @@
+{
+    "name": "PerjanjianKinerja",
+    "alias": "perjanjiankinerja",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PerjanjianKinerja\\Providers\\PerjanjianKinerjaServiceProvider"
+    ],
+    "files": []
+}
