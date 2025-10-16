@@ -467,7 +467,7 @@ class PerjanjianKinerjaController extends Controller
     }
 
     /**
-     * Generate PDF dokumen menggunakan template dari database
+     * Generate PDF dokumen
      */
     public function generate($id)
     {
@@ -476,28 +476,7 @@ class PerjanjianKinerjaController extends Controller
             'pegawai.bidang',
             'atasan.jabatan',
             'template.sections',
-            'sasaran' => function ($query) {
-                $query->orderBy('urutan')
-                    ->with([
-                        'indikator' => function ($qi) {
-                            $qi->with([
-                                'program' => function ($qp) {
-                                    $qp->orderBy('urutan')
-                                        ->with([
-                                            'kegiatan' => function ($qk) {
-                                                $qk->orderBy('urutan')
-                                                    ->with([
-                                                        'subKegiatan' => function ($qs) {
-                                                            $qs->orderBy('urutan');
-                                                        }
-                                                    ]);
-                                            }
-                                        ]);
-                                }
-                            ]);
-                        }
-                    ]);
-            }
+            'sasaran.indikator.program.kegiatan.subKegiatan'
         ])->findOrFail($id);
 
         DB::beginTransaction();
@@ -514,7 +493,7 @@ class PerjanjianKinerjaController extends Controller
             // Reset previous latest
             $pk->dokumen()->where('is_latest', true)->update(['is_latest' => false]);
 
-            // Create PDF menggunakan template
+            // Create PDF
             $data = [
                 'pk' => $pk,
                 'title' => 'Perjanjian Kinerja - ' . $pk->nomor_perjanjian
@@ -522,26 +501,11 @@ class PerjanjianKinerjaController extends Controller
 
             $pdf = PDF::loadView('perjanjiankinerja::pdf.perjanjian_kinerja', $data);
 
-            // Set paper size dan orientation dari template
-            $pageSize = $pk->template->page_size ?? 'A4';
-            $orientation = strtolower($pk->template->orientation ?? 'Portrait');
-            $pdf->setPaper($pageSize, $orientation);
+            // Set paper size
+            $pdf->setPaper($pk->template->page_size ?? 'A4', $pk->template->orientation ?? 'Portrait');
 
-            // Set margin untuk DomPDF
-            if (method_exists($pdf, 'getDomPDF')) {
-                $dompdf = $pdf->getDomPDF();
-                $dompdf->set_option('isHtml5ParserEnabled', true);
-                $dompdf->set_option('isRemoteEnabled', false);
-
-                // Margin dalam points (1mm = 2.83465 points)
-                // 20mm = 56.7pt, 25mm = 70.9pt
-                $dompdf->set_option('margin_top', 56.7);
-                $dompdf->set_option('margin_right', 70.9);
-                $dompdf->set_option('margin_bottom', 56.7);
-                $dompdf->set_option('margin_left', 70.9);
-            }
-
-            // Set options untuk Snappy/wkhtmltopdf (jika digunakan)
+            // ⭐ PENTING: SET MARGIN SECARA EKSPLISIT
+            // Untuk wkhtmltopdf (jika menggunakan snappy/laravel-snappy):
             if (method_exists($pdf, 'setOption')) {
                 $pdf->setOption('margin-top', '20mm');
                 $pdf->setOption('margin-right', '25mm');
@@ -550,14 +514,33 @@ class PerjanjianKinerjaController extends Controller
                 $pdf->setOption('enable-local-file-access', true);
             }
 
+            // Untuk dompdf (jika menggunakan barryvdh/laravel-dompdf):
+            if (method_exists($pdf, 'getDomPDF')) {
+                $dompdf = $pdf->getDomPDF();
+                $dompdf->set_option('isHtml5ParserEnabled', true);
+                $dompdf->set_option('isRemoteEnabled', false);
+
+                // Dompdf margin setting (dalam points: 1mm = 2.83465 points)
+                // 20mm = 56.7pt, 25mm = 70.9pt
+                $dompdf->set_option('margin_top', 56.7);
+                $dompdf->set_option('margin_right', 70.9);
+                $dompdf->set_option('margin_bottom', 56.7);
+                $dompdf->set_option('margin_left', 70.9);
+            }
+
             // Generate filename - Format: PK_NIP_2024_v1.pdf
             $nip = $pk->pegawai->nomor_identitas ?? 'NONIP';
             $fileName = sprintf('PK_%s_%s_v%d.pdf', $nip, $pk->tahun, $newVersion);
 
-            // Path relatif untuk database
+            // Path yang akan disimpan di DATABASE (relatif dari public disk)
+            // Format: perjanjian/2025/PK_NONIP_2025_v1.pdf
             $relativePath = 'perjanjian/' . $pk->tahun . '/' . $fileName;
 
-            // Ensure directory exists
+            // Path lengkap untuk operasi Storage Laravel (dengan disk 'public')
+            // Storage facade akan otomatis menambahkan 'storage/app/public/'
+            $storageDiskPath = $relativePath; // Tidak perlu tambah 'public/' lagi
+
+            // Ensure directory exists dalam disk public
             $directory = 'perjanjian/' . $pk->tahun;
             if (!Storage::disk('public')->exists($directory)) {
                 Storage::disk('public')->makeDirectory($directory);
@@ -566,15 +549,16 @@ class PerjanjianKinerjaController extends Controller
             // Get PDF output
             $pdfOutput = $pdf->output();
 
-            // Save to storage
-            $saved = Storage::disk('public')->put($relativePath, $pdfOutput);
+            // Save to storage menggunakan disk 'public'
+            $saved = Storage::disk('public')->put($storageDiskPath, $pdfOutput);
 
             if (!$saved) {
                 throw new \Exception('Gagal menyimpan file PDF ke storage');
             }
 
-            // Full path untuk verifikasi
-            $fullPath = Storage::disk('public')->path($relativePath);
+            // Full path untuk verifikasi dan hash
+            // storage/app/public/perjanjian/2025/PK_NONIP_2025_v1.pdf
+            $fullPath = Storage::disk('public')->path($storageDiskPath);
 
             if (!file_exists($fullPath)) {
                 throw new \Exception('File PDF tidak ditemukan setelah disimpan: ' . $fullPath);
@@ -583,18 +567,18 @@ class PerjanjianKinerjaController extends Controller
             $fileHash = hash_file('sha256', $fullPath);
             $fileSizeKb = (int) round(filesize($fullPath) / 1024);
 
-            // Count pages
+            // Count pages (simple estimation)
             $totalPages = $this->estimatePdfPages($pdfOutput);
 
-            // Generate nomor dokumen
+            // Generate nomor dokumen - sama dengan nomor_perjanjian + versi
             $nomorDokumen = $pk->nomor_perjanjian . '/V' . $newVersion;
 
-            // Create document record
+            // Create document record - simpan path RELATIF saja
             $dokumen = $pk->dokumen()->create([
-                'jenis_dokumen' => 'Pernyataan',
+                'jenis_dokumen' => 'Pernyataan', // Sesuai ENUM: Pernyataan, Formulir, Lampiran
                 'nomor_dokumen' => $nomorDokumen,
                 'file_name' => $fileName,
-                'file_path' => $relativePath,
+                'file_path' => $relativePath, // Path relatif: perjanjian/2025/...
                 'file_hash' => $fileHash,
                 'file_size_kb' => $fileSizeKb,
                 'versi' => $newVersion,
@@ -650,6 +634,7 @@ class PerjanjianKinerjaController extends Controller
             return back()->with('error', 'Dokumen belum di-generate.');
         }
 
+        // Gunakan disk 'public' untuk akses file
         if (!Storage::disk('public')->exists($dokumen->file_path)) {
             return back()->with('error', 'File PDF tidak ditemukan di storage.');
         }
@@ -675,6 +660,7 @@ class PerjanjianKinerjaController extends Controller
             return back()->with('error', 'Dokumen belum di-generate.');
         }
 
+        // Gunakan disk 'public' untuk akses file
         if (!Storage::disk('public')->exists($dokumen->file_path)) {
             return back()->with('error', 'File PDF tidak ditemukan di storage.');
         }
@@ -759,6 +745,7 @@ class PerjanjianKinerjaController extends Controller
 
     /**
      * Estimate PDF pages from output
+     * Simple estimation based on page break markers
      */
     private function estimatePdfPages($pdfOutput)
     {
@@ -767,7 +754,7 @@ class PerjanjianKinerjaController extends Controller
             $pageCount = substr_count($pdfOutput, '/Type /Page');
             return $pageCount > 0 ? $pageCount : 1;
         } catch (\Exception $e) {
-            return 1;
+            return 1; // Default to 1 page if estimation fails
         }
     }
 }
