@@ -241,7 +241,7 @@
                     <!-- NIP/NIK -->
                     <div>
                         <input id="nomor_identitas-mobile" type="text" name="nomor_identitas" required
-                            placeholder="Isikan username, email atau NIK"
+                            placeholder="Isikan username atau NIK"
                             class="custom-input w-full px-4 py-3 focus:outline-none" />
                     </div>
 
@@ -400,10 +400,10 @@
                             <div>
                                 <label for="nomor_identitas-desktop"
                                     class="block text-sm font-medium text-gray-700 mb-1">
-                                    NIP / NIK / Email
+                                    NIP / NIK
                                 </label>
                                 <input id="nomor_identitas-desktop" type="text" name="nomor_identitas" required
-                                    placeholder="Isikan NIP, NIK, atau email Anda"
+                                    placeholder="Isikan NIP atau NIK Anda"
                                     class="custom-input w-full px-4 py-2.5 focus:outline-none" />
                             </div>
 

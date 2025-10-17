@@ -8,8 +8,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Modules\PerjanjianKinerja\Models\PkIndikator;
+use Modules\PerjanjianKinerja\Models\PkKegiatan;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
 use Modules\PerjanjianKinerja\Models\PkDokumen;
+use Modules\PerjanjianKinerja\Models\PkProgram;
+use Modules\PerjanjianKinerja\Models\PkSasaran;
+use Modules\PerjanjianKinerja\Models\PkSubKegiatan;
 use Modules\PerjanjianKinerja\Models\PkTemplate;
 use App\Models\MasterPegawai;
 use App\Models\MasterJabatan;
@@ -128,86 +133,7 @@ class PerjanjianKinerjaController extends Controller
         ));
     }
 
-    /**
-     * Show the form for creating a new perjanjian kinerja
-     */
-    public function create()
-    {
-        $pegawais = MasterPegawai::where('status_aktif', 'Aktif')
-            ->whereNotNull('atasan_langsung_id')
-            ->with(['jabatan', 'bidang'])
-            ->orderBy('nama')
-            ->get();
 
-        $templates = PkTemplate::where('is_active', true)
-            ->where('tahun', date('Y'))
-            ->with('jabatan')
-            ->get();
-
-        $currentYear = date('Y');
-
-        return view('perjanjiankinerja::create', compact(
-            'pegawais',
-            'templates',
-            'currentYear'
-        ));
-    }
-
-    /**
-     * Store a newly created perjanjian kinerja
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'pegawai_id' => 'required|exists:master_pegawai,id',
-            'template_id' => 'required|exists:pk_template,id',
-            'tahun' => 'required|integer|min:2020|max:2100',
-            'periode_mulai' => 'required|date',
-            'periode_selesai' => 'required|date|after:periode_mulai',
-            'tempat_ttd' => 'required|string|max:100',
-            'catatan' => 'nullable|string',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            // Get pegawai data
-            $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
-
-            if (!$pegawai->atasan_langsung_id) {
-                throw new \Exception('Pegawai tidak memiliki atasan langsung.');
-            }
-
-            // Generate nomor perjanjian
-            $nomor = PkPerjanjianKinerja::generateNomorPerjanjian($validated['tahun']);
-
-            // Create perjanjian kinerja
-            $pk = PkPerjanjianKinerja::create([
-                'nomor_perjanjian' => $nomor,
-                'pegawai_id' => $validated['pegawai_id'],
-                'atasan_id' => $pegawai->atasan_langsung_id,
-                'template_id' => $validated['template_id'],
-                'tahun' => $validated['tahun'],
-                'periode_mulai' => $validated['periode_mulai'],
-                'periode_selesai' => $validated['periode_selesai'],
-                'tempat_ttd' => $validated['tempat_ttd'],
-                'status_dokumen' => 'Draft',
-                'catatan' => $validated['catatan'],
-                'is_locked' => false,
-                'total_anggaran' => 0,
-            ]);
-
-            DB::commit();
-
-            return redirect()
-                ->route('perjanjian-kinerja.show', $pk->id)
-                ->with('success', 'Perjanjian Kinerja berhasil dibuat.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()
-                ->withInput()
-                ->with('error', 'Gagal membuat Perjanjian Kinerja: ' . $e->getMessage());
-        }
-    }
 
     /**
      * Display the specified perjanjian kinerja
@@ -228,30 +154,403 @@ class PerjanjianKinerjaController extends Controller
         return view('perjanjiankinerja::show', compact('pk'));
     }
 
+
+    /**
+     * Show the form for creating a new perjanjian kinerja
+     */
+    public function create()
+    {
+        // Ambil pegawai yang aktif dan punya atasan
+        $pegawai = MasterPegawai::where('status_aktif', 'Aktif')
+            ->whereNotNull('atasan_langsung_id')
+            ->with(['jabatan', 'bidang', 'atasanLangsung'])
+            ->orderBy('nama')
+            ->get();
+
+        // Ambil template yang aktif untuk tahun ini
+        $templates = PkTemplate::where('is_active', true)
+            ->where('tahun', date('Y'))
+            ->with('jabatan')
+            ->get();
+
+        $currentYear = date('Y');
+
+        return view('perjanjiankinerja::create', compact(
+            'pegawai',
+            'templates',
+            'currentYear'
+        ));
+    }
+
+    /**
+     * Store a newly created perjanjian kinerja
+     */
+    public function store(Request $request)
+    {
+        // Validasi input dengan struktur lengkap
+        $validated = $request->validate([
+            'pegawai_id' => 'required|exists:master_pegawai,id',
+            'template_id' => 'required|exists:pk_template,id',
+            'tahun' => 'required|integer|min:2020|max:2100',
+            'periode_mulai' => 'required|date',
+            'periode_selesai' => 'required|date|after:periode_mulai',
+            'catatan' => 'nullable|string',
+
+            // Validasi Sasaran
+            'sasaran' => 'nullable|array',
+            'sasaran.*.sasaran_strategis' => 'required_with:sasaran|string',
+            'sasaran.*.urutan' => 'required_with:sasaran|integer|min:1',
+
+            // Validasi Indikator
+            'sasaran.*.indikator' => 'nullable|array',
+            'sasaran.*.indikator.*.indikator_sasaran' => 'required_with:sasaran.*.indikator|string',
+            'sasaran.*.indikator.*.target_value' => 'required_with:sasaran.*.indikator|numeric',
+            'sasaran.*.indikator.*.satuan' => 'required_with:sasaran.*.indikator|string',
+
+            // Validasi Program
+            'sasaran.*.indikator.*.program' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kode_program' => 'required_with:sasaran.*.indikator.*.program|string|max:50',
+            'sasaran.*.indikator.*.program.*.nama_program' => 'required_with:sasaran.*.indikator.*.program|string',
+            'sasaran.*.indikator.*.program.*.anggaran' => 'required_with:sasaran.*.indikator.*.program|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.urutan' => 'required_with:sasaran.*.indikator.*.program|integer|min:1',
+
+            // Validasi Kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.kode_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string|max:50',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.nama_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.urutan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|integer|min:1',
+
+            // Validasi Sub Kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.kode_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.nama_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.target_value' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.satuan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Ambil data pegawai untuk mendapatkan atasan
+            $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
+
+            if (!$pegawai->atasan_langsung_id) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Pegawai tidak memiliki atasan langsung');
+            }
+
+            // Generate nomor perjanjian
+            $nomorPerjanjian = $this->generateNomorPerjanjian($validated['tahun']);
+
+            // Buat perjanjian kinerja
+            $pk = PkPerjanjianKinerja::create([
+                'nomor_perjanjian' => $nomorPerjanjian,
+                'pegawai_id' => $validated['pegawai_id'],
+                'atasan_id' => $pegawai->atasan_langsung_id,
+                'template_id' => $validated['template_id'],
+                'tahun' => $validated['tahun'],
+                'periode_mulai' => $validated['periode_mulai'],
+                'periode_selesai' => $validated['periode_selesai'],
+                'tempat_ttd' => 'Sofifi',
+                'catatan' => $validated['catatan'] ?? null,
+                'status_dokumen' => 'Draft',
+                'is_locked' => false,
+                'total_anggaran' => 0,
+            ]);
+
+            $totalAnggaran = 0;
+
+            // Simpan sasaran dan struktur lengkapnya
+            if (isset($validated['sasaran']) && is_array($validated['sasaran'])) {
+                foreach ($validated['sasaran'] as $sasaranData) {
+                    // 1. Simpan Sasaran
+                    $sasaran = PkSasaran::create([
+                        'perjanjian_kinerja_id' => $pk->id,
+                        'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+                        'urutan' => $sasaranData['urutan'],
+                    ]);
+
+                    // 2. Simpan Indikator jika ada
+                    if (isset($sasaranData['indikator']) && is_array($sasaranData['indikator'])) {
+                        foreach ($sasaranData['indikator'] as $indikatorData) {
+                            $indikator = PkIndikator::create([
+                                'sasaran_id' => $sasaran->id,
+                                'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+                                'target_value' => $indikatorData['target_value'],
+                                'satuan' => $indikatorData['satuan'],
+                            ]);
+
+                            // 3. Simpan Program jika ada
+                            if (isset($indikatorData['program']) && is_array($indikatorData['program'])) {
+                                foreach ($indikatorData['program'] as $programData) {
+                                    $program = PkProgram::create([
+                                        'indikator_id' => $indikator->id,
+                                        'kode_program' => $programData['kode_program'],
+                                        'nama_program' => $programData['nama_program'],
+                                        'anggaran' => $programData['anggaran'],
+                                        'urutan' => $programData['urutan'],
+                                    ]);
+
+                                    $totalAnggaran += $programData['anggaran'];
+
+                                    // 4. Simpan Kegiatan jika ada
+                                    if (isset($programData['kegiatan']) && is_array($programData['kegiatan'])) {
+                                        foreach ($programData['kegiatan'] as $kegiatanData) {
+                                            $kegiatan = PkSubKegiatan::create([
+                                                'program_id' => $program->id,
+                                                'kode_kegiatan' => $kegiatanData['kode_kegiatan'],
+                                                'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                'anggaran' => $kegiatanData['anggaran'],
+                                                'urutan' => $kegiatanData['urutan'],
+                                            ]);
+
+                                            // 5. Simpan Sub Kegiatan jika ada
+                                            if (isset($kegiatanData['subkegiatan']) && is_array($kegiatanData['subkegiatan'])) {
+                                                foreach ($kegiatanData['subkegiatan'] as $subKegiatanData) {
+                                                    PkSubKegiatan::create([
+                                                        'kegiatan_id' => $kegiatan->id,
+                                                        'kode_sub_kegiatan' => $subKegiatanData['kode_sub_kegiatan'],
+                                                        'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                        'anggaran' => $subKegiatanData['anggaran'],
+                                                        'target_value' => $subKegiatanData['target_value'],
+                                                        'satuan' => $subKegiatanData['satuan'],
+                                                        'urutan' => $subKegiatanData['urutan'] ?? 1,
+                                                    ]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update total anggaran
+            $pk->update(['total_anggaran' => $totalAnggaran]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('perjanjian-kinerja.show', $pk->id)
+                ->with('success', 'Perjanjian Kinerja berhasil dibuat dengan ' . count($validated['sasaran'] ?? []) . ' sasaran');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating perjanjian kinerja: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Gagal membuat Perjanjian Kinerja: ' . $e->getMessage());
+        }
+    }
+
+
     /**
      * Show the form for editing the specified perjanjian kinerja
      */
     public function edit($id)
     {
-        $pk = PkPerjanjianKinerja::findOrFail($id);
+        $pk = PkPerjanjianKinerja::with([
+            'pegawai.jabatan',
+            'pegawai.bidang',
+            'atasan.jabatan',
+            'template',
+            'sasaran.indikator'
+        ])->findOrFail($id);
 
-        if (!$pk->isEditable()) {
-            return back()->with('warning', 'Perjanjian Kinerja tidak dapat diedit karena sudah dikunci atau status tidak memungkinkan.');
+        // Cek apakah sudah dikunci
+        if ($pk->is_locked) {
+            return redirect()
+                ->route('perjanjian-kinerja.show', $pk->id)
+                ->with('warning', 'Dokumen sudah ditandatangani dan tidak dapat diedit');
         }
 
-        $pegawais = MasterPegawai::where('status_aktif', 'Aktif')
+        // Ambil pegawai yang aktif dan punya atasan
+        $pegawai = MasterPegawai::where('status_aktif', 'Aktif')
             ->whereNotNull('atasan_langsung_id')
-            ->with(['jabatan', 'bidang'])
+            ->with(['jabatan', 'bidang', 'atasanLangsung'])
             ->orderBy('nama')
             ->get();
 
-        $templates = PkTemplate::where('tahun', $pk->tahun)
+        // Ambil semua atasan (untuk keperluan jika ingin mengubah atasan manual)
+        $atasan = MasterPegawai::where('status_aktif', 'Aktif')
+            ->whereHas('jabatan', function ($q) {
+                $q->where('is_struktural', true);
+            })
+            ->with(['jabatan'])
+            ->orderBy('nama')
+            ->get();
+
+        // Ambil template yang aktif
+        $templates = PkTemplate::where('is_active', true)
             ->with('jabatan')
             ->get();
 
-        return view('perjanjiankinerja::edit', compact('pk', 'pegawais', 'templates'));
+        return view('perjanjiankinerja::edit', compact(
+            'pk',
+            'pegawai',
+            'atasan',
+            'templates'
+        ));
     }
 
+    /**
+     * Update the specified perjanjian kinerja
+     */
+    // public function update(Request $request, $id)
+    // {
+    //     $pk = PkPerjanjianKinerja::findOrFail($id);
+
+    //     // Cek apakah sudah dikunci
+    //     if ($pk->is_locked) {
+    //         return redirect()
+    //             ->route('perjanjian-kinerja.show', $pk->id)
+    //             ->with('error', 'Dokumen sudah ditandatangani dan tidak dapat diedit');
+    //     }
+
+    //     // Validasi input
+    //     $validated = $request->validate([
+    //         'pegawai_id' => 'required|exists:master_pegawai,id',
+    //         'atasan_id' => 'required|exists:master_pegawai,id',
+    //         'template_id' => 'required|exists:pk_template,id',
+    //         'tahun' => 'required|integer|min:2020|max:2100',
+    //         'periode_mulai' => 'required|date',
+    //         'periode_selesai' => 'required|date|after:periode_mulai',
+    //         'catatan' => 'nullable|string',
+    //         'sasaran' => 'nullable|array',
+    //         'sasaran.*.id' => 'nullable|exists:pk_sasaran,id',
+    //         'sasaran.*.sasaran_strategis' => 'required_with:sasaran.*|string',
+    //         'sasaran.*.urutan' => 'required_with:sasaran.*|integer|min:1',
+    //         'sasaran.*.indikator' => 'nullable|array',
+    //         'sasaran.*.indikator.*.id' => 'nullable|exists:pk_indikator,id',
+    //         'sasaran.*.indikator.*.indikator_sasaran' => 'required_with:sasaran.*.indikator.*|string',
+    //         'sasaran.*.indikator.*.target_value' => 'required_with:sasaran.*.indikator.*|numeric',
+    //         'sasaran.*.indikator.*.satuan' => 'required_with:sasaran.*.indikator.*|string',
+    //     ]);
+
+    //     DB::beginTransaction();
+    //     try {
+    //         // Update perjanjian kinerja
+    //         $pk->update([
+    //             'pegawai_id' => $validated['pegawai_id'],
+    //             'atasan_id' => $validated['atasan_id'],
+    //             'template_id' => $validated['template_id'],
+    //             'tahun' => $validated['tahun'],
+    //             'periode_mulai' => $validated['periode_mulai'],
+    //             'periode_selesai' => $validated['periode_selesai'],
+    //             'catatan' => $validated['catatan'] ?? null,
+    //         ]);
+
+    //         // Tracking ID sasaran yang sudah ada
+    //         $existingSasaranIds = [];
+
+    //         // Update atau create sasaran
+    //         if (isset($validated['sasaran']) && is_array($validated['sasaran'])) {
+    //             foreach ($validated['sasaran'] as $sasaranData) {
+    //                 // Reset tracking indikator untuk setiap sasaran - INI PENTING!
+    //                 $existingIndikatorIds = [];
+
+    //                 if (isset($sasaranData['id']) && !empty($sasaranData['id'])) {
+    //                     // Update existing sasaran
+    //                     $sasaran = PkSasaran::where('id', $sasaranData['id'])
+    //                         ->where('perjanjian_kinerja_id', $pk->id)
+    //                         ->first();
+
+    //                     if ($sasaran) {
+    //                         $sasaran->update([
+    //                             'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+    //                             'urutan' => $sasaranData['urutan'],
+    //                         ]);
+    //                         $existingSasaranIds[] = $sasaran->id;
+    //                     }
+    //                 } else {
+    //                     // Create new sasaran
+    //                     $sasaran = PkSasaran::create([
+    //                         'perjanjian_kinerja_id' => $pk->id,
+    //                         'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+    //                         'urutan' => $sasaranData['urutan'],
+    //                     ]);
+    //                     $existingSasaranIds[] = $sasaran->id;
+    //                 }
+
+    //                 // Update atau create indikator
+    //                 if (isset($sasaranData['indikator']) && is_array($sasaranData['indikator'])) {
+    //                     foreach ($sasaranData['indikator'] as $indikatorData) {
+    //                         if (isset($indikatorData['id']) && !empty($indikatorData['id'])) {
+    //                             // Update existing indikator
+    //                             $indikator = PkIndikator::where('id', $indikatorData['id'])
+    //                                 ->where('sasaran_id', $sasaran->id)
+    //                                 ->first();
+
+    //                             if ($indikator) {
+    //                                 $indikator->update([
+    //                                     'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+    //                                     'target_value' => $indikatorData['target_value'],
+    //                                     'satuan' => $indikatorData['satuan'],
+    //                                 ]);
+    //                                 $existingIndikatorIds[] = $indikator->id;
+    //                             }
+    //                         } else {
+    //                             // Create new indikator
+    //                             $indikator = PkIndikator::create([
+    //                                 'sasaran_id' => $sasaran->id,
+    //                                 'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+    //                                 'target_value' => $indikatorData['target_value'],
+    //                                 'satuan' => $indikatorData['satuan'],
+    //                             ]);
+    //                             $existingIndikatorIds[] = $indikator->id;
+    //                         }
+    //                     }
+    //                 }
+
+    //                 // Hapus indikator yang tidak ada di request untuk sasaran ini
+    //                 if (!empty($existingIndikatorIds)) {
+    //                     PkIndikator::where('sasaran_id', $sasaran->id)
+    //                         ->whereNotIn('id', $existingIndikatorIds)
+    //                         ->delete();
+    //                 } else {
+    //                     // Jika tidak ada indikator di request, hapus semua indikator sasaran ini
+    //                     PkIndikator::where('sasaran_id', $sasaran->id)->delete();
+    //                 }
+    //             }
+    //         }
+
+    //         // Hapus sasaran yang tidak ada di request
+    //         if (!empty($existingSasaranIds)) {
+    //             PkSasaran::where('perjanjian_kinerja_id', $pk->id)
+    //                 ->whereNotIn('id', $existingSasaranIds)
+    //                 ->delete();
+    //         } else {
+    //             // Jika tidak ada sasaran di request, hapus semua sasaran
+    //             PkSasaran::where('perjanjian_kinerja_id', $pk->id)->delete();
+    //         }
+
+    //         DB::commit();
+
+    //         return redirect()
+    //             ->route('perjanjian-kinerja.show', $pk->id)
+    //             ->with('success', 'Perjanjian Kinerja berhasil diupdate');
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Error updating perjanjian kinerja: ' . $e->getMessage(), [
+    //             'pk_id' => $id,
+    //             'request_data' => $request->all(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return redirect()
+    //             ->back()
+    //             ->withInput()
+    //             ->with('error', 'Gagal mengupdate Perjanjian Kinerja: ' . $e->getMessage());
+    //     }
+    // }
     /**
      * Update the specified perjanjian kinerja
      */
@@ -259,50 +558,363 @@ class PerjanjianKinerjaController extends Controller
     {
         $pk = PkPerjanjianKinerja::findOrFail($id);
 
-        if (!$pk->isEditable()) {
-            return back()->with('error', 'Perjanjian Kinerja tidak dapat diedit karena sudah dikunci atau status tidak memungkinkan.');
+        // Cek apakah sudah dikunci
+        if ($pk->is_locked) {
+            return redirect()
+                ->route('perjanjian-kinerja.show', $pk->id)
+                ->with('error', 'Dokumen sudah ditandatangani dan tidak dapat diedit');
         }
 
+        // Validasi input lengkap
         $validated = $request->validate([
             'pegawai_id' => 'required|exists:master_pegawai,id',
+            'atasan_id' => 'required|exists:master_pegawai,id',
             'template_id' => 'required|exists:pk_template,id',
+            'tahun' => 'required|integer|min:2020|max:2100',
             'periode_mulai' => 'required|date',
             'periode_selesai' => 'required|date|after:periode_mulai',
-            'tempat_ttd' => 'required|string|max:100',
             'catatan' => 'nullable|string',
-            'status_dokumen' => 'required|in:Draft,Generated,Menunggu_TTD,Aktif,Selesai,Dibatalkan',
+
+            // Validasi Sasaran
+            'sasaran' => 'nullable|array',
+            'sasaran.*.id' => 'nullable|exists:pk_sasaran,id',
+            'sasaran.*.sasaran_strategis' => 'required_with:sasaran|string',
+            'sasaran.*.urutan' => 'required_with:sasaran|integer|min:1',
+
+            // Validasi Indikator
+            'sasaran.*.indikator' => 'nullable|array',
+            'sasaran.*.indikator.*.id' => 'nullable|exists:pk_indikator,id',
+            'sasaran.*.indikator.*.indikator_sasaran' => 'required_with:sasaran.*.indikator|string',
+            'sasaran.*.indikator.*.target_value' => 'required_with:sasaran.*.indikator|numeric',
+            'sasaran.*.indikator.*.satuan' => 'required_with:sasaran.*.indikator|string',
+
+            // Validasi Program
+            'sasaran.*.indikator.*.program' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.id' => 'nullable|exists:pk_program,id',
+            'sasaran.*.indikator.*.program.*.kode_program' => 'required_with:sasaran.*.indikator.*.program|string|max:50',
+            'sasaran.*.indikator.*.program.*.nama_program' => 'required_with:sasaran.*.indikator.*.program|string',
+            'sasaran.*.indikator.*.program.*.anggaran' => 'required_with:sasaran.*.indikator.*.program|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.urutan' => 'required_with:sasaran.*.indikator.*.program|integer|min:1',
+
+            // Validasi Kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.id' => 'nullable|exists:pk_kegiatan,id',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.kode_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string|max:50',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.nama_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.urutan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|integer|min:1',
+
+            // Validasi Sub Kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.id' => 'nullable|exists:pk_sub_kegiatan,id',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.kode_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.nama_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.target_value' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.satuan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
         ]);
 
         DB::beginTransaction();
         try {
-            // Get pegawai data
-            $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
-
-            if (!$pegawai->atasan_langsung_id) {
-                throw new \Exception('Pegawai tidak memiliki atasan langsung.');
-            }
-
+            // Update perjanjian kinerja
             $pk->update([
                 'pegawai_id' => $validated['pegawai_id'],
-                'atasan_id' => $pegawai->atasan_langsung_id,
+                'atasan_id' => $validated['atasan_id'],
                 'template_id' => $validated['template_id'],
+                'tahun' => $validated['tahun'],
                 'periode_mulai' => $validated['periode_mulai'],
                 'periode_selesai' => $validated['periode_selesai'],
-                'tempat_ttd' => $validated['tempat_ttd'],
-                'catatan' => $validated['catatan'],
-                'status_dokumen' => $validated['status_dokumen'],
+                'catatan' => $validated['catatan'] ?? null,
             ]);
+
+            // Tracking ID yang sudah ada
+            $existingSasaranIds = [];
+            $totalAnggaran = 0;
+
+            // Update atau create sasaran
+            if (isset($validated['sasaran']) && is_array($validated['sasaran'])) {
+                foreach ($validated['sasaran'] as $sasaranData) {
+                    $existingIndikatorIds = [];
+
+                    // 1. Simpan/Update Sasaran
+                    if (isset($sasaranData['id']) && !empty($sasaranData['id'])) {
+                        $sasaran = PkSasaran::where('id', $sasaranData['id'])
+                            ->where('perjanjian_kinerja_id', $pk->id)
+                            ->first();
+
+                        if ($sasaran) {
+                            $sasaran->update([
+                                'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+                                'urutan' => $sasaranData['urutan'],
+                            ]);
+                            $existingSasaranIds[] = $sasaran->id;
+                        }
+                    } else {
+                        $sasaran = PkSasaran::create([
+                            'perjanjian_kinerja_id' => $pk->id,
+                            'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+                            'urutan' => $sasaranData['urutan'],
+                        ]);
+                        $existingSasaranIds[] = $sasaran->id;
+                    }
+
+                    // 2. Simpan/Update Indikator
+                    if (isset($sasaranData['indikator']) && is_array($sasaranData['indikator'])) {
+                        foreach ($sasaranData['indikator'] as $indikatorData) {
+                            $existingProgramIds = [];
+
+                            if (isset($indikatorData['id']) && !empty($indikatorData['id'])) {
+                                $indikator = PkIndikator::where('id', $indikatorData['id'])
+                                    ->where('sasaran_id', $sasaran->id)
+                                    ->first();
+
+                                if ($indikator) {
+                                    $indikator->update([
+                                        'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+                                        'target_value' => $indikatorData['target_value'],
+                                        'satuan' => $indikatorData['satuan'],
+                                    ]);
+                                    $existingIndikatorIds[] = $indikator->id;
+                                }
+                            } else {
+                                $indikator = PkIndikator::create([
+                                    'sasaran_id' => $sasaran->id,
+                                    'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+                                    'target_value' => $indikatorData['target_value'],
+                                    'satuan' => $indikatorData['satuan'],
+                                ]);
+                                $existingIndikatorIds[] = $indikator->id;
+                            }
+
+                            // 3. Simpan/Update Program
+                            if (isset($indikatorData['program']) && is_array($indikatorData['program'])) {
+                                foreach ($indikatorData['program'] as $programData) {
+                                    $existingKegiatanIds = [];
+
+                                    if (isset($programData['id']) && !empty($programData['id'])) {
+                                        $program = PkProgram::where('id', $programData['id'])
+                                            ->where('indikator_id', $indikator->id)
+                                            ->first();
+
+                                        if ($program) {
+                                            $program->update([
+                                                'kode_program' => $programData['kode_program'],
+                                                'nama_program' => $programData['nama_program'],
+                                                'anggaran' => $programData['anggaran'],
+                                                'urutan' => $programData['urutan'],
+                                            ]);
+                                            $existingProgramIds[] = $program->id;
+                                        }
+                                    } else {
+                                        $program = PkProgram::create([
+                                            'indikator_id' => $indikator->id,
+                                            'kode_program' => $programData['kode_program'],
+                                            'nama_program' => $programData['nama_program'],
+                                            'anggaran' => $programData['anggaran'],
+                                            'urutan' => $programData['urutan'],
+                                        ]);
+                                        $existingProgramIds[] = $program->id;
+                                    }
+
+                                    $totalAnggaran += $programData['anggaran'];
+
+                                    // 4. Simpan/Update Kegiatan
+                                    if (isset($programData['kegiatan']) && is_array($programData['kegiatan'])) {
+                                        foreach ($programData['kegiatan'] as $kegiatanData) {
+                                            $existingSubKegiatanIds = [];
+
+                                            if (isset($kegiatanData['id']) && !empty($kegiatanData['id'])) {
+                                                $kegiatan = PkKegiatan::where('id', $kegiatanData['id'])
+                                                    ->where('program_id', $program->id)
+                                                    ->first();
+
+                                                if ($kegiatan) {
+                                                    $kegiatan->update([
+                                                        'kode_kegiatan' => $kegiatanData['kode_kegiatan'],
+                                                        'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                        'anggaran' => $kegiatanData['anggaran'],
+                                                        'urutan' => $kegiatanData['urutan'],
+                                                    ]);
+                                                    $existingKegiatanIds[] = $kegiatan->id;
+                                                }
+                                            } else {
+                                                $kegiatan = PkKegiatan::create([
+                                                    'program_id' => $program->id,
+                                                    'kode_kegiatan' => $kegiatanData['kode_kegiatan'],
+                                                    'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                    'anggaran' => $kegiatanData['anggaran'],
+                                                    'urutan' => $kegiatanData['urutan'],
+                                                ]);
+                                                $existingKegiatanIds[] = $kegiatan->id;
+                                            }
+
+                                            // 5. Simpan/Update Sub Kegiatan
+                                            if (isset($kegiatanData['subkegiatan']) && is_array($kegiatanData['subkegiatan'])) {
+                                                foreach ($kegiatanData['subkegiatan'] as $subKegiatanData) {
+                                                    if (isset($subKegiatanData['id']) && !empty($subKegiatanData['id'])) {
+                                                        $subKegiatan = PkSubKegiatan::where('id', $subKegiatanData['id'])
+                                                            ->where('kegiatan_id', $kegiatan->id)
+                                                            ->first();
+
+                                                        if ($subKegiatan) {
+                                                            $subKegiatan->update([
+                                                                'kode_sub_kegiatan' => $subKegiatanData['kode_sub_kegiatan'],
+                                                                'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                                'anggaran' => $subKegiatanData['anggaran'],
+                                                                'target_value' => $subKegiatanData['target_value'],
+                                                                'satuan' => $subKegiatanData['satuan'],
+                                                                'urutan' => $subKegiatanData['urutan'] ?? 1,
+                                                            ]);
+                                                            $existingSubKegiatanIds[] = $subKegiatan->id;
+                                                        }
+                                                    } else {
+                                                        $subKegiatan = PkSubKegiatan::create([
+                                                            'kegiatan_id' => $kegiatan->id,
+                                                            'kode_sub_kegiatan' => $subKegiatanData['kode_sub_kegiatan'],
+                                                            'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                            'anggaran' => $subKegiatanData['anggaran'],
+                                                            'target_value' => $subKegiatanData['target_value'],
+                                                            'satuan' => $subKegiatanData['satuan'],
+                                                            'urutan' => $subKegiatanData['urutan'] ?? 1,
+                                                        ]);
+                                                        $existingSubKegiatanIds[] = $subKegiatan->id;
+                                                    }
+                                                }
+                                            }
+
+                                            // Hapus sub kegiatan yang tidak ada di request
+                                            if (!empty($existingSubKegiatanIds)) {
+                                                PkSubKegiatan::where('kegiatan_id', $kegiatan->id)
+                                                    ->whereNotIn('id', $existingSubKegiatanIds)
+                                                    ->delete();
+                                            } else {
+                                                PkSubKegiatan::where('kegiatan_id', $kegiatan->id)->delete();
+                                            }
+                                        }
+                                    }
+
+                                    // Hapus kegiatan yang tidak ada di request
+                                    if (!empty($existingKegiatanIds)) {
+                                        PkKegiatan::where('program_id', $program->id)
+                                            ->whereNotIn('id', $existingKegiatanIds)
+                                            ->delete();
+                                    } else {
+                                        PkKegiatan::where('program_id', $program->id)->delete();
+                                    }
+                                }
+                            }
+
+                            // Hapus program yang tidak ada di request
+                            if (!empty($existingProgramIds)) {
+                                PkProgram::where('indikator_id', $indikator->id)
+                                    ->whereNotIn('id', $existingProgramIds)
+                                    ->delete();
+                            } else {
+                                PkProgram::where('indikator_id', $indikator->id)->delete();
+                            }
+                        }
+                    }
+
+                    // Hapus indikator yang tidak ada di request
+                    if (!empty($existingIndikatorIds)) {
+                        PkIndikator::where('sasaran_id', $sasaran->id)
+                            ->whereNotIn('id', $existingIndikatorIds)
+                            ->delete();
+                    } else {
+                        PkIndikator::where('sasaran_id', $sasaran->id)->delete();
+                    }
+                }
+            }
+
+            // Hapus sasaran yang tidak ada di request
+            if (!empty($existingSasaranIds)) {
+                PkSasaran::where('perjanjian_kinerja_id', $pk->id)
+                    ->whereNotIn('id', $existingSasaranIds)
+                    ->delete();
+            } else {
+                PkSasaran::where('perjanjian_kinerja_id', $pk->id)->delete();
+            }
+
+            // Update total anggaran
+            $pk->update(['total_anggaran' => $totalAnggaran]);
 
             DB::commit();
 
             return redirect()
                 ->route('perjanjian-kinerja.show', $pk->id)
-                ->with('success', 'Perjanjian Kinerja berhasil diupdate.');
+                ->with('success', 'Perjanjian Kinerja berhasil diupdate');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()
+            Log::error('Error updating perjanjian kinerja: ' . $e->getMessage(), [
+                'pk_id' => $id,
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()
+                ->back()
                 ->withInput()
                 ->with('error', 'Gagal mengupdate Perjanjian Kinerja: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Generate nomor perjanjian unik
+     */
+    private function generateNomorPerjanjian($tahun)
+    {
+        // Format: PK/BAPPEDA/TAHUN/COUNTER
+        $prefix = 'PK/BAPPEDA/' . $tahun . '/';
+
+        // Cari counter terakhir untuk tahun ini
+        $lastPK = PkPerjanjianKinerja::where('tahun', $tahun)
+            ->where('nomor_perjanjian', 'like', $prefix . '%')
+            ->orderBy('nomor_perjanjian', 'desc')
+            ->first();
+
+        if ($lastPK) {
+            // Extract counter dari nomor terakhir
+            $lastNumber = (int) substr($lastPK->nomor_perjanjian, -3);
+            $counter = $lastNumber + 1;
+        } else {
+            $counter = 1;
+        }
+
+        // Format counter dengan 3 digit
+        $formattedCounter = str_pad($counter, 3, '0', STR_PAD_LEFT);
+
+        return $prefix . $formattedCounter;
+    }
+
+    /**
+     * Get atasan by pegawai ID (untuk AJAX request)
+     */
+    public function getAtasan($pegawaiId)
+    {
+        try {
+            $pegawai = MasterPegawai::with(['atasanLangsung.jabatan'])
+                ->findOrFail($pegawaiId);
+
+            if (!$pegawai->atasanLangsung) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pegawai tidak memiliki atasan langsung'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $pegawai->atasanLangsung->id,
+                    'nama' => $pegawai->atasanLangsung->nama,
+                    'nip' => $pegawai->atasanLangsung->nomor_identitas,
+                    'jabatan' => $pegawai->atasanLangsung->jabatan->nama ?? '-',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pegawai tidak ditemukan'
+            ], 404);
         }
     }
 

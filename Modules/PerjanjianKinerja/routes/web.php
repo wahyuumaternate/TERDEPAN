@@ -37,9 +37,7 @@ Route::middleware(['web', 'auth'])->group(function () {
             Route::get('/{id}/preview-pdf', [TemplateController::class, 'previewPdf'])->name('preview-pdf');
             Route::get('/{id}/download-pdf', [TemplateController::class, 'downloadPdf'])->name('download-pdf');
         });
-        // ====================================
-        // PERJANJIAN KINERJA ROUTES
-        // ====================================
+        // Resource routes
         Route::get('/', [PerjanjianKinerjaController::class, 'index'])->name('index');
         Route::get('/create', [PerjanjianKinerjaController::class, 'create'])->name('create');
         Route::post('/', [PerjanjianKinerjaController::class, 'store'])->name('store');
@@ -47,6 +45,15 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/{id}/edit', [PerjanjianKinerjaController::class, 'edit'])->name('edit');
         Route::put('/{id}', [PerjanjianKinerjaController::class, 'update'])->name('update');
         Route::delete('/{id}', [PerjanjianKinerjaController::class, 'destroy'])->name('destroy');
+
+        // Additional routes
+        Route::post('/{id}/generate', [PerjanjianKinerjaController::class, 'generatePDF'])->name('generate');
+        Route::get('/{id}/preview', [PerjanjianKinerjaController::class, 'preview'])->name('preview');
+        Route::get('/{id}/download', [PerjanjianKinerjaController::class, 'download'])->name('download');
+        Route::post('/{id}/sign', [PerjanjianKinerjaController::class, 'sign'])->name('sign');
+
+        // AJAX route for getting atasan
+        Route::get('/get-atasan/{pegawaiId}', [PerjanjianKinerjaController::class, 'getAtasan'])->name('get-atasan');
 
         // Perjanjian Kinerja Actions
         Route::post('/{id}/generate', [PerjanjianKinerjaController::class, 'generate'])->name('generate');
