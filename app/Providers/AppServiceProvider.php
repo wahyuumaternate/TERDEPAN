@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Helpers\StorageHelper;
 use App\Services\NomorDokumenService;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +29,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Paginator::useBootstrap();
+
         // Hitung total & penggunaan storage di disk 'public'
         $used = StorageHelper::getFolderSize(); // tanpa argumen, default ke public
         $total = 1000 * 1024 * 1024 * 1024; //  total kapasitas: 800 GB

@@ -301,7 +301,7 @@
                          <i class="bi bi-circle"></i><span>Folder Dokumen</span>
                      </a>
                  </li>
-                 <li>
+                 {{-- <li>
                      <a href="{{ url('dokumen/log') }}" class="{{ request()->is('dokumen/log') ? 'active' : '' }}">
                          <i class="bi bi-circle"></i><span>Log Aktivitas Dokumen</span>
                      </a>
@@ -311,7 +311,7 @@
                          class="{{ request()->is('dokumen/nomor') ? 'active' : '' }}">
                          <i class="bi bi-circle"></i><span>Penomoran Dokumen</span>
                      </a>
-                 </li>
+                 </li> --}}
              </ul>
          </li>
          <!-- End Management File Nav -->
@@ -336,16 +336,7 @@
                          <i class="bi bi-circle"></i><span>Template PK</span>
                      </a>
                  </li>
-                 <li>
-                     <a href="{{ url('perjanjian-kinerja/sasaran') }}">
-                         <i class="bi bi-circle"></i><span>Sasaran & Indikator</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('perjanjian-kinerja/program') }}">
-                         <i class="bi bi-circle"></i><span>Program & Kegiatan</span>
-                     </a>
-                 </li>
+
                  <li>
                      <a href="{{ url('perjanjian-kinerja/create') }}">
                          <i class="bi bi-circle"></i><span>Buat PK Baru</span>

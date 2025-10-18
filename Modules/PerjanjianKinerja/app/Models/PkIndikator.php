@@ -20,7 +20,7 @@ class PkIndikator extends Model
     ];
 
     protected $casts = [
-        'target_value' => 'decimal:2',
+        'target_value' => 'int:10',
     ];
 
     public function sasaran()

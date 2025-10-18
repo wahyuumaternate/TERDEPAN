@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\PerjanjianKinerja\Models\PkTemplate;
 use Modules\PerjanjianKinerja\Models\PkTemplateSection;
 use App\Models\MasterJabatan;
+use Illuminate\Support\Facades\Log;
 
 class TemplateController extends Controller
 {
@@ -175,6 +176,7 @@ class TemplateController extends Controller
      */
     public function edit($id)
     {
+
         $template = PkTemplate::with('sections')->findOrFail($id);
 
         // Check if template can be edited
@@ -182,9 +184,9 @@ class TemplateController extends Controller
             ->whereIn('status_dokumen', ['Aktif', 'Menunggu_TTD'])
             ->count();
 
-        if ($activeUsage > 0) {
-            return back()->with('warning', 'Template tidak dapat diedit karena sedang digunakan oleh perjanjian kinerja aktif.');
-        }
+        // if ($activeUsage > 0) {
+        //     return back()->with('warning', 'Template tidak dapat diedit karena sedang digunakan oleh perjanjian kinerja aktif.');
+        // }
 
         $jabatans = MasterJabatan::where('is_active', true)
             ->where('is_struktural', true)
@@ -277,31 +279,47 @@ class TemplateController extends Controller
      */
     public function destroy($id)
     {
-        $template = PkTemplate::findOrFail($id);
-
-        // Check if template can be deleted
-        $usageCount = $template->perjanjianKinerja()->count();
-
-        if ($usageCount > 0) {
-            return back()->with('error', 'Template tidak dapat dihapus karena masih digunakan oleh ' . $usageCount . ' perjanjian kinerja.');
-        }
-
-        DB::beginTransaction();
         try {
-            // Delete sections first
-            $template->sections()->delete();
+            $template = PkTemplate::findOrFail($id);
 
-            // Delete template
-            $template->delete();
+            // Check if template can be deleted
+            $usageCount = $template->perjanjianKinerja()->count();
 
-            DB::commit();
+            if ($usageCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Template tidak dapat dihapus karena masih digunakan oleh ' . $usageCount . ' perjanjian kinerja.'
+                ], 422);
+            }
 
-            return redirect()
-                ->route('perjanjian-kinerja.template.index')
-                ->with('success', 'Template berhasil dihapus.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Gagal menghapus template: ' . $e->getMessage());
+            DB::beginTransaction();
+            try {
+                // Delete sections first
+                $template->sections()->delete();
+
+                // Delete template
+                $template->delete();
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Template berhasil dihapus.'
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error deleting template: ' . $e->getMessage());
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus template: ' . $e->getMessage()
+                ], 500);
+            }
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Template tidak ditemukan.'
+            ], 404);
         }
     }
 
