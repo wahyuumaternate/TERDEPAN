@@ -497,7 +497,7 @@
              </a>
              <ul id="master-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('master/pegawai') }}">
+                     <a href="{{ route('master.pegawai.index') }}">
                          <i class="bi bi-circle"></i><span>Pegawai</span>
                      </a>
                  </li>
