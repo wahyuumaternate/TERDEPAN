@@ -35,7 +35,7 @@
                         <div class="card-body">
                             <div class="row align-items-center">
                                 <div class="col-md-6">
-                                    <h6 class="text-muted mb-1">Nomor Perjanjian</h6>
+                                    <h6 class="text-muted mb-1 pt-2">Nomor Perjanjian</h6>
                                     <h5 class="mb-0 text-primary">{{ $pk->nomor_perjanjian }}</h5>
                                 </div>
                                 <div class="col-md-6 text-md-end">
@@ -965,7 +965,7 @@
 
         /* Preview Styling */
         .info-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
             color: white;
         }
 
@@ -1103,12 +1103,12 @@
 
         /* Buttons */
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
             border: none;
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #65408b 100%);
+            background: linear-gradient(135deg, #1e88e5 0%, #26b4f1 100%);
             transform: translateY(-1px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }

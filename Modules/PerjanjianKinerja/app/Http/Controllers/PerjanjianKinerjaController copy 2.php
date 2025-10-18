@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
-use Modules\PerjanjianKinerja\Models\PkSasaran;
 use Modules\PerjanjianKinerja\Models\PkIndikator;
+use Modules\PerjanjianKinerja\Models\PkKegiatan;
+use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
+use Modules\PerjanjianKinerja\Models\PkDokumen;
 use Modules\PerjanjianKinerja\Models\PkProgram;
-use Modules\PerjanjianKinerja\Models\PkKegiatan;        // ✅ PASTIKAN INI ADA
-use Modules\PerjanjianKinerja\Models\PkSubKegiatan;     // ✅ PASTIKAN INI ADA
+use Modules\PerjanjianKinerja\Models\PkSasaran;
+use Modules\PerjanjianKinerja\Models\PkSubKegiatan;
 use Modules\PerjanjianKinerja\Models\PkTemplate;
 use App\Models\MasterPegawai;
 use App\Models\MasterJabatan;
@@ -301,14 +302,12 @@ class PerjanjianKinerjaController extends Controller
     /**
      * Store a newly created perjanjian kinerja
      */
-    /**
-     * Store a newly created perjanjian kinerja
-     */
     public function store(Request $request)
     {
+        // dd($request->all());
         // SANITIZE: Bersihkan format Rupiah dari semua anggaran
         $this->sanitizeAnggaran($request);
-
+        // dd('Step 2: Data setelah sanitize', $request->all());
         // Validasi input TANPA kode-kode (auto-generate)
         $validated = $request->validate([
             'pegawai_id' => 'required|exists:master_pegawai,id',
@@ -330,19 +329,19 @@ class PerjanjianKinerjaController extends Controller
             'sasaran.*.indikator.*.target_value' => 'required_with:sasaran.*.indikator|numeric',
             'sasaran.*.indikator.*.satuan' => 'required_with:sasaran.*.indikator|string',
 
-            // Validasi Program
+            // Validasi Program - TANPA kode_program
             'sasaran.*.indikator.*.program' => 'nullable|array',
             'sasaran.*.indikator.*.program.*.nama_program' => 'required_with:sasaran.*.indikator.*.program|string',
             'sasaran.*.indikator.*.program.*.anggaran' => 'required_with:sasaran.*.indikator.*.program|numeric|min:0',
             'sasaran.*.indikator.*.program.*.urutan' => 'required_with:sasaran.*.indikator.*.program|integer|min:1',
 
-            // Validasi Kegiatan
+            // Validasi Kegiatan - TANPA kode_kegiatan
             'sasaran.*.indikator.*.program.*.kegiatan' => 'nullable|array',
             'sasaran.*.indikator.*.program.*.kegiatan.*.nama_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string',
             'sasaran.*.indikator.*.program.*.kegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|numeric|min:0',
             'sasaran.*.indikator.*.program.*.kegiatan.*.urutan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|integer|min:1',
 
-            // Validasi Sub Kegiatan
+            // Validasi Sub Kegiatan - TANPA kode_sub_kegiatan
             'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan' => 'nullable|array',
             'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.nama_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string',
             'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric|min:0',
@@ -378,6 +377,7 @@ class PerjanjianKinerjaController extends Controller
                 'total_anggaran' => 0,
             ]);
 
+            $totalAnggaran = 0;
             $sasaranCount = 0;
 
             // Simpan sasaran dan struktur lengkapnya
@@ -436,6 +436,8 @@ class PerjanjianKinerjaController extends Controller
                                         'urutan' => $programData['urutan'] ?? ($programIndex + 1),
                                     ]);
 
+                                    $totalAnggaran += floatval($programData['anggaran'] ?? 0);
+
                                     // 4. Simpan Kegiatan jika ada
                                     if (isset($programData['kegiatan']) && is_array($programData['kegiatan'])) {
                                         foreach ($programData['kegiatan'] as $kegiatanIndex => $kegiatanData) {
@@ -446,48 +448,18 @@ class PerjanjianKinerjaController extends Controller
 
                                             // AUTO GENERATE KODE KEGIATAN
                                             $kodeKegiatan = sprintf(
-                                                'PK%d.P%d.%d.%d.K%d',
-                                                $pk->id,                    // ✅ Tambahkan PK ID
-                                                $sasaranIndex + 1,
-                                                $indikatorIndex + 1,
-                                                $programIndex + 1,
+                                                '%s.K%d',
+                                                $kodeProgram,
                                                 $kegiatanIndex + 1
                                             );
 
-                                            try {
-                                                $kegiatan = PkKegiatan::create([
-                                                    'program_id' => $program->id,
-                                                    'kode_kegiatan' => $kodeKegiatan,
-                                                    'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
-                                                    'anggaran' => $kegiatanData['anggaran'] ?? 0,
-                                                    'urutan' => $kegiatanData['urutan'] ?? ($kegiatanIndex + 1),
-                                                ]);
-
-                                                Log::info('✅ Kegiatan Created', [
-                                                    'kegiatan_id' => $kegiatan->id,
-                                                    'kode' => $kodeKegiatan
-                                                ]);
-                                            } catch (\Illuminate\Database\QueryException $e) {
-                                                // Tangkap error database spesifik
-                                                Log::error('❌ DATABASE ERROR saat create Kegiatan:', [
-                                                    'error_code' => $e->getCode(),
-                                                    'error_message' => $e->getMessage(),
-                                                    'sql' => $e->getSql(),
-                                                    'bindings' => $e->getBindings(),
-                                                ]);
-                                                dd($e->getMessage());
-                                                // Tampilkan error ke user
-                                                throw new \Exception('Error create Kegiatan: ' . $e->getMessage());
-                                            } catch (\Exception $e) {
-                                                // Tangkap error lainnya
-                                                Log::error('❌ GENERAL ERROR saat create Kegiatan:', [
-                                                    'error_message' => $e->getMessage(),
-                                                    'line' => $e->getLine(),
-                                                    'file' => $e->getFile(),
-                                                ]);
-
-                                                throw $e;
-                                            }
+                                            $kegiatan = PkKegiatan::create([
+                                                'program_id' => $program->id,
+                                                'kode_kegiatan' => $kodeKegiatan,
+                                                'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                'anggaran' => $kegiatanData['anggaran'] ?? 0,
+                                                'urutan' => $kegiatanData['urutan'] ?? ($kegiatanIndex + 1),
+                                            ]);
 
                                             // 5. Simpan Sub Kegiatan jika ada
                                             if (isset($kegiatanData['subkegiatan']) && is_array($kegiatanData['subkegiatan'])) {
@@ -504,26 +476,15 @@ class PerjanjianKinerjaController extends Controller
                                                         $subKegiatanIndex + 1
                                                     );
 
-                                                    try {
-                                                        PkSubKegiatan::create([
-                                                            'kegiatan_id' => $kegiatan->id,
-                                                            'kode_sub_kegiatan' => $kodeSubKegiatan,
-                                                            'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
-                                                            'anggaran' => $subKegiatanData['anggaran'] ?? 0,
-                                                            'target_value' => $subKegiatanData['target_value'] ?? 0,
-                                                            'satuan' => $subKegiatanData['satuan'] ?? '-',
-                                                            'urutan' => $subKegiatanIndex + 1,
-                                                        ]);
-
-                                                        Log::info('✅ Sub Kegiatan Created', [
-                                                            'kode' => $kodeSubKegiatan
-                                                        ]);
-                                                    } catch (\Exception $e) {
-                                                        Log::error('❌ ERROR saat create Sub Kegiatan:', [
-                                                            'error_message' => $e->getMessage(),
-                                                        ]);
-                                                        throw $e;
-                                                    }
+                                                    PkSubKegiatan::create([
+                                                        'kegiatan_id' => $kegiatan->id,
+                                                        'kode_sub_kegiatan' => $kodeSubKegiatan,
+                                                        'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                        'anggaran' => $subKegiatanData['anggaran'] ?? 0,
+                                                        'target_value' => $subKegiatanData['target_value'] ?? 0,
+                                                        'satuan' => $subKegiatanData['satuan'] ?? '-',
+                                                        'urutan' => $subKegiatanIndex + 1,
+                                                    ]);
                                                 }
                                             }
                                         }
@@ -534,11 +495,6 @@ class PerjanjianKinerjaController extends Controller
                     }
                 }
             }
-
-            // Hitung total anggaran dari database
-            $totalAnggaran = PkProgram::whereHas('indikator.sasaran', function ($q) use ($pk) {
-                $q->where('perjanjian_kinerja_id', $pk->id);
-            })->sum('anggaran');
 
             // Update total anggaran
             $pk->update(['total_anggaran' => $totalAnggaran]);
@@ -562,9 +518,8 @@ class PerjanjianKinerjaController extends Controller
                 ->with('error', 'Gagal membuat Perjanjian Kinerja: ' . $e->getMessage());
         }
     }
-
     /**
-     * Sanitize format Rupiah menjadi angka murni dan cast ke float
+     * Sanitize format Rupiah menjadi angka murni
      */
     private function sanitizeAnggaran(Request $request)
     {
@@ -579,43 +534,32 @@ class PerjanjianKinerjaController extends Controller
                 foreach ($sasaranData['indikator'] as $iKey => $indikatorData) {
                     if (isset($indikatorData['program']) && is_array($indikatorData['program'])) {
                         foreach ($indikatorData['program'] as $pKey => $programData) {
-                            // Bersihkan dan CAST ke float
+                            // Bersihkan anggaran Program
                             if (isset($programData['anggaran'])) {
                                 $sasaran[$sKey]['indikator'][$iKey]['program'][$pKey]['anggaran'] =
-                                    floatval($this->cleanNumber($programData['anggaran']));
+                                    $this->cleanNumber($programData['anggaran']);
                             }
 
                             if (isset($programData['kegiatan']) && is_array($programData['kegiatan'])) {
                                 foreach ($programData['kegiatan'] as $kKey => $kegiatanData) {
-                                    // Bersihkan dan CAST ke float
+                                    // Bersihkan anggaran Kegiatan
                                     if (isset($kegiatanData['anggaran'])) {
                                         $sasaran[$sKey]['indikator'][$iKey]['program'][$pKey]['kegiatan'][$kKey]['anggaran'] =
-                                            floatval($this->cleanNumber($kegiatanData['anggaran']));
+                                            $this->cleanNumber($kegiatanData['anggaran']);
                                     }
 
                                     if (isset($kegiatanData['subkegiatan']) && is_array($kegiatanData['subkegiatan'])) {
                                         foreach ($kegiatanData['subkegiatan'] as $skKey => $subKegiatanData) {
-                                            // Bersihkan dan CAST ke float
+                                            // Bersihkan anggaran Sub Kegiatan
                                             if (isset($subKegiatanData['anggaran'])) {
                                                 $sasaran[$sKey]['indikator'][$iKey]['program'][$pKey]['kegiatan'][$kKey]['subkegiatan'][$skKey]['anggaran'] =
-                                                    floatval($this->cleanNumber($subKegiatanData['anggaran']));
-                                            }
-
-                                            // CAST target_value ke float juga
-                                            if (isset($subKegiatanData['target_value'])) {
-                                                $sasaran[$sKey]['indikator'][$iKey]['program'][$pKey]['kegiatan'][$kKey]['subkegiatan'][$skKey]['target_value'] =
-                                                    floatval($subKegiatanData['target_value']);
+                                                    $this->cleanNumber($subKegiatanData['anggaran']);
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-
-                    // CAST target_value indikator ke float
-                    if (isset($indikatorData['target_value'])) {
-                        $sasaran[$sKey]['indikator'][$iKey]['target_value'] = floatval($indikatorData['target_value']);
                     }
                 }
             }
@@ -629,8 +573,15 @@ class PerjanjianKinerjaController extends Controller
      */
     private function cleanNumber($value)
     {
-        // Hapus SEMUA karakter selain angka
-        return preg_replace('/[^0-9]/', '', $value);
+        // Hapus "Rp", spasi, titik pemisah ribuan, dan karakter non-numerik
+        // Tapi pertahankan titik desimal (jika ada)
+        $cleaned = str_replace(['Rp', ' ', '.'], '', $value);
+
+        // Ganti koma desimal dengan titik (jika format Indonesia)
+        $cleaned = str_replace(',', '.', $cleaned);
+
+        // Pastikan hanya angka dan titik desimal
+        return preg_replace('/[^0-9.]/', '', $cleaned);
     }
     private function generateNomorPerjanjian($tahun)
     {

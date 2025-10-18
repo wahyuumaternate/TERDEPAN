@@ -8,8 +8,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Modules\PerjanjianKinerja\Models\PkIndikator;
+use Modules\PerjanjianKinerja\Models\PkKegiatan;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
 use Modules\PerjanjianKinerja\Models\PkDokumen;
+use Modules\PerjanjianKinerja\Models\PkProgram;
+use Modules\PerjanjianKinerja\Models\PkSasaran;
+use Modules\PerjanjianKinerja\Models\PkSubKegiatan;
 use Modules\PerjanjianKinerja\Models\PkTemplate;
 use App\Models\MasterPegawai;
 use App\Models\MasterJabatan;
@@ -129,83 +134,112 @@ class PerjanjianKinerjaController extends Controller
     }
 
     /**
-     * Show the form for creating a new perjanjian kinerja
+     * Download PDF dokumen
      */
-    public function create()
-    {
-        $pegawais = MasterPegawai::where('status_aktif', 'Aktif')
-            ->whereNotNull('atasan_langsung_id')
-            ->with(['jabatan', 'bidang'])
-            ->orderBy('nama')
-            ->get();
-
-        $templates = PkTemplate::where('is_active', true)
-            ->where('tahun', date('Y'))
-            ->with('jabatan')
-            ->get();
-
-        $currentYear = date('Y');
-
-        return view('perjanjiankinerja::create', compact(
-            'pegawais',
-            'templates',
-            'currentYear'
-        ));
-    }
-
     /**
-     * Store a newly created perjanjian kinerja
+     * Download PDF dokumen dengan penanganan khusus untuk mencegah refresh halaman
      */
-    public function store(Request $request)
+    public function download($id)
     {
-        $validated = $request->validate([
-            'pegawai_id' => 'required|exists:master_pegawai,id',
-            'template_id' => 'required|exists:pk_template,id',
-            'tahun' => 'required|integer|min:2020|max:2100',
-            'periode_mulai' => 'required|date',
-            'periode_selesai' => 'required|date|after:periode_mulai',
-            'tempat_ttd' => 'required|string|max:100',
-            'catatan' => 'nullable|string',
-        ]);
-
-        DB::beginTransaction();
         try {
-            // Get pegawai data
-            $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
+            $pk = PkPerjanjianKinerja::with(['pegawai', 'dokumen' => function ($q) {
+                $q->where('is_latest', true);
+            }])->findOrFail($id);
 
-            if (!$pegawai->atasan_langsung_id) {
-                throw new \Exception('Pegawai tidak memiliki atasan langsung.');
+            $dokumen = $pk->dokumen->first();
+
+            // Cek apakah dokumen ada
+            if (!$dokumen) {
+                Log::warning('Dokumen belum di-generate (ID PK: ' . $id . ')');
+                return redirect()
+                    ->route('perjanjian-kinerja.index')
+                    ->with('error', 'Dokumen belum di-generate. Silakan generate dokumen terlebih dahulu.');
             }
 
-            // Generate nomor perjanjian
-            $nomor = PkPerjanjianKinerja::generateNomorPerjanjian($validated['tahun']);
+            // Dapatkan file path yang disimpan di database
+            $dbFilePath = $dokumen->file_path;
+            Log::info('DB file path: ' . $dbFilePath);
 
-            // Create perjanjian kinerja
-            $pk = PkPerjanjianKinerja::create([
-                'nomor_perjanjian' => $nomor,
-                'pegawai_id' => $validated['pegawai_id'],
-                'atasan_id' => $pegawai->atasan_langsung_id,
-                'template_id' => $validated['template_id'],
-                'tahun' => $validated['tahun'],
-                'periode_mulai' => $validated['periode_mulai'],
-                'periode_selesai' => $validated['periode_selesai'],
-                'tempat_ttd' => $validated['tempat_ttd'],
-                'status_dokumen' => 'Draft',
-                'catatan' => $validated['catatan'],
-                'is_locked' => false,
-                'total_anggaran' => 0,
-            ]);
+            // Coba dengan direct path dulu (normalisasi path di database)
+            $normalizedPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $dbFilePath);
 
-            DB::commit();
+            // Build semua kemungkinan path untuk dicoba
+            $possiblePaths = [
+                $dbFilePath,                                                            // Original path
+                $normalizedPath,                                                        // Normalized path
+                storage_path('app/public/' . $dbFilePath),                              // Absolute path with forward slash
+                storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . $normalizedPath), // Absolute with normalized
+                public_path('storage/' . $dbFilePath),                                  // Public storage path 
+                public_path('storage' . DIRECTORY_SEPARATOR . $normalizedPath),         // Public with normalized
+                str_replace('public/', '', $dbFilePath),                                // Without public/ prefix
+                str_replace('public\\', '', $normalizedPath)                            // Without public\ prefix
+            ];
+
+            // Log semua possible paths untuk debugging
+            Log::info('Trying possible paths:', $possiblePaths);
+
+            // Cari file yang valid dari semua kemungkinan path
+            $validPath = null;
+            foreach ($possiblePaths as $path) {
+                if (file_exists($path) && is_file($path) && filesize($path) > 0) {
+                    $validPath = $path;
+                    Log::info('Found valid file at: ' . $validPath . ' (Size: ' . filesize($validPath) . ' bytes)');
+                    break;
+                }
+            }
+
+            // Jika tidak ada path valid
+            if (!$validPath) {
+                // Cek apakah file ada di storage (gunakan Storage facade sebagai fallback)
+                if (Storage::disk('public')->exists($dbFilePath)) {
+                    $validPath = Storage::disk('public')->path($dbFilePath);
+                    Log::info('Found via Storage facade: ' . $validPath);
+                } else {
+                    Log::error('File not found in any location. Tried paths: ' . implode(', ', $possiblePaths));
+                    return redirect()
+                        ->route('perjanjian-kinerja.show', $id)
+                        ->with('error', 'File PDF tidak ditemukan. Silakan generate ulang dokumen.');
+                }
+            }
+
+            // Update download count
+            $dokumen->increment('download_count');
+
+            // PENGGUNAAN DIRECT PHP UNTUK FORCED DOWNLOAD
+            // Ini adalah cara alternatif yang lebih robust untuk memaksa download
+
+            // Bersihkan semua output buffer
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            // Set header yang lebih lengkap untuk memastikan file didownload
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $dokumen->file_name . '"');
+            header('Content-Transfer-Encoding: binary');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($validPath));
+
+            // Kirim file dengan readfile
+            flush();
+            readfile($validPath);
+            exit; // Penting: Exit setelah mengirim file
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error('PK Not Found (ID: ' . $id . '): ' . $e->getMessage());
+            return redirect()
+                ->route('perjanjian-kinerja.index')
+                ->with('error', 'Perjanjian Kinerja tidak ditemukan.');
+        } catch (\Exception $e) {
+            Log::error('Error Download PDF (ID: ' . $id . '): ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
 
             return redirect()
-                ->route('perjanjian-kinerja.show', $pk->id)
-                ->with('success', 'Perjanjian Kinerja berhasil dibuat.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()
-                ->withInput()
-                ->with('error', 'Gagal membuat Perjanjian Kinerja: ' . $e->getMessage());
+                ->route('perjanjian-kinerja.index')
+                ->with('error', 'Gagal mengunduh PDF: ' . $e->getMessage());
         }
     }
 
@@ -228,29 +262,330 @@ class PerjanjianKinerjaController extends Controller
         return view('perjanjiankinerja::show', compact('pk'));
     }
 
+
+    /**
+     * Show the form for creating a new perjanjian kinerja
+     */
+    public function create()
+    {
+        $tahunSekarang = date('Y');
+
+        // Ambil ID pegawai yang sudah memiliki PK di tahun ini
+        $pegawaiYangSudahPunya = PkPerjanjianKinerja::where('tahun', $tahunSekarang)
+            ->pluck('pegawai_id')
+            ->toArray();
+
+        // Ambil pegawai yang aktif, punya atasan, DAN belum punya PK di tahun ini
+        $pegawai = MasterPegawai::where('status_aktif', 'Aktif')
+            ->whereNotNull('atasan_langsung_id')
+            ->whereNotIn('id', $pegawaiYangSudahPunya) // Filter yang sudah punya PK
+            ->with(['jabatan', 'bidang', 'atasanLangsung'])
+            ->where('status_kepegawaian', '!=', 'Kontrak')
+            ->orderBy('nama')
+            ->get();
+
+        // Ambil template yang aktif untuk tahun ini
+        $templates = PkTemplate::where('is_active', true)
+            ->where('tahun', $tahunSekarang)
+            ->with('jabatan')
+            ->get();
+
+        $currentYear = $tahunSekarang;
+
+        return view('perjanjiankinerja::create', compact(
+            'pegawai',
+            'templates',
+            'currentYear'
+        ));
+    }
+
+    /**
+     * Store a newly created perjanjian kinerja
+     */
+    public function store(Request $request)
+    {
+        // Validasi input TANPA kode-kode (auto-generate)
+        $validated = $request->validate([
+            'pegawai_id' => 'required|exists:master_pegawai,id',
+            'atasan_id' => 'required|exists:master_pegawai,id',
+            'template_id' => 'required|exists:pk_template,id',
+            'tahun' => 'required|integer|min:2020|max:2100',
+            'periode_mulai' => 'required|date',
+            'periode_selesai' => 'required|date|after:periode_mulai',
+            'catatan' => 'nullable|string',
+
+            // Validasi Sasaran
+            'sasaran' => 'nullable|array',
+            'sasaran.*.sasaran_strategis' => 'required_with:sasaran|string',
+            'sasaran.*.urutan' => 'required_with:sasaran|integer|min:1',
+
+            // Validasi Indikator
+            'sasaran.*.indikator' => 'nullable|array',
+            'sasaran.*.indikator.*.indikator_sasaran' => 'required_with:sasaran.*.indikator|string',
+            'sasaran.*.indikator.*.target_value' => 'required_with:sasaran.*.indikator|numeric',
+            'sasaran.*.indikator.*.satuan' => 'required_with:sasaran.*.indikator|string',
+
+            // Validasi Program - TANPA kode_program
+            'sasaran.*.indikator.*.program' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.nama_program' => 'required_with:sasaran.*.indikator.*.program|string',
+            'sasaran.*.indikator.*.program.*.anggaran' => 'required_with:sasaran.*.indikator.*.program|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.urutan' => 'required_with:sasaran.*.indikator.*.program|integer|min:1',
+
+            // Validasi Kegiatan - TANPA kode_kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.nama_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.urutan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|integer|min:1',
+
+            // Validasi Sub Kegiatan - TANPA kode_sub_kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.nama_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.target_value' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.satuan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Validasi atasan
+            if (!$validated['atasan_id']) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Atasan langsung harus dipilih');
+            }
+
+            // Generate nomor perjanjian
+            $nomorPerjanjian = $this->generateNomorPerjanjian($validated['tahun']);
+
+            // Buat perjanjian kinerja
+            $pk = PkPerjanjianKinerja::create([
+                'nomor_perjanjian' => $nomorPerjanjian,
+                'pegawai_id' => $validated['pegawai_id'],
+                'atasan_id' => $validated['atasan_id'],
+                'template_id' => $validated['template_id'],
+                'tahun' => $validated['tahun'],
+                'periode_mulai' => $validated['periode_mulai'],
+                'periode_selesai' => $validated['periode_selesai'],
+                'tempat_ttd' => 'Sofifi',
+                'catatan' => $validated['catatan'] ?? null,
+                'status_dokumen' => 'Draft',
+                'is_locked' => false,
+                'total_anggaran' => 0,
+            ]);
+
+            $totalAnggaran = 0;
+            $sasaranCount = 0;
+
+            // Simpan sasaran dan struktur lengkapnya
+            if (isset($validated['sasaran']) && is_array($validated['sasaran'])) {
+                foreach ($validated['sasaran'] as $sasaranIndex => $sasaranData) {
+                    // Skip jika kosong
+                    if (empty($sasaranData['sasaran_strategis'])) {
+                        continue;
+                    }
+
+                    $sasaranCount++;
+
+                    // 1. Simpan Sasaran
+                    $sasaran = PkSasaran::create([
+                        'perjanjian_kinerja_id' => $pk->id,
+                        'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+                        'urutan' => $sasaranData['urutan'] ?? ($sasaranIndex + 1),
+                    ]);
+
+                    // 2. Simpan Indikator jika ada
+                    if (isset($sasaranData['indikator']) && is_array($sasaranData['indikator'])) {
+                        foreach ($sasaranData['indikator'] as $indikatorIndex => $indikatorData) {
+                            // Skip jika kosong
+                            if (empty($indikatorData['indikator_sasaran'])) {
+                                continue;
+                            }
+
+                            $indikator = PkIndikator::create([
+                                'sasaran_id' => $sasaran->id,
+                                'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+                                'target_value' => $indikatorData['target_value'] ?? 0,
+                                'satuan' => $indikatorData['satuan'] ?? '-',
+                            ]);
+
+                            // 3. Simpan Program jika ada
+                            if (isset($indikatorData['program']) && is_array($indikatorData['program'])) {
+                                foreach ($indikatorData['program'] as $programIndex => $programData) {
+                                    // Skip jika kosong
+                                    if (empty($programData['nama_program'])) {
+                                        continue;
+                                    }
+
+                                    // AUTO GENERATE KODE PROGRAM
+                                    $kodeProgram = sprintf(
+                                        'P%d.%d.%d',
+                                        $sasaranIndex + 1,
+                                        $indikatorIndex + 1,
+                                        $programIndex + 1
+                                    );
+
+                                    $program = PkProgram::create([
+                                        'indikator_id' => $indikator->id,
+                                        'kode_program' => $kodeProgram,
+                                        'nama_program' => $programData['nama_program'],
+                                        'anggaran' => $programData['anggaran'] ?? 0,
+                                        'urutan' => $programData['urutan'] ?? ($programIndex + 1),
+                                    ]);
+
+                                    $totalAnggaran += floatval($programData['anggaran'] ?? 0);
+
+                                    // 4. Simpan Kegiatan jika ada
+                                    if (isset($programData['kegiatan']) && is_array($programData['kegiatan'])) {
+                                        foreach ($programData['kegiatan'] as $kegiatanIndex => $kegiatanData) {
+                                            // PENTING: Cek apakah kegiatanData adalah array valid
+                                            if (!is_array($kegiatanData) || empty($kegiatanData['nama_kegiatan'])) {
+                                                continue;
+                                            }
+
+                                            // AUTO GENERATE KODE KEGIATAN
+                                            $kodeKegiatan = sprintf(
+                                                '%s.K%d',
+                                                $kodeProgram,
+                                                $kegiatanIndex + 1
+                                            );
+
+                                            $kegiatan = PkKegiatan::create([
+                                                'program_id' => $program->id,
+                                                'kode_kegiatan' => $kodeKegiatan,
+                                                'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                'anggaran' => $kegiatanData['anggaran'] ?? 0,
+                                                'urutan' => $kegiatanData['urutan'] ?? ($kegiatanIndex + 1),
+                                            ]);
+
+                                            // 5. Simpan Sub Kegiatan jika ada
+                                            if (isset($kegiatanData['subkegiatan']) && is_array($kegiatanData['subkegiatan'])) {
+                                                foreach ($kegiatanData['subkegiatan'] as $subKegiatanIndex => $subKegiatanData) {
+                                                    // PENTING: Cek apakah subKegiatanData adalah array valid
+                                                    if (!is_array($subKegiatanData) || empty($subKegiatanData['nama_sub_kegiatan'])) {
+                                                        continue;
+                                                    }
+
+                                                    // AUTO GENERATE KODE SUB KEGIATAN
+                                                    $kodeSubKegiatan = sprintf(
+                                                        '%s.S%d',
+                                                        $kodeKegiatan,
+                                                        $subKegiatanIndex + 1
+                                                    );
+
+                                                    PkSubKegiatan::create([
+                                                        'kegiatan_id' => $kegiatan->id,
+                                                        'kode_sub_kegiatan' => $kodeSubKegiatan,
+                                                        'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                        'anggaran' => $subKegiatanData['anggaran'] ?? 0,
+                                                        'target_value' => $subKegiatanData['target_value'] ?? 0,
+                                                        'satuan' => $subKegiatanData['satuan'] ?? '-',
+                                                        'urutan' => $subKegiatanIndex + 1,
+                                                    ]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update total anggaran
+            $pk->update(['total_anggaran' => $totalAnggaran]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('perjanjian-kinerja.show', $pk->id)
+                ->with('success', "Perjanjian Kinerja berhasil dibuat dengan {$sasaranCount} sasaran strategis");
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error creating perjanjian kinerja: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Gagal membuat Perjanjian Kinerja: ' . $e->getMessage());
+        }
+    }
+
+    private function generateNomorPerjanjian($tahun)
+    {
+        $pegawai = MasterPegawai::find(request('pegawai_id'));
+        $kodeBidang = $pegawai->bidang->kode ?? 'UMUM';
+
+        $lastPK = PkPerjanjianKinerja::whereYear('created_at', $tahun)
+            ->where('nomor_perjanjian', 'like', "PK/{$kodeBidang}/{$tahun}/%")
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($lastPK) {
+            $parts = explode('/', $lastPK->nomor_perjanjian);
+            $lastNumber = intval(end($parts));
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return sprintf('PK/%s/%s/%03d', $kodeBidang, $tahun, $newNumber);
+    }
+
+
     /**
      * Show the form for editing the specified perjanjian kinerja
      */
     public function edit($id)
     {
-        $pk = PkPerjanjianKinerja::findOrFail($id);
+        $pk = PkPerjanjianKinerja::with([
+            'pegawai.jabatan',
+            'pegawai.bidang',
+            'atasan.jabatan',
+            'template',
+            'sasaran.indikator'
+        ])->findOrFail($id);
 
-        if (!$pk->isEditable()) {
-            return back()->with('warning', 'Perjanjian Kinerja tidak dapat diedit karena sudah dikunci atau status tidak memungkinkan.');
+        // Cek apakah sudah dikunci
+        if ($pk->is_locked) {
+            return redirect()
+                ->route('perjanjian-kinerja.show', $pk->id)
+                ->with('warning', 'Dokumen sudah ditandatangani dan tidak dapat diedit');
         }
 
-        $pegawais = MasterPegawai::where('status_aktif', 'Aktif')
+        // Ambil pegawai yang aktif dan punya atasan
+        $pegawai = MasterPegawai::where('status_aktif', 'Aktif')
             ->whereNotNull('atasan_langsung_id')
-            ->with(['jabatan', 'bidang'])
+            ->with(['jabatan', 'bidang', 'atasanLangsung'])
             ->orderBy('nama')
             ->get();
 
-        $templates = PkTemplate::where('tahun', $pk->tahun)
+        // Ambil semua atasan (untuk keperluan jika ingin mengubah atasan manual)
+        $atasan = MasterPegawai::where('status_aktif', 'Aktif')
+            ->whereHas('jabatan', function ($q) {
+                $q->where('is_struktural', true);
+            })
+            ->with(['jabatan'])
+            ->orderBy('nama')
+            ->get();
+
+        // Ambil template yang aktif
+        $templates = PkTemplate::where('is_active', true)
             ->with('jabatan')
             ->get();
 
-        return view('perjanjiankinerja::edit', compact('pk', 'pegawais', 'templates'));
+        return view('perjanjiankinerja::edit', compact(
+            'pk',
+            'pegawai',
+            'atasan',
+            'templates'
+        ));
     }
+
 
     /**
      * Update the specified perjanjian kinerja
@@ -259,50 +594,364 @@ class PerjanjianKinerjaController extends Controller
     {
         $pk = PkPerjanjianKinerja::findOrFail($id);
 
-        if (!$pk->isEditable()) {
-            return back()->with('error', 'Perjanjian Kinerja tidak dapat diedit karena sudah dikunci atau status tidak memungkinkan.');
+        // Cek apakah sudah dikunci
+        if ($pk->is_locked) {
+            return redirect()
+                ->route('perjanjian-kinerja.show', $pk->id)
+                ->with('error', 'Dokumen sudah ditandatangani dan tidak dapat diedit');
         }
 
+        // Validasi input lengkap
         $validated = $request->validate([
             'pegawai_id' => 'required|exists:master_pegawai,id',
+            'atasan_id' => 'required|exists:master_pegawai,id',
             'template_id' => 'required|exists:pk_template,id',
+            'tahun' => 'required|integer|min:2020|max:2100',
             'periode_mulai' => 'required|date',
             'periode_selesai' => 'required|date|after:periode_mulai',
-            'tempat_ttd' => 'required|string|max:100',
             'catatan' => 'nullable|string',
-            'status_dokumen' => 'required|in:Draft,Generated,Menunggu_TTD,Aktif,Selesai,Dibatalkan',
+
+            // Validasi Sasaran
+            'sasaran' => 'nullable|array',
+            'sasaran.*.id' => 'nullable|exists:pk_sasaran,id',
+            'sasaran.*.sasaran_strategis' => 'required_with:sasaran|string',
+            'sasaran.*.urutan' => 'required_with:sasaran|integer|min:1',
+
+            // Validasi Indikator
+            'sasaran.*.indikator' => 'nullable|array',
+            'sasaran.*.indikator.*.id' => 'nullable|exists:pk_indikator,id',
+            'sasaran.*.indikator.*.indikator_sasaran' => 'required_with:sasaran.*.indikator|string',
+            'sasaran.*.indikator.*.target_value' => 'required_with:sasaran.*.indikator|numeric',
+            'sasaran.*.indikator.*.satuan' => 'required_with:sasaran.*.indikator|string',
+
+            // Validasi Program
+            'sasaran.*.indikator.*.program' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.id' => 'nullable|exists:pk_program,id',
+            'sasaran.*.indikator.*.program.*.kode_program' => 'required_with:sasaran.*.indikator.*.program|string|max:50',
+            'sasaran.*.indikator.*.program.*.nama_program' => 'required_with:sasaran.*.indikator.*.program|string',
+            'sasaran.*.indikator.*.program.*.anggaran' => 'required_with:sasaran.*.indikator.*.program|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.urutan' => 'required_with:sasaran.*.indikator.*.program|integer|min:1',
+
+            // Validasi Kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.id' => 'nullable|exists:pk_kegiatan,id',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.kode_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string|max:50',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.nama_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.urutan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan|integer|min:1',
+
+            // Validasi Sub Kegiatan
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan' => 'nullable|array',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.id' => 'nullable|exists:pk_sub_kegiatan,id',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.kode_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.nama_sub_kegiatan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.anggaran' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric|min:0',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.target_value' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|numeric',
+            'sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan.*.satuan' => 'required_with:sasaran.*.indikator.*.program.*.kegiatan.*.subkegiatan|string|max:50',
         ]);
 
         DB::beginTransaction();
         try {
-            // Get pegawai data
-            $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
-
-            if (!$pegawai->atasan_langsung_id) {
-                throw new \Exception('Pegawai tidak memiliki atasan langsung.');
-            }
-
+            // Update perjanjian kinerja
             $pk->update([
                 'pegawai_id' => $validated['pegawai_id'],
-                'atasan_id' => $pegawai->atasan_langsung_id,
+                'atasan_id' => $validated['atasan_id'],
                 'template_id' => $validated['template_id'],
+                'tahun' => $validated['tahun'],
                 'periode_mulai' => $validated['periode_mulai'],
                 'periode_selesai' => $validated['periode_selesai'],
-                'tempat_ttd' => $validated['tempat_ttd'],
-                'catatan' => $validated['catatan'],
-                'status_dokumen' => $validated['status_dokumen'],
+                'catatan' => $validated['catatan'] ?? null,
             ]);
+
+            // Tracking ID yang sudah ada
+            $existingSasaranIds = [];
+            $totalAnggaran = 0;
+
+            // Update atau create sasaran
+            if (isset($validated['sasaran']) && is_array($validated['sasaran'])) {
+                foreach ($validated['sasaran'] as $sasaranData) {
+                    $existingIndikatorIds = [];
+
+                    // 1. Simpan/Update Sasaran
+                    if (isset($sasaranData['id']) && !empty($sasaranData['id'])) {
+                        $sasaran = PkSasaran::where('id', $sasaranData['id'])
+                            ->where('perjanjian_kinerja_id', $pk->id)
+                            ->first();
+
+                        if ($sasaran) {
+                            $sasaran->update([
+                                'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+                                'urutan' => $sasaranData['urutan'],
+                            ]);
+                            $existingSasaranIds[] = $sasaran->id;
+                        }
+                    } else {
+                        $sasaran = PkSasaran::create([
+                            'perjanjian_kinerja_id' => $pk->id,
+                            'sasaran_strategis' => $sasaranData['sasaran_strategis'],
+                            'urutan' => $sasaranData['urutan'],
+                        ]);
+                        $existingSasaranIds[] = $sasaran->id;
+                    }
+
+                    // 2. Simpan/Update Indikator
+                    if (isset($sasaranData['indikator']) && is_array($sasaranData['indikator'])) {
+                        foreach ($sasaranData['indikator'] as $indikatorData) {
+                            $existingProgramIds = [];
+
+                            if (isset($indikatorData['id']) && !empty($indikatorData['id'])) {
+                                $indikator = PkIndikator::where('id', $indikatorData['id'])
+                                    ->where('sasaran_id', $sasaran->id)
+                                    ->first();
+
+                                if ($indikator) {
+                                    $indikator->update([
+                                        'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+                                        'target_value' => $indikatorData['target_value'],
+                                        'satuan' => $indikatorData['satuan'],
+                                    ]);
+                                    $existingIndikatorIds[] = $indikator->id;
+                                }
+                            } else {
+                                $indikator = PkIndikator::create([
+                                    'sasaran_id' => $sasaran->id,
+                                    'indikator_sasaran' => $indikatorData['indikator_sasaran'],
+                                    'target_value' => $indikatorData['target_value'],
+                                    'satuan' => $indikatorData['satuan'],
+                                ]);
+                                $existingIndikatorIds[] = $indikator->id;
+                            }
+
+                            // 3. Simpan/Update Program
+                            if (isset($indikatorData['program']) && is_array($indikatorData['program'])) {
+                                foreach ($indikatorData['program'] as $programData) {
+                                    $existingKegiatanIds = [];
+
+                                    if (isset($programData['id']) && !empty($programData['id'])) {
+                                        $program = PkProgram::where('id', $programData['id'])
+                                            ->where('indikator_id', $indikator->id)
+                                            ->first();
+
+                                        if ($program) {
+                                            $program->update([
+                                                'kode_program' => $programData['kode_program'],
+                                                'nama_program' => $programData['nama_program'],
+                                                'anggaran' => $programData['anggaran'],
+                                                'urutan' => $programData['urutan'],
+                                            ]);
+                                            $existingProgramIds[] = $program->id;
+                                        }
+                                    } else {
+                                        $program = PkProgram::create([
+                                            'indikator_id' => $indikator->id,
+                                            'kode_program' => $programData['kode_program'],
+                                            'nama_program' => $programData['nama_program'],
+                                            'anggaran' => $programData['anggaran'],
+                                            'urutan' => $programData['urutan'],
+                                        ]);
+                                        $existingProgramIds[] = $program->id;
+                                    }
+
+                                    $totalAnggaran += $programData['anggaran'];
+
+                                    // 4. Simpan/Update Kegiatan
+                                    if (isset($programData['kegiatan']) && is_array($programData['kegiatan'])) {
+                                        foreach ($programData['kegiatan'] as $kegiatanData) {
+                                            $existingSubKegiatanIds = [];
+
+                                            if (isset($kegiatanData['id']) && !empty($kegiatanData['id'])) {
+                                                $kegiatan = PkKegiatan::where('id', $kegiatanData['id'])
+                                                    ->where('program_id', $program->id)
+                                                    ->first();
+
+                                                if ($kegiatan) {
+                                                    $kegiatan->update([
+                                                        'kode_kegiatan' => $kegiatanData['kode_kegiatan'],
+                                                        'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                        'anggaran' => $kegiatanData['anggaran'],
+                                                        'urutan' => $kegiatanData['urutan'],
+                                                    ]);
+                                                    $existingKegiatanIds[] = $kegiatan->id;
+                                                }
+                                            } else {
+                                                $kegiatan = PkKegiatan::create([
+                                                    'program_id' => $program->id,
+                                                    'kode_kegiatan' => $kegiatanData['kode_kegiatan'],
+                                                    'nama_kegiatan' => $kegiatanData['nama_kegiatan'],
+                                                    'anggaran' => $kegiatanData['anggaran'],
+                                                    'urutan' => $kegiatanData['urutan'],
+                                                ]);
+                                                $existingKegiatanIds[] = $kegiatan->id;
+                                            }
+
+                                            // 5. Simpan/Update Sub Kegiatan
+                                            if (isset($kegiatanData['subkegiatan']) && is_array($kegiatanData['subkegiatan'])) {
+                                                foreach ($kegiatanData['subkegiatan'] as $subKegiatanData) {
+                                                    if (isset($subKegiatanData['id']) && !empty($subKegiatanData['id'])) {
+                                                        $subKegiatan = PkSubKegiatan::where('id', $subKegiatanData['id'])
+                                                            ->where('kegiatan_id', $kegiatan->id)
+                                                            ->first();
+
+                                                        if ($subKegiatan) {
+                                                            $subKegiatan->update([
+                                                                'kode_sub_kegiatan' => $subKegiatanData['kode_sub_kegiatan'],
+                                                                'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                                'anggaran' => $subKegiatanData['anggaran'],
+                                                                'target_value' => $subKegiatanData['target_value'],
+                                                                'satuan' => $subKegiatanData['satuan'],
+                                                                'urutan' => $subKegiatanData['urutan'] ?? 1,
+                                                            ]);
+                                                            $existingSubKegiatanIds[] = $subKegiatan->id;
+                                                        }
+                                                    } else {
+                                                        $subKegiatan = PkSubKegiatan::create([
+                                                            'kegiatan_id' => $kegiatan->id,
+                                                            'kode_sub_kegiatan' => $subKegiatanData['kode_sub_kegiatan'],
+                                                            'nama_sub_kegiatan' => $subKegiatanData['nama_sub_kegiatan'],
+                                                            'anggaran' => $subKegiatanData['anggaran'],
+                                                            'target_value' => $subKegiatanData['target_value'],
+                                                            'satuan' => $subKegiatanData['satuan'],
+                                                            'urutan' => $subKegiatanData['urutan'] ?? 1,
+                                                        ]);
+                                                        $existingSubKegiatanIds[] = $subKegiatan->id;
+                                                    }
+                                                }
+                                            }
+
+                                            // Hapus sub kegiatan yang tidak ada di request
+                                            if (!empty($existingSubKegiatanIds)) {
+                                                PkSubKegiatan::where('kegiatan_id', $kegiatan->id)
+                                                    ->whereNotIn('id', $existingSubKegiatanIds)
+                                                    ->delete();
+                                            } else {
+                                                PkSubKegiatan::where('kegiatan_id', $kegiatan->id)->delete();
+                                            }
+                                        }
+                                    }
+
+                                    // Hapus kegiatan yang tidak ada di request
+                                    if (!empty($existingKegiatanIds)) {
+                                        PkKegiatan::where('program_id', $program->id)
+                                            ->whereNotIn('id', $existingKegiatanIds)
+                                            ->delete();
+                                    } else {
+                                        PkKegiatan::where('program_id', $program->id)->delete();
+                                    }
+                                }
+                            }
+
+                            // Hapus program yang tidak ada di request
+                            if (!empty($existingProgramIds)) {
+                                PkProgram::where('indikator_id', $indikator->id)
+                                    ->whereNotIn('id', $existingProgramIds)
+                                    ->delete();
+                            } else {
+                                PkProgram::where('indikator_id', $indikator->id)->delete();
+                            }
+                        }
+                    }
+
+                    // Hapus indikator yang tidak ada di request
+                    if (!empty($existingIndikatorIds)) {
+                        PkIndikator::where('sasaran_id', $sasaran->id)
+                            ->whereNotIn('id', $existingIndikatorIds)
+                            ->delete();
+                    } else {
+                        PkIndikator::where('sasaran_id', $sasaran->id)->delete();
+                    }
+                }
+            }
+
+            // Hapus sasaran yang tidak ada di request
+            if (!empty($existingSasaranIds)) {
+                PkSasaran::where('perjanjian_kinerja_id', $pk->id)
+                    ->whereNotIn('id', $existingSasaranIds)
+                    ->delete();
+            } else {
+                PkSasaran::where('perjanjian_kinerja_id', $pk->id)->delete();
+            }
+
+            // Update total anggaran
+            $pk->update(['total_anggaran' => $totalAnggaran]);
 
             DB::commit();
 
             return redirect()
                 ->route('perjanjian-kinerja.show', $pk->id)
-                ->with('success', 'Perjanjian Kinerja berhasil diupdate.');
+                ->with('success', 'Perjanjian Kinerja berhasil diupdate');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()
+            Log::error('Error updating perjanjian kinerja: ' . $e->getMessage(), [
+                'pk_id' => $id,
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()
+                ->back()
                 ->withInput()
                 ->with('error', 'Gagal mengupdate Perjanjian Kinerja: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate nomor perjanjian unik
+     */
+    // private function generateNomorPerjanjian($tahun)
+    // {
+    //     // Format: PK/BAPPEDA/TAHUN/COUNTER
+    //     $prefix = 'PK/BAPPEDA/' . $tahun . '/';
+
+    //     // Cari counter terakhir untuk tahun ini
+    //     $lastPK = PkPerjanjianKinerja::where('tahun', $tahun)
+    //         ->where('nomor_perjanjian', 'like', $prefix . '%')
+    //         ->orderBy('nomor_perjanjian', 'desc')
+    //         ->first();
+
+    //     if ($lastPK) {
+    //         // Extract counter dari nomor terakhir
+    //         $lastNumber = (int) substr($lastPK->nomor_perjanjian, -3);
+    //         $counter = $lastNumber + 1;
+    //     } else {
+    //         $counter = 1;
+    //     }
+
+    //     // Format counter dengan 3 digit
+    //     $formattedCounter = str_pad($counter, 3, '0', STR_PAD_LEFT);
+
+    //     return $prefix . $formattedCounter;
+    // }
+
+    /**
+     * Get atasan by pegawai ID (untuk AJAX request)
+     */
+    public function getAtasan($pegawaiId)
+    {
+        try {
+            $pegawai = MasterPegawai::with(['atasanLangsung.jabatan'])
+                ->findOrFail($pegawaiId);
+
+            if (!$pegawai->atasanLangsung) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pegawai tidak memiliki atasan langsung'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $pegawai->atasanLangsung->id,
+                    'nama' => $pegawai->atasanLangsung->nama,
+                    'nip' => $pegawai->atasanLangsung->nomor_identitas,
+                    'jabatan' => $pegawai->atasanLangsung->jabatan->nama ?? '-',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pegawai tidak ditemukan'
+            ], 404);
         }
     }
 
@@ -467,10 +1116,183 @@ class PerjanjianKinerjaController extends Controller
     }
 
     /**
-     * Generate PDF dokumen
+     * Generate PDF dokumen menggunakan template dari database
+     */
+    // public function generate($id)
+    // {
+    //     $pk = PkPerjanjianKinerja::with([
+    //         'pegawai.jabatan',
+    //         'pegawai.bidang',
+    //         'atasan.jabatan',
+    //         'template.sections',
+    //         'sasaran' => function ($query) {
+    //             $query->orderBy('urutan')
+    //                 ->with([
+    //                     'indikator' => function ($qi) {
+    //                         $qi->with([
+    //                             'program' => function ($qp) {
+    //                                 $qp->orderBy('urutan')
+    //                                     ->with([
+    //                                         'kegiatan' => function ($qk) {
+    //                                             $qk->orderBy('urutan')
+    //                                                 ->with([
+    //                                                     'subKegiatan' => function ($qs) {
+    //                                                         $qs->orderBy('urutan');
+    //                                                     }
+    //                                                 ]);
+    //                                         }
+    //                                     ]);
+    //                             }
+    //                         ]);
+    //                     }
+    //                 ]);
+    //         }
+    //     ])->findOrFail($id);
+
+    //     DB::beginTransaction();
+    //     try {
+    //         // Validate template exists
+    //         if (!$pk->template) {
+    //             throw new \Exception('Template tidak ditemukan untuk perjanjian kinerja ini.');
+    //         }
+
+    //         // Calculate version number
+    //         $latestVersion = $pk->dokumen()->max('versi') ?? 0;
+    //         $newVersion = $latestVersion + 1;
+
+    //         // Reset previous latest
+    //         $pk->dokumen()->where('is_latest', true)->update(['is_latest' => false]);
+
+    //         // Create PDF menggunakan template
+    //         $data = [
+    //             'pk' => $pk,
+    //             'title' => 'Perjanjian Kinerja - ' . $pk->nomor_perjanjian
+    //         ];
+
+    //         $pdf = PDF::loadView('perjanjiankinerja::pdf.perjanjian_kinerja', $data);
+
+    //         // Set paper size dan orientation dari template
+    //         $pageSize = $pk->template->page_size ?? 'A4';
+    //         $orientation = strtolower($pk->template->orientation ?? 'Portrait');
+    //         $pdf->setPaper($pageSize, $orientation);
+
+    //         // Set margin untuk DomPDF
+    //         if (method_exists($pdf, 'getDomPDF')) {
+    //             $dompdf = $pdf->getDomPDF();
+    //             $dompdf->set_option('isHtml5ParserEnabled', true);
+    //             $dompdf->set_option('isRemoteEnabled', false);
+
+    //             // Margin dalam points (1mm = 2.83465 points)
+    //             // 20mm = 56.7pt, 25mm = 70.9pt
+    //             $dompdf->set_option('margin_top', 56.7);
+    //             $dompdf->set_option('margin_right', 70.9);
+    //             $dompdf->set_option('margin_bottom', 56.7);
+    //             $dompdf->set_option('margin_left', 70.9);
+    //         }
+
+    //         // Set options untuk Snappy/wkhtmltopdf (jika digunakan)
+    //         if (method_exists($pdf, 'setOption')) {
+    //             $pdf->setOption('margin-top', '20mm');
+    //             $pdf->setOption('margin-right', '25mm');
+    //             $pdf->setOption('margin-bottom', '20mm');
+    //             $pdf->setOption('margin-left', '25mm');
+    //             $pdf->setOption('enable-local-file-access', true);
+    //         }
+
+    //         // Generate filename - Format: PK_NIP_2024_v1.pdf
+    //         $nip = $pk->pegawai->nomor_identitas ?? 'NONIP';
+    //         $fileName = sprintf('PK_%s_%s_v%d.pdf', $nip, $pk->tahun, $newVersion);
+
+    //         // Path relatif untuk database
+    //         $relativePath = 'perjanjian/' . $pk->tahun . '/' . $fileName;
+
+    //         // Ensure directory exists
+    //         $directory = 'perjanjian/' . $pk->tahun;
+    //         if (!Storage::disk('public')->exists($directory)) {
+    //             Storage::disk('public')->makeDirectory($directory);
+    //         }
+
+    //         // Get PDF output
+    //         $pdfOutput = $pdf->output();
+
+    //         // Save to storage
+    //         $saved = Storage::disk('public')->put($relativePath, $pdfOutput);
+
+    //         if (!$saved) {
+    //             throw new \Exception('Gagal menyimpan file PDF ke storage');
+    //         }
+
+    //         // Full path untuk verifikasi
+    //         $fullPath = Storage::disk('public')->path($relativePath);
+
+    //         if (!file_exists($fullPath)) {
+    //             throw new \Exception('File PDF tidak ditemukan setelah disimpan: ' . $fullPath);
+    //         }
+
+    //         $fileHash = hash_file('sha256', $fullPath);
+    //         $fileSizeKb = (int) round(filesize($fullPath) / 1024);
+
+    //         // Count pages
+    //         $totalPages = $this->estimatePdfPages($pdfOutput);
+
+    //         // Generate nomor dokumen
+    //         $nomorDokumen = $pk->nomor_perjanjian . '/V' . $newVersion;
+
+    //         // Create document record
+    //         $dokumen = $pk->dokumen()->create([
+    //             'jenis_dokumen' => 'Pernyataan',
+    //             'nomor_dokumen' => $nomorDokumen,
+    //             'file_name' => $fileName,
+    //             'file_path' => $relativePath,
+    //             'file_hash' => $fileHash,
+    //             'file_size_kb' => $fileSizeKb,
+    //             'versi' => $newVersion,
+    //             'total_pages' => $totalPages,
+    //             'generated_by' => Auth::id(),
+    //             'generated_at' => now(),
+    //             'is_latest' => true,
+    //             'perjanjian_kinerja_id' => $pk->id,
+    //         ]);
+
+    //         // Update PK status if still Draft
+    //         if ($pk->status_dokumen === 'Draft') {
+    //             $pk->update(['status_dokumen' => 'Generated']);
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Dokumen PDF berhasil di-generate (Versi ' . $newVersion . ')',
+    //             'dokumen_id' => $dokumen->id,
+    //             'nomor_dokumen' => $nomorDokumen,
+    //             'versi' => $newVersion,
+    //             'file_name' => $fileName,
+    //             'file_size_kb' => $fileSizeKb,
+    //             'total_pages' => $totalPages,
+    //             'download_url' => route('perjanjian-kinerja.download', $pk->id)
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+
+    //         Log::error('Error generating PDF: ' . $e->getMessage(), [
+    //             'pk_id' => $id,
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Gagal membuat dokumen PDF: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+    /**
+     * Generate PDF dokumen menggunakan template dari database
      */
     public function generate($id)
     {
+
+        // Load data dengan relasi lengkap
         $pk = PkPerjanjianKinerja::with([
             'pegawai.jabatan',
             'pegawai.bidang',
@@ -493,7 +1315,24 @@ class PerjanjianKinerjaController extends Controller
             // Reset previous latest
             $pk->dokumen()->where('is_latest', true)->update(['is_latest' => false]);
 
-            // Create PDF
+            // Calculate total anggaran
+            $totalAnggaran = 0;
+            foreach ($pk->sasaran as $sasaran) {
+                foreach ($sasaran->indikator as $indikator) {
+                    foreach ($indikator->program as $program) {
+                        foreach ($program->kegiatan as $kegiatan) {
+                            foreach ($kegiatan->subKegiatan as $subKegiatan) {
+                                $totalAnggaran += $subKegiatan->anggaran ?? 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update total anggaran di PK
+            $pk->update(['total_anggaran' => $totalAnggaran]);
+
+            // Create PDF menggunakan template
             $data = [
                 'pk' => $pk,
                 'title' => 'Perjanjian Kinerja - ' . $pk->nomor_perjanjian
@@ -501,11 +1340,25 @@ class PerjanjianKinerjaController extends Controller
 
             $pdf = PDF::loadView('perjanjiankinerja::pdf.perjanjian_kinerja', $data);
 
-            // Set paper size
-            $pdf->setPaper($pk->template->page_size ?? 'A4', $pk->template->orientation ?? 'Portrait');
+            // Set paper size dan orientation dari template
+            $pageSize = $pk->template->page_size ?? 'A4';
+            $orientation = strtolower($pk->template->orientation ?? 'Portrait');
+            $pdf->setPaper($pageSize, $orientation);
 
-            // ⭐ PENTING: SET MARGIN SECARA EKSPLISIT
-            // Untuk wkhtmltopdf (jika menggunakan snappy/laravel-snappy):
+            // Set margin untuk DomPDF
+            if (method_exists($pdf, 'getDomPDF')) {
+                $dompdf = $pdf->getDomPDF();
+                $dompdf->set_option('isHtml5ParserEnabled', true);
+                $dompdf->set_option('isRemoteEnabled', false);
+
+                // Margin dalam points (1mm = 2.83465 points)
+                $dompdf->set_option('margin_top', 56.7);
+                $dompdf->set_option('margin_right', 70.9);
+                $dompdf->set_option('margin_bottom', 56.7);
+                $dompdf->set_option('margin_left', 70.9);
+            }
+
+            // Set options untuk Snappy/wkhtmltopdf (jika digunakan)
             if (method_exists($pdf, 'setOption')) {
                 $pdf->setOption('margin-top', '20mm');
                 $pdf->setOption('margin-right', '25mm');
@@ -514,33 +1367,14 @@ class PerjanjianKinerjaController extends Controller
                 $pdf->setOption('enable-local-file-access', true);
             }
 
-            // Untuk dompdf (jika menggunakan barryvdh/laravel-dompdf):
-            if (method_exists($pdf, 'getDomPDF')) {
-                $dompdf = $pdf->getDomPDF();
-                $dompdf->set_option('isHtml5ParserEnabled', true);
-                $dompdf->set_option('isRemoteEnabled', false);
-
-                // Dompdf margin setting (dalam points: 1mm = 2.83465 points)
-                // 20mm = 56.7pt, 25mm = 70.9pt
-                $dompdf->set_option('margin_top', 56.7);
-                $dompdf->set_option('margin_right', 70.9);
-                $dompdf->set_option('margin_bottom', 56.7);
-                $dompdf->set_option('margin_left', 70.9);
-            }
-
             // Generate filename - Format: PK_NIP_2024_v1.pdf
             $nip = $pk->pegawai->nomor_identitas ?? 'NONIP';
             $fileName = sprintf('PK_%s_%s_v%d.pdf', $nip, $pk->tahun, $newVersion);
 
-            // Path yang akan disimpan di DATABASE (relatif dari public disk)
-            // Format: perjanjian/2025/PK_NONIP_2025_v1.pdf
+            // Path relatif untuk database
             $relativePath = 'perjanjian/' . $pk->tahun . '/' . $fileName;
 
-            // Path lengkap untuk operasi Storage Laravel (dengan disk 'public')
-            // Storage facade akan otomatis menambahkan 'storage/app/public/'
-            $storageDiskPath = $relativePath; // Tidak perlu tambah 'public/' lagi
-
-            // Ensure directory exists dalam disk public
+            // Ensure directory exists
             $directory = 'perjanjian/' . $pk->tahun;
             if (!Storage::disk('public')->exists($directory)) {
                 Storage::disk('public')->makeDirectory($directory);
@@ -549,16 +1383,15 @@ class PerjanjianKinerjaController extends Controller
             // Get PDF output
             $pdfOutput = $pdf->output();
 
-            // Save to storage menggunakan disk 'public'
-            $saved = Storage::disk('public')->put($storageDiskPath, $pdfOutput);
+            // Save to storage
+            $saved = Storage::disk('public')->put($relativePath, $pdfOutput);
 
             if (!$saved) {
                 throw new \Exception('Gagal menyimpan file PDF ke storage');
             }
 
-            // Full path untuk verifikasi dan hash
-            // storage/app/public/perjanjian/2025/PK_NONIP_2025_v1.pdf
-            $fullPath = Storage::disk('public')->path($storageDiskPath);
+            // Full path untuk verifikasi
+            $fullPath = Storage::disk('public')->path($relativePath);
 
             if (!file_exists($fullPath)) {
                 throw new \Exception('File PDF tidak ditemukan setelah disimpan: ' . $fullPath);
@@ -567,18 +1400,19 @@ class PerjanjianKinerjaController extends Controller
             $fileHash = hash_file('sha256', $fullPath);
             $fileSizeKb = (int) round(filesize($fullPath) / 1024);
 
-            // Count pages (simple estimation)
-            $totalPages = $this->estimatePdfPages($pdfOutput);
+            // Count pages
+            $totalPages = preg_match_all("/\/Page\W/", $pdfOutput, $matches);
+            $totalPages = $totalPages > 0 ? $totalPages : 2;
 
-            // Generate nomor dokumen - sama dengan nomor_perjanjian + versi
+            // Generate nomor dokumen
             $nomorDokumen = $pk->nomor_perjanjian . '/V' . $newVersion;
 
-            // Create document record - simpan path RELATIF saja
+            // Create document record
             $dokumen = $pk->dokumen()->create([
-                'jenis_dokumen' => 'Pernyataan', // Sesuai ENUM: Pernyataan, Formulir, Lampiran
+                'jenis_dokumen' => 'Pernyataan',
                 'nomor_dokumen' => $nomorDokumen,
                 'file_name' => $fileName,
-                'file_path' => $relativePath, // Path relatif: perjanjian/2025/...
+                'file_path' => $relativePath,
                 'file_hash' => $fileHash,
                 'file_size_kb' => $fileSizeKb,
                 'versi' => $newVersion,
@@ -622,35 +1456,220 @@ class PerjanjianKinerjaController extends Controller
         }
     }
 
+
     /**
-     * Download PDF dokumen
+     * Validate data completeness before generating PDF
      */
-    public function download($id)
+    private function validateDataCompleteness($pk)
     {
-        $pk = PkPerjanjianKinerja::findOrFail($id);
-        $dokumen = $pk->dokumen()->where('is_latest', true)->first();
-
-        if (!$dokumen) {
-            return back()->with('error', 'Dokumen belum di-generate.');
+        // Validate pegawai
+        if (!$pk->pegawai) {
+            throw new \Exception('Data pegawai tidak ditemukan');
         }
 
-        // Gunakan disk 'public' untuk akses file
-        if (!Storage::disk('public')->exists($dokumen->file_path)) {
-            return back()->with('error', 'File PDF tidak ditemukan di storage.');
+        if (!$pk->pegawai->nama) {
+            throw new \Exception('Nama pegawai tidak boleh kosong');
         }
 
-        $fullPath = Storage::disk('public')->path($dokumen->file_path);
+        if (!$pk->pegawai->nomor_identitas) {
+            throw new \Exception('NIP pegawai tidak boleh kosong');
+        }
 
-        return response()->download(
-            $fullPath,
-            $dokumen->file_name,
-            ['Content-Type' => 'application/pdf']
-        );
+        // Validate atasan
+        if (!$pk->atasan) {
+            throw new \Exception('Data atasan tidak ditemukan');
+        }
+
+        if (!$pk->atasan->nama) {
+            throw new \Exception('Nama atasan tidak boleh kosong');
+        }
+
+        // Validate sasaran
+        if ($pk->sasaran->count() === 0) {
+            throw new \Exception('Belum ada sasaran yang ditambahkan');
+        }
+
+        // Validate each sasaran has indicators
+        foreach ($pk->sasaran as $sasaran) {
+            if ($sasaran->indikator->count() === 0) {
+                throw new \Exception('Sasaran "' . $sasaran->nama_sasaran . '" belum memiliki indikator');
+            }
+
+            // Validate each indicator has programs
+            foreach ($sasaran->indikator as $indikator) {
+                if ($indikator->program->count() === 0) {
+                    throw new \Exception('Indikator "' . $indikator->indikator_sasaran . '" belum memiliki program');
+                }
+
+                // Validate each program has kegiatan
+                foreach ($indikator->program as $program) {
+                    if ($program->kegiatan->count() === 0) {
+                        throw new \Exception('Program "' . $program->nama_program . '" belum memiliki kegiatan');
+                    }
+
+                    // Validate each kegiatan has sub kegiatan
+                    foreach ($program->kegiatan as $kegiatan) {
+                        if ($kegiatan->subKegiatan->count() === 0) {
+                            throw new \Exception('Kegiatan "' . $kegiatan->nama_kegiatan . '" belum memiliki sub kegiatan');
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
-     * Preview PDF dokumen
+     * Calculate total anggaran from all sub kegiatan
      */
+    private function calculateTotalAnggaran($pk)
+    {
+        $totalAnggaran = 0;
+
+        foreach ($pk->sasaran as $sasaran) {
+            foreach ($sasaran->indikator as $indikator) {
+                foreach ($indikator->program as $program) {
+                    foreach ($program->kegiatan as $kegiatan) {
+                        foreach ($kegiatan->subKegiatan as $subKegiatan) {
+                            $totalAnggaran += $subKegiatan->anggaran ?? 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $totalAnggaran;
+    }
+
+    /**
+     * Get statistics from perjanjian kinerja
+     */
+    private function getStatistics($pk)
+    {
+        $totalSasaran = $pk->sasaran->count();
+
+        $totalIndikator = 0;
+        $totalProgram = 0;
+        $totalKegiatan = 0;
+        $totalSubKegiatan = 0;
+
+        foreach ($pk->sasaran as $sasaran) {
+            $totalIndikator += $sasaran->indikator->count();
+
+            foreach ($sasaran->indikator as $indikator) {
+                $totalProgram += $indikator->program->count();
+
+                foreach ($indikator->program as $program) {
+                    $totalKegiatan += $program->kegiatan->count();
+
+                    foreach ($program->kegiatan as $kegiatan) {
+                        $totalSubKegiatan += $kegiatan->subKegiatan->count();
+                    }
+                }
+            }
+        }
+
+        return [
+            'total_sasaran' => $totalSasaran,
+            'total_indikator' => $totalIndikator,
+            'total_program' => $totalProgram,
+            'total_kegiatan' => $totalKegiatan,
+            'total_sub_kegiatan' => $totalSubKegiatan,
+            'total_anggaran' => $pk->total_anggaran,
+            'total_anggaran_formatted' => 'Rp ' . number_format($pk->total_anggaran, 0, ',', '.'),
+        ];
+    }
+
+    /**
+     * Estimate PDF pages from PDF output
+     */
+    // private function estimatePdfPages($pdfOutput)
+    // {
+    //     try {
+    //         // Try to count pages from PDF
+    //         $pageCount = preg_match_all("/\/Page\W/", $pdfOutput, $matches);
+    //         return $pageCount > 0 ? $pageCount : 2; // Default 2 pages (pernyataan + formulir)
+    //     } catch (\Exception $e) {
+    //         Log::warning('Failed to count PDF pages: ' . $e->getMessage());
+    //         return 2; // Default fallback
+    //     }
+    // }
+
+    // /**
+    //  * Preview PDF in browser
+    //  */
+    // public function preview($id)
+    // {
+    //     try {
+    //         $pk = PkPerjanjianKinerja::with([
+    //             'pegawai.jabatan',
+    //             'atasan.jabatan',
+    //             'template',
+    //             'sasaran' => function ($query) {
+    //                 $query->orderBy('urutan')
+    //                     ->with([
+    //                         'indikator' => function ($qi) {
+    //                             $qi->orderBy('urutan')
+    //                                 ->with([
+    //                                     'program' => function ($qp) {
+    //                                         $qp->orderBy('urutan')
+    //                                             ->with([
+    //                                                 'kegiatan' => function ($qk) {
+    //                                                     $qk->orderBy('urutan')
+    //                                                         ->with([
+    //                                                             'subKegiatan' => function ($qs) {
+    //                                                                 $qs->orderBy('urutan');
+    //                                                             }
+    //                                                         ]);
+    //                                                 }
+    //                                             ]);
+    //                                     }
+    //                                 ]);
+    //                         }
+    //                     ]);
+    //             }
+    //         ])->findOrFail($id);
+
+    //         // Validasi data wajib
+    //         if (!$pk->pegawai) {
+    //             return back()->with('error', 'Data pegawai tidak ditemukan.');
+    //         }
+
+    //         if (!$pk->atasan) {
+    //             return back()->with('error', 'Data atasan tidak ditemukan.');
+    //         }
+
+    //         $data = [
+    //             'pk' => $pk,
+    //             'title' => 'Preview - Perjanjian Kinerja Tahun ' . $pk->tahun
+    //         ];
+
+    //         // Load view PDF
+    //         $pdf = PDF::loadView('perjanjiankinerja::pdf.perjanjian_kinerja', $data);
+
+    //         // Set paper size dan orientation
+    //         $pageSize = $pk->template->page_size ?? 'A4';
+    //         $orientation = strtolower($pk->template->orientation ?? 'portrait');
+    //         $pdf->setPaper($pageSize, $orientation);
+
+    //         // Set options untuk preview yang lebih baik
+    //         $pdf->setOptions([
+    //             'isHtml5ParserEnabled' => true,
+    //             'isRemoteEnabled' => true,
+    //             'defaultFont' => 'Times New Roman'
+    //         ]);
+
+    //         // Stream ke browser
+    //         return $pdf->stream('preview_pk_' . $pk->pegawai->nama . '_' . $pk->tahun . '.pdf');
+    //     } catch (\Exception $e) {
+    //         Log::error('Error Preview PDF: ' . $e->getMessage());
+    //         return back()->with('error', 'Gagal menampilkan preview PDF: ' . $e->getMessage());
+    //     }
+    // }
+    // /**
+    //  * Preview PDF dokumen
+    //  */
     public function preview($id)
     {
         $pk = PkPerjanjianKinerja::findOrFail($id);
@@ -660,7 +1679,6 @@ class PerjanjianKinerjaController extends Controller
             return back()->with('error', 'Dokumen belum di-generate.');
         }
 
-        // Gunakan disk 'public' untuk akses file
         if (!Storage::disk('public')->exists($dokumen->file_path)) {
             return back()->with('error', 'File PDF tidak ditemukan di storage.');
         }
@@ -745,7 +1763,6 @@ class PerjanjianKinerjaController extends Controller
 
     /**
      * Estimate PDF pages from output
-     * Simple estimation based on page break markers
      */
     private function estimatePdfPages($pdfOutput)
     {
@@ -754,7 +1771,7 @@ class PerjanjianKinerjaController extends Controller
             $pageCount = substr_count($pdfOutput, '/Type /Page');
             return $pageCount > 0 ? $pageCount : 1;
         } catch (\Exception $e) {
-            return 1; // Default to 1 page if estimation fails
+            return 1;
         }
     }
 }

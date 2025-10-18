@@ -271,232 +271,193 @@
     </template>
 
     <!-- Template Indikator Item -->
+
     <template id="template-indikator">
-        <div class="indikator-item mb-3">
-            <div class="card border shadow-sm">
-                <div class="card-header bg-white border-bottom">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <span class="badge bg-primary me-2">
-                                <i class="bi bi-check2-circle me-1"></i>
-                                Indikator <span class="indikator-number">1</span>
-                            </span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeIndikator(this)">
-                            <i class="bi bi-trash3"></i>
-                        </button>
-                    </div>
+        <div class="indikator-item card bg-light border mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <small class="text-muted fw-semibold">
+                        <i class="bi bi-check2-circle"></i> Indikator <span class="indikator-number">1</span>
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeIndikator(this)"
+                        title="Hapus Indikator">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
 
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-graph-up"></i> Nama Indikator Kinerja
-                        </label>
-                        <input type="text" class="form-control" name="sasaran[0][indikator][0][indikator_sasaran]"
-                            placeholder="Contoh: Persentase Kepuasan Masyarakat" required>
+                <div class="row g-2 mb-3">
+                    <!-- FIELD WAJIB 1: Nama Indikator -->
+                    <div class="col-12">
+                        <input type="text" class="form-control form-control-sm"
+                            name="sasaran[0][indikator][0][indikator_sasaran]" placeholder="Nama indikator kinerja..."
+                            required>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-bullseye"></i> Target
-                            </label>
+                    <!-- FIELD WAJIB 2: Target Value -->
+                    <div class="col-6">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Target</span>
                             <input type="number" class="form-control" name="sasaran[0][indikator][0][target_value]"
                                 placeholder="100" step="0.01" required>
                         </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-calculator"></i> Satuan
-                            </label>
-                            <input type="text" class="form-control" name="sasaran[0][indikator][0][satuan]"
-                                placeholder="%, Orang, Dokumen, dll" required>
-                        </div>
                     </div>
 
-                    <hr class="my-3">
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0 fw-semibold">
-                            <i class="bi bi-folder-fill"></i> Program & Kegiatan
-                            <small class="text-muted ms-2">(Kode otomatis)</small>
-                        </h6>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="addProgram(this)">
-                            <i class="bi bi-plus-circle"></i> Tambah Program
-                        </button>
+                    <!-- FIELD WAJIB 3: Satuan -->
+                    <div class="col-6">
+                        <input type="text" class="form-control form-control-sm"
+                            name="sasaran[0][indikator][0][satuan]" placeholder="Satuan (%, Orang, Kegiatan...)" required>
                     </div>
-
-                    <div class="program-container"></div>
                 </div>
+
+                <hr class="my-2">
+
+                <!-- Program Section -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted fw-semibold">
+                        <i class="bi bi-folder"></i> Program & Kegiatan
+                        <span class="badge bg-secondary ms-1">Kode Otomatis</span>
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-success btn-xs" onclick="addProgram(this)">
+                        <i class="bi bi-plus"></i> Program
+                    </button>
+                </div>
+
+                <div class="program-container"></div>
             </div>
+
         </div>
     </template>
 
-    <!-- Template Program Item -->
+    <!-- Template Program Item - TANPA KODE -->
     <template id="template-program">
-        <div class="program-item mb-3 ms-3">
-            <div class="card border-start border-primary border-3">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="badge bg-primary">
-                            <i class="bi bi-folder-fill me-1"></i>
-                            Program <span class="program-number">1</span>
-                        </span>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProgram(this)">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
+        <div class="program-item card border-start border-success border-3 mb-2">
+            <div class="card-body p-2 bg-white">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <small class="text-success fw-semibold">
+                        <i class="bi bi-folder-fill"></i> Program <span class="program-number">1</span>
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-xs" onclick="removeProgram(this)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
 
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold mb-2">
-                            <i class="bi bi-card-heading"></i> Nama Program
-                        </label>
-                        <input type="text" class="form-control"
-                            name="sasaran[0][indikator][0][program][0][nama_program]"
-                            placeholder="Contoh: Program Peningkatan Kualitas Pelayanan" required>
+                <div class="row g-2 mb-2">
+                    <div class="col-12">
+                        <input type="text" class="form-control form-control-sm"
+                            name="sasaran[0][indikator][0][program][0][nama_program]" placeholder="Nama Program" required>
                     </div>
-
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold mb-2">
-                            <i class="bi bi-cash-stack"></i> Anggaran Program
-                        </label>
-                        <input type="text" class="form-control" name="sasaran[0][indikator][0][program][0][anggaran]"
-                            placeholder="Contoh: 200000000" required>
-                        <small class="text-muted d-block mt-1">
-                            <i class="bi bi-info-circle"></i> Ketik angka → format otomatis Rupiah
+                    <div class="col-12">
+                        <input type="text" class="form-control form-control-sm"
+                            name="sasaran[0][indikator][0][program][0][anggaran]" placeholder="Anggaran (Rp)" required>
+                        <small class="text-muted" style="font-size: 0.7rem;">
+                            <i class="bi bi-info-circle"></i> Contoh: ketik 200000000 → otomatis jadi Rp 200.000.000
                         </small>
                     </div>
+                    <!-- Hidden input untuk urutan otomatis -->
                     <input type="hidden" name="sasaran[0][indikator][0][program][0][urutan]" value="1">
-
-                    <div class="mt-3 pt-3 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="fw-semibold text-muted">
-                                <i class="bi bi-list-task"></i> Daftar Kegiatan
-                            </small>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKegiatan(this)">
-                                <i class="bi bi-plus"></i> Kegiatan
-                            </button>
-                        </div>
-                        <div class="kegiatan-container"></div>
-                    </div>
                 </div>
+
+                <!-- Kegiatan Section -->
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        <i class="bi bi-list-task"></i> Kegiatan
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-info btn-xs"
+                        style="padding: 0.1rem 0.3rem; font-size: 0.7rem;" onclick="addKegiatan(this)">
+                        <i class="bi bi-plus"></i> Kegiatan
+                    </button>
+                </div>
+
+                <div class="kegiatan-container ms-2"></div>
             </div>
         </div>
     </template>
 
-    <!-- Template Kegiatan Item -->
+    <!-- Template Kegiatan Item - TANPA KODE -->
     <template id="template-kegiatan">
-        <div class="kegiatan-item mb-2 ms-3">
-            <div class="card border-start border-primary border-2 bg-light">
-                <div class="card-body p-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge bg-primary" style="font-size: 0.8rem;">
-                            <i class="bi bi-list-check me-1"></i>
-                            Kegiatan <span class="kegiatan-number">1</span>
-                        </span>
-                        <button type="button" class="btn btn-sm btn-outline-danger"
-                            style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="removeKegiatan(this)">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
+        <div class="kegiatan-item card bg-light mb-1" style="border-left: 3px solid #0dcaf0;">
+            <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <small class="text-info" style="font-size: 0.75rem;">
+                        <i class="bi bi-list-check"></i> Kegiatan <span class="kegiatan-number">1</span>
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                        style="padding: 0.1rem 0.3rem; font-size: 0.7rem;" onclick="removeKegiatan(this)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
 
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold mb-1" style="font-size: 0.9rem;">
-                            <i class="bi bi-tag"></i> Nama Kegiatan
-                        </label>
-                        <input type="text" class="form-control form-control-sm"
+                <div class="row g-1 mb-1">
+                    <div class="col-12">
+                        <input type="text" class="form-control form-control-sm" style="font-size: 0.8rem;"
                             name="sasaran[0][indikator][0][program][0][kegiatan][0][nama_kegiatan]"
-                            placeholder="Contoh: Sosialisasi Standar Pelayanan" required>
+                            placeholder="Nama Kegiatan" required>
                     </div>
-
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold mb-1" style="font-size: 0.9rem;">
-                            <i class="bi bi-currency-dollar"></i> Anggaran Kegiatan
-                        </label>
-                        <input type="text" class="form-control form-control-sm"
-                            name="sasaran[0][indikator][0][program][0][kegiatan][0][anggaran]"
-                            placeholder="Contoh: 50000000" required>
+                    <div class="col-12">
+                        <input type="text" class="form-control form-control-sm" style="font-size: 0.8rem;"
+                            name="sasaran[0][indikator][0][program][0][kegiatan][0][anggaran]" placeholder="Anggaran (Rp)"
+                            required>
                     </div>
+                    <!-- Hidden input untuk urutan otomatis -->
                     <input type="hidden" name="sasaran[0][indikator][0][program][0][kegiatan][0][urutan]"
                         value="1">
-
-                    <div class="mt-2 pt-2 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="fw-semibold text-muted" style="font-size: 0.8rem;">
-                                <i class="bi bi-arrow-return-right"></i> Sub Kegiatan
-                            </small>
-                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                style="padding: 0.15rem 0.4rem; font-size: 0.75rem;" onclick="addSubKegiatan(this)">
-                                <i class="bi bi-plus"></i> Sub
-                            </button>
-                        </div>
-                        <div class="subkegiatan-container"></div>
-                    </div>
                 </div>
+
+                <!-- Sub Kegiatan Section -->
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted" style="font-size: 0.7rem;">
+                        <i class="bi bi-arrow-return-right"></i> Sub Kegiatan
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-xs"
+                        style="padding: 0.05rem 0.2rem; font-size: 0.65rem;" onclick="addSubKegiatan(this)">
+                        <i class="bi bi-plus"></i> Sub
+                    </button>
+                </div>
+
+                <div class="subkegiatan-container ms-2"></div>
             </div>
         </div>
     </template>
 
-    <!-- Template Sub Kegiatan Item -->
+    <!-- Template Sub Kegiatan Item - TANPA KODE -->
     <template id="template-subkegiatan">
-        <div class="subkegiatan-item mb-2 ms-3">
-            <div class="card border-start border-secondary border-2 bg-white">
-                <div class="card-body p-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge bg-secondary" style="font-size: 0.75rem;">
-                            <i class="bi bi-arrow-return-right me-1"></i>
-                            Sub <span class="subkegiatan-number">1</span>
-                        </span>
-                        <button type="button" class="btn btn-sm btn-outline-danger"
-                            style="padding: 0.15rem 0.35rem; font-size: 0.7rem;" onclick="removeSubKegiatan(this)">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
+        <div class="subkegiatan-item p-2 mb-1 bg-white border rounded" style="border-left: 2px solid #6c757d !important;">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <small class="text-muted" style="font-size: 0.7rem;">
+                    <i class="bi bi-arrow-return-right"></i> Sub <span class="subkegiatan-number">1</span>
+                </small>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                    style="padding: 0.05rem 0.2rem; font-size: 0.65rem;" onclick="removeSubKegiatan(this)">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
 
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label mb-1" style="font-size: 0.8rem; font-weight: 600;">
-                                <i class="bi bi-file-text"></i> Nama Sub Kegiatan
-                            </label>
-                            <input type="text" class="form-control form-control-sm" style="font-size: 0.85rem;"
-                                name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][nama_sub_kegiatan]"
-                                placeholder="Contoh: Workshop Pelatihan SDM" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label mb-1" style="font-size: 0.8rem; font-weight: 600;">
-                                <i class="bi bi-wallet2"></i> Anggaran
-                            </label>
-                            <input type="text" class="form-control form-control-sm" style="font-size: 0.85rem;"
-                                name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][anggaran]"
-                                placeholder="10000000" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label mb-1" style="font-size: 0.8rem; font-weight: 600;">
-                                <i class="bi bi-target"></i> Target
-                            </label>
-                            <input type="number" class="form-control form-control-sm" style="font-size: 0.85rem;"
-                                name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][target_value]"
-                                placeholder="5" step="0.01" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1" style="font-size: 0.8rem; font-weight: 600;">
-                                <i class="bi bi-rulers"></i> Satuan
-                            </label>
-                            <input type="text" class="form-control form-control-sm" style="font-size: 0.85rem;"
-                                name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][satuan]"
-                                placeholder="Kegiatan, Orang, Paket" required>
-                        </div>
-                    </div>
+            <div class="row g-1">
+                <div class="col-12">
+                    <input type="text" class="form-control form-control-sm" style="font-size: 0.75rem;"
+                        name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][nama_sub_kegiatan]"
+                        placeholder="Nama Sub Kegiatan" required>
+                </div>
+                <div class="col-6">
+                    <input type="text" class="form-control form-control-sm" style="font-size: 0.75rem;"
+                        name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][anggaran]"
+                        placeholder="Anggaran (Rp)" required>
+                </div>
+                <div class="col-6">
+                    <input type="number" class="form-control form-control-sm" style="font-size: 0.75rem;"
+                        name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][target_value]"
+                        placeholder="Target" step="0.01" required>
+                </div>
+                <div class="col-12">
+                    <input type="text" class="form-control form-control-sm" style="font-size: 0.75rem;"
+                        name="sasaran[0][indikator][0][program][0][kegiatan][0][subkegiatan][0][satuan]"
+                        placeholder="Satuan" required>
                 </div>
             </div>
         </div>
     </template>
 
     <style>
-        /* ============================================
-           GENERAL CARD STYLING
-           ============================================ */
         .card {
             margin-bottom: 1.5rem;
             border: none;
@@ -510,9 +471,7 @@
             margin-bottom: 1rem;
         }
 
-        /* ============================================
-           PREVIEW INFO CARD - SIDEBAR
-           ============================================ */
+        /* Preview Styling - WARNA BIRU */
         .info-card {
             background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
             color: white;
@@ -567,9 +526,6 @@
             border-color: rgba(255, 255, 255, 0.2);
         }
 
-        /* ============================================
-           HIERARCHY ITEMS - SASARAN & CHILDREN
-           ============================================ */
         .sasaran-item {
             transition: all 0.3s ease;
             animation: slideIn 0.3s ease-out;
@@ -585,74 +541,22 @@
             animation: fadeIn 0.3s ease-out;
         }
 
+        .indikator-item:hover {
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+        }
+
         .program-item {
-            animation: fadeIn 0.3s ease-out;
+            animation: slideIn 0.2s ease-out;
         }
 
         .kegiatan-item {
-            animation: fadeIn 0.3s ease-out;
+            animation: slideIn 0.2s ease-out;
             font-size: 0.9rem;
         }
 
         .subkegiatan-item {
-            animation: fadeIn 0.3s ease-out;
+            animation: slideIn 0.2s ease-out;
             font-size: 0.85rem;
-        }
-
-        /* Card Hover Effect untuk Hierarchy */
-        .indikator-item .card:hover,
-        .program-item .card:hover,
-        .kegiatan-item .card:hover,
-        .subkegiatan-item .card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s ease;
-        }
-
-        /* ============================================
-           CONTAINERS & SPACING
-           ============================================ */
-        .program-container,
-        .kegiatan-container,
-        .subkegiatan-container {
-            margin-top: 0.5rem;
-        }
-
-        #empty-sasaran {
-            padding: 3rem 1rem;
-        }
-
-        /* ============================================
-           FORM CONTROLS
-           ============================================ */
-        .form-control:focus,
-        .form-select:focus {
-            border-color: #1e88e5;
-            box-shadow: 0 0 0 0.2rem rgba(30, 136, 229, 0.15);
-        }
-
-        /* ============================================
-           SELECT2
-           ============================================ */
-        .select2-container {
-            width: 100% !important;
-        }
-
-        .select2-container--bootstrap-5 .select2-selection {
-            min-height: 38px;
-        }
-
-        /* ============================================
-           BUTTONS
-           ============================================ */
-        .btn-primary {
-            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(30, 136, 229, 0.4);
         }
 
         .btn-xs {
@@ -660,24 +564,12 @@
             font-size: 0.75rem;
         }
 
-        /* ============================================
-           BADGES
-           ============================================ */
-        .badge {
-            padding: 0.4em 0.7em;
-            font-weight: 600;
+        .program-container,
+        .kegiatan-container,
+        .subkegiatan-container {
+            margin-top: 0.5rem;
         }
 
-        /* ============================================
-           UTILITIES
-           ============================================ */
-        .border-info {
-            border-left: 4px solid #0dcaf0 !important;
-        }
-
-        /* ============================================
-           ANIMATIONS
-           ============================================ */
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -693,18 +585,52 @@
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0);
             }
         }
 
-        /* ============================================
-           RESPONSIVE
-           ============================================ */
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #1e88e5;
+            box-shadow: 0 0 0 0.2rem rgba(30, 136, 229, 0.15);
+        }
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+        }
+
+        /* Buttons - WARNA BIRU */
+        .btn-primary {
+            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(30, 136, 229, 0.4);
+        }
+
+        #empty-sasaran {
+            padding: 3rem 1rem;
+        }
+
+        .badge {
+            padding: 0.4em 0.7em;
+            font-weight: 600;
+        }
+
+        .border-info {
+            border-left: 4px solid #0dcaf0 !important;
+        }
+
         @media (max-width: 991px) {
             .info-card {
                 margin-bottom: 1.5rem;

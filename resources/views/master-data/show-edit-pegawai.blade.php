@@ -57,16 +57,21 @@
                             </h6>
                         </div>
                         <div class="card-body text-center">
-                            <div class="profile-photo-container mb-3">
+                            <div class="profile-photo-container mb-3 mt-2">
                                 @if ($pegawai->foto_profile_path)
                                     <img src="{{ asset($pegawai->foto_profile_path) }}" alt="{{ $pegawai->nama }}"
                                         class="rounded-circle shadow" id="profilePhoto"
                                         style="width: 120px; height: 120px; object-fit: cover;">
                                 @else
-                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center shadow mx-auto"
-                                        id="profilePhoto" style="width: 120px; height: 120px;">
-                                        <i class="bi bi-person text-primary" style="font-size: 3rem;"></i>
-                                    </div>
+                                    @if ($pegawai->jenis_kelamin == 'L')
+                                        <img src="{{ asset('assets/img/avatar-laki-laki.webp') }}"
+                                            alt="{{ $pegawai->nama }}" class="rounded-circle shadow" id="profilePhoto"
+                                            style="width: 120px; height: 120px; object-fit: cover;">
+                                    @else
+                                        <img src="{{ asset('assets/img/avatar-perempuan.webp') }}"
+                                            alt="{{ $pegawai->nama }}" class="rounded-circle shadow" id="profilePhoto"
+                                            style="width: 120px; height: 120px; object-fit: cover;">
+                                    @endif
                                 @endif
                             </div>
 

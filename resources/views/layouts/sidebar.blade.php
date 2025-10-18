@@ -257,12 +257,14 @@
      <ul class="sidebar-nav" id="sidebar-nav">
 
          <!-- Dashboard Nav -->
+
          <li class="nav-item">
-             <a class="nav-link" href="{{ url('/') }}">
+             <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
                  <i class="bi bi-grid"></i>
                  <span>Dashboard</span>
              </a>
          </li><!-- End Dashboard Nav -->
+
 
          <!-- Bappeda Storage -->
          <li class="nav-heading">Bappeda Storage</li>

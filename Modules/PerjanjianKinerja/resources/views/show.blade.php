@@ -220,7 +220,7 @@
                                             <div class="flex-grow-1">
                                                 <h6 class="mb-1 text-primary">
                                                     <i class="bi bi-folder-fill me-2"></i>
-                                                    {{ $program->kode_program }} - {{ $program->nama_program }}
+                                                    {{ $program->nama_program }}
                                                 </h6>
                                                 <p class="text-muted small mb-0">
                                                     Anggaran: <strong>Rp
@@ -237,7 +237,7 @@
                                                     <div class="flex-grow-1">
                                                         <h6 class="mb-1" style="font-size: 0.95rem;">
                                                             <i class="bi bi-file-earmark-text me-2"></i>
-                                                            {{ $kegiatan->kode_kegiatan }} -
+
                                                             {{ $kegiatan->nama_kegiatan }}
                                                         </h6>
                                                         <p class="text-muted small mb-0">
@@ -256,7 +256,7 @@
                                                                 <div class="flex-grow-1">
                                                                     <p class="mb-1 small">
                                                                         <i class="bi bi-arrow-return-right me-2"></i>
-                                                                        {{ $subKegiatan->kode_sub_kegiatan }} -
+
                                                                         {{ $subKegiatan->nama_sub_kegiatan }}
                                                                     </p>
                                                                     <div class="d-flex justify-content-between">
@@ -581,7 +581,7 @@
                 beforeSend: function() {
                     $('#btnGeneratePDF').html(
                         '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...'
-                        ).prop('disabled', true);
+                    ).prop('disabled', true);
                 },
                 success: function(response) {
                     $('#modalGeneratePDF').modal('hide');
@@ -644,7 +644,7 @@
                     beforeSend: function() {
                         $('#btnSignDocument').html(
                             '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...'
-                            ).prop('disabled', true);
+                        ).prop('disabled', true);
                     },
                     success: function(response) {
                         $('#modalSignDocument').modal('hide');
