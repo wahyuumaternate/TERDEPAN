@@ -352,7 +352,7 @@
              </a>
              <ul id="tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('penugasan/tugas-pokok') }}">
+                     <a href="{{ route('penugasan.tugas-pokok.index') }}">
                          <i class="bi bi-circle"></i><span>Tugas Pokok</span>
                      </a>
                  </li>
@@ -497,18 +497,18 @@
              </a>
              <ul id="master-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('master/pegawai') }}">
+                     <a href="{{ route('master.pegawai.index') }}">
                          <i class="bi bi-circle"></i><span>Pegawai</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('master/jabatan') }}">
-                         <i class="bi bi-circle"></i><span>Jabatan</span>
+                     <a href="{{ route('master.bidang.index') }}">
+                         <i class="bi bi-circle"></i><span>Bidang</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('master/bidang') }}">
-                         <i class="bi bi-circle"></i><span>Bidang</span>
+                     <a href="{{ route('master.jabatan.index') }}">
+                         <i class="bi bi-circle"></i><span>Jabatan</span>
                      </a>
                  </li>
                  <li>

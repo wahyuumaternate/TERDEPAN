@@ -9,6 +9,12 @@ class MasterBidang extends Model
     protected $table = 'master_bidang';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function pegawai()
     {
         return $this->hasMany(MasterPegawai::class, 'bidang_id');
