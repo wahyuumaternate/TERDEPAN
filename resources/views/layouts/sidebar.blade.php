@@ -361,7 +361,7 @@
              </a>
              <ul id="tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('penugasan/tugas-pokok') }}">
+                     <a href="{{ route('penugasan.tugas-pokok.index') }}">
                          <i class="bi bi-circle"></i><span>Tugas Pokok</span>
                      </a>
                  </li>
