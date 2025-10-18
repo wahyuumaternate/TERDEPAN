@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Master\MasterPegawaiController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,7 +13,7 @@ Route::middleware('auth')->prefix('master')->name('master.')->group(function () 
     // ============================
     // MASTER PEGAWAI ROUTES - /master/pegawai
     // ============================
-    Route::resource('pegawai', App\Http\Controllers\Master\MasterPegawaiController::class)->names([
+    Route::resource('pegawai', MasterPegawaiController::class)->names([
         'index' => 'pegawai.index',
         'create' => 'pegawai.create', 
         'store' => 'pegawai.store',
