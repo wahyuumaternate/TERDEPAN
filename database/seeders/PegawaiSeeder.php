@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-class PegawaiWithAtasanSeeder extends Seeder
+class PegawaiSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -29,12 +29,18 @@ class PegawaiWithAtasanSeeder extends Seeder
                 return;
             }
 
+            /**
+             * ============================================
+             * 33-43. Pegawai SEKRETARIAT   
+             * ============================================
+             */
+
             // 1. Kepala Badan (Level 1 - Paling Atas, No Atasan)
             $kaban = $this->createPegawai([
                 'nomor_identitas' => '198104201999121001',
                 'nama' => 'MUHAMMAD SARMIN S. ADAM',
                 'jabatan_id' => $jabatans['KABAN'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'kaban@bappeda.go.id',
                 'pangkat' => 'Pembina Tk. I',
                 'golongan' => 'IV/b',
@@ -50,7 +56,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '197302232002121006',
                 'nama' => 'HERIFAL NALY THOMAS',
                 'jabatan_id' => $jabatans['SEKBAN'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'sekban@bappeda.go.id',
                 'pangkat' => 'Pembina Tk. I',
                 'golongan' => 'IV/b',
@@ -64,8 +70,8 @@ class PegawaiWithAtasanSeeder extends Seeder
             $penelaah = $this->createPegawai([
                 'nomor_identitas' => '197901051997121000',
                 'nama' => 'JUNAIDI SOAMOLE',
-                'jabatan_id' => $jabatans['JAFUNG'],
-                'bidang_id' => $bidangs['PLAN'],
+                'jabatan_id' => $jabatans['STF'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'junaidi.soamole@bappeda.go.id',
                 'pangkat' => 'Pembina Tk. I',
                 'golongan' => 'IV/b',
@@ -80,7 +86,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '197403282003122009',
                 'nama' => 'KURAISIN A.HASAN',
                 'jabatan_id' => $jabatans['JAFUNG'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'kuraisin.hasan@bappeda.go.id',
                 'pangkat' => 'Pembina',
                 'golongan' => 'IV/a',
@@ -95,7 +101,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198505132006021001',
                 'nama' => 'HENDRA PERDANA',
                 'jabatan_id' => $jabatans['KABID'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'hendra.perdana@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -110,7 +116,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '199001022010102001',
                 'nama' => 'RIZKA WURI HANDAYANI',
                 'jabatan_id' => $jabatans['KABID'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'rizka.handayani@bappeda.go.id',
                 'pangkat' => 'Penata',
                 'golongan' => 'III/c',
@@ -125,7 +131,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '196909282005012016',
                 'nama' => 'NURMIATY ISMAIL',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'nurmiaty.ismail@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -138,7 +144,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '197404272001122001',
                 'nama' => 'NURLAILA B. HI. IBRAHIM',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'nurlaila.ibrahim@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -151,7 +157,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '197904192000082001',
                 'nama' => 'SAIBA MUHAMMAD ZEN',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['EVAL'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'saiba.zen@bappeda.go.id',
                 'pangkat' => 'Penata',
                 'golongan' => 'III/c',
@@ -164,7 +170,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198004112006042012',
                 'nama' => 'RIRIZ OLIVIA PANDJAB',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'ririz.pandjab@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -177,7 +183,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '197103272002121007',
                 'nama' => 'MAHMUD AHMAD',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['EVAL'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'mahmud.ahmad@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -190,7 +196,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198003092009022001',
                 'nama' => 'AMALIYAH DJAFAR',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'amaliyah.djafar@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -206,7 +212,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198104172011012003',
                 'nama' => 'IRMAWATI KARIM',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'irmawati.karim@bappeda.go.id',
                 'pangkat' => 'Penata',
                 'golongan' => 'III/c',
@@ -219,7 +225,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198703042010012002',
                 'nama' => 'NURYANA',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['DATA'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'nuryana@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -232,7 +238,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198012072010011007',
                 'nama' => 'LUKMAN DJABID',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'lukman.djabid@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -245,7 +251,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198205012009031001',
                 'nama' => 'RUSLAN ABDUL KADIR',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'ruslan.kadir@bappeda.go.id',
                 'pangkat' => 'Penata',
                 'golongan' => 'III/c',
@@ -258,7 +264,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '199204182014062001',
                 'nama' => 'RAHMAWATI UMAR',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'rahmawati.umar@bappeda.go.id',
                 'pangkat' => 'Penata',
                 'golongan' => 'III/c',
@@ -274,7 +280,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198201272003122003',
                 'nama' => 'AFI A.DO YUNAN',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'afi.yunan@bappeda.go.id',
                 'pangkat' => 'Penata Muda Tk. I',
                 'golongan' => 'III/b',
@@ -286,7 +292,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '199709082019081001',
                 'nama' => 'ACHMAD QABIRRUL RIFAI',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'achmad.rifai@bappeda.go.id',
                 'pangkat' => 'Penata Muda Tk. I',
                 'golongan' => 'III/b',
@@ -299,7 +305,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '200201072024092001',
                 'nama' => 'FITRI SYAIROH NURSHANY',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'fitri.nurshany@bappeda.go.id',
                 'pangkat' => 'Penata Muda',
                 'golongan' => 'III/a',
@@ -314,7 +320,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198203082007011011',
                 'nama' => 'ARI JOKJA',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'ari.jokja@bappeda.go.id',
                 'pangkat' => 'Pengatur',
                 'golongan' => 'II/d',
@@ -326,7 +332,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198301182023212019',
                 'nama' => 'ERNAWATY',
                 'jabatan_id' => $jabatans['JAFUNG'],
-                'bidang_id' => $bidangs['DATA'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'ernawaty@bappeda.go.id',
                 'pangkat' => 'IX',
                 'golongan' => 'IX',
@@ -340,7 +346,7 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '198312182025211000',
                 'nama' => 'FARDI A.HI.DJAUHAR',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['SEKRET'],
+                'bidang_id' => $bidangs['SEKRETARIAT'],
                 'email' => 'fardi.djauhar@bappeda.go.id',
                 'pangkat' => 'V',
                 'golongan' => 'V',
@@ -370,24 +376,28 @@ class PegawaiWithAtasanSeeder extends Seeder
                     'nomor_identitas' => 'TT' . $nomorTT++,
                     'nama' => $tt['nama'],
                     'jabatan_id' => $jabatans['TT'],
-                    'bidang_id' => $bidangs['SEKRET'],
+                    'bidang_id' => $bidangs['SEKRETARIAT'],
                     'email' => strtolower(str_replace([' ', '.', '\''], ['', '', ''], $tt['nama'])) . '@bappeda.go.id',
                     'pangkat' => null,
                     'golongan' => null,
                     'gelar_belakang' => $tt['gelar'],
                     'jenis_kelamin' => $tt['jk'],
                     'status_kepegawaian' => 'Kontrak',
-                    'atasan_langsung_id' => $sekban,
+                    'atasan_langsung_id' => $kaban,
                 ]);
             }
             $this->command->info('   ✓ Created: 9 Tenaga Teknis (Atasan: Sekban)');
 
-            // 33-43. Pegawai Bidang Perencanaan (Data Tambahan)
-            $this->createPegawai([
+            /**
+             * ============================================
+             * 33-43. Pegawai Bidang IPW (Data Tambahan)
+             * ============================================
+             */
+            $kabidIpw = $this->createPegawai([
                 'nomor_identitas' => '198408202011011002',
                 'nama' => 'ZULKARNAIN ABD. LATIF',
                 'jabatan_id' => $jabatans['JAFUNG'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'zulkarnain.latif@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
@@ -400,130 +410,130 @@ class PegawaiWithAtasanSeeder extends Seeder
                 'nomor_identitas' => '196908042001121005',
                 'nama' => 'ROSIHAN THAMRIN',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'rosihan.thamrin@bappeda.go.id',
                 'pangkat' => 'Pembina',
                 'golongan' => 'IV/d',
                 'gelar_belakang' => 'SH',
                 'jenis_kelamin' => 'L',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '197609092003122008',
                 'nama' => 'NURHAYA UMASANGAJI',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'nurhaya.umasangaji@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
                 'gelar_belakang' => 'SE',
                 'jenis_kelamin' => 'P',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '198303172009032002',
                 'nama' => 'NURMARDIYANTI',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'nurmardiyanti@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
                 'gelar_belakang' => 'ST',
                 'jenis_kelamin' => 'P',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '197601252009031001',
                 'nama' => 'MUHAMMAD YAMIN NOH BAILUSY',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'yamin.bailusy@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
                 'gelar_belakang' => 'SH',
                 'jenis_kelamin' => 'L',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '198606082010012037',
                 'nama' => 'ROSNIA HI.SALAM',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'rosnia.salam@bappeda.go.id',
                 'pangkat' => 'Penata Tk. I',
                 'golongan' => 'III/d',
                 'gelar_belakang' => 'S.Pt',
                 'jenis_kelamin' => 'P',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '199407112019031004',
                 'nama' => 'RAHMAT JULASRI WANBOKO',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'rahmat.wanboko@bappeda.go.id',
                 'pangkat' => 'Penata Muda',
                 'golongan' => 'III/a',
                 'gelar_belakang' => 'A.Md',
                 'jenis_kelamin' => 'L',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '198509012010012001',
                 'nama' => 'SITI SARAH HI. SALIM HAMDJA',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'siti.hamdja@bappeda.go.id',
                 'pangkat' => 'Pengatur',
                 'golongan' => 'II/c',
                 'jenis_kelamin' => 'P',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '199704212025041004',
                 'nama' => 'SURYA PRATAMA JUMSAR',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'surya.jumsar@bappeda.go.id',
                 'pangkat' => 'Penata Muda',
                 'golongan' => 'III/a',
                 'gelar_belakang' => 'S.T',
                 'jenis_kelamin' => 'L',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => '199708312025041004',
                 'nama' => 'MUHAMMAD SYAHRUL',
                 'jabatan_id' => $jabatans['STF'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'muhammad.syahrul@bappeda.go.id',
                 'pangkat' => 'Penata Muda',
                 'golongan' => 'III/a',
                 'gelar_belakang' => 'S.T',
                 'jenis_kelamin' => 'L',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->createPegawai([
                 'nomor_identitas' => 'TT10010',
                 'nama' => 'SAHDIRAN M. SALEH',
                 'jabatan_id' => $jabatans['TT'],
-                'bidang_id' => $bidangs['PLAN'],
+                'bidang_id' => $bidangs['IPW'],
                 'email' => 'sahdiran.saleh@bappeda.go.id',
                 'pangkat' => null,
                 'golongan' => null,
                 'gelar_belakang' => 'ST',
                 'jenis_kelamin' => 'L',
                 'status_kepegawaian' => 'Kontrak',
-                'atasan_langsung_id' => $kasubbagPlan,
+                'atasan_langsung_id' => $kabidIpw,
             ]);
 
             $this->command->info('   ✓ Created: 11 Pegawai Bidang Perencanaan (10 PNS + 1 TT)');
@@ -629,7 +639,7 @@ class PegawaiWithAtasanSeeder extends Seeder
     {
         $bidangs = [
             ['kode' => 'SEKRET', 'nama' => 'Sekretariat', 'warna' => '#3B82F6'],
-            ['kode' => 'PLAN', 'nama' => 'Bidang Perencanaan', 'warna' => '#10B981'],
+            ['kode' => 'IPW', 'nama' => 'Bidang Perencanaan', 'warna' => '#10B981'],
             ['kode' => 'EVAL', 'nama' => 'Bidang Evaluasi', 'warna' => '#F59E0B'],
             ['kode' => 'DATA', 'nama' => 'Bidang Data dan Statistik', 'warna' => '#8B5CF6'],
         ];
