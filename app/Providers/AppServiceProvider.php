@@ -37,6 +37,11 @@ class AppServiceProvider extends ServiceProvider
         // $total = 200 * 1024 * 1024; // total kapasitas: 200 MB
         $percentage = ($used / $total) * 100;
 
+        // Helper untuk format tanggal yang aman dari null
+        View::share('formatDate', function ($date, $format = 'd M Y H:i', $default = 'Tidak diketahui') {
+            return $date ? $date->format($format) : $default;
+        });
+
         // Bagikan ke semua view
         View::share([
             'used' => StorageHelper::formatBytes($used),

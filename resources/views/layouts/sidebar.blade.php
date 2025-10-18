@@ -507,7 +507,7 @@
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('master/jabatan') }}">
+                     <a href="{{ route('master.jabatan.index') }}">
                          <i class="bi bi-circle"></i><span>Jabatan</span>
                      </a>
                  </li>

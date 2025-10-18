@@ -96,7 +96,7 @@
                                     </div>
                                     <div class="col-12">
                                         <small class="text-muted">Dibuat</small>
-                                        <div class="fw-bold small">{{ $bidang->created_at->format('d M Y H:i') }}</div>
+                                        <div class="fw-bold small">{{ $formatDate($bidang->created_at) }}</div>
                                     </div>
                                 </div>
                             </div>

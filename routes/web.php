@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Master\MasterPegawaiController;
 use App\Http\Controllers\Master\MasterBidangController;
+use App\Http\Controllers\Master\MasterJabatanController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,6 +36,19 @@ Route::middleware('auth')->prefix('master')->name('master.')->group(function () 
         'edit' => 'bidang.edit',
         'update' => 'bidang.update',
         'destroy' => 'bidang.destroy',
+    ]);
+
+    // ============================
+    // MASTER JABATAN ROUTES - /master/jabatan
+    // ============================
+    Route::resource('jabatan', MasterJabatanController::class)->names([
+        'index' => 'jabatan.index',
+        'create' => 'jabatan.create',
+        'store' => 'jabatan.store',
+        'show' => 'jabatan.show',
+        'edit' => 'jabatan.edit',
+        'update' => 'jabatan.update',
+        'destroy' => 'jabatan.destroy',
     ]);
 });
 
