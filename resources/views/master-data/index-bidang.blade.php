@@ -195,10 +195,6 @@
                                                         class="btn btn-sm btn-outline-info" title="Lihat Detail">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <a href="{{ route('master.bidang.edit', $bidang->id) }}"
-                                                        class="btn btn-sm btn-outline-warning" title="Edit">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </a>
                                                     @if ($bidang->pegawai->count() == 0)
                                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                             onclick="confirmDelete({{ $bidang->id }})" title="Hapus">

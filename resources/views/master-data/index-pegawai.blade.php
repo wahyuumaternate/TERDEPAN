@@ -241,10 +241,6 @@
                                                         class="btn btn-sm btn-outline-info" title="Lihat Detail">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <a href="{{ route('master.pegawai.edit', $pegawai->id) }}"
-                                                        class="btn btn-sm btn-outline-warning" title="Edit">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </a>
                                                     <button type="button" class="btn btn-sm btn-outline-danger"
                                                         onclick="confirmDelete({{ $pegawai->id }})" title="Hapus">
                                                         <i class="bi bi-trash"></i>
