@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Master\MasterPegawaiController;
+use App\Http\Controllers\Master\MasterBidangController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,12 +16,25 @@ Route::middleware('auth')->prefix('master')->name('master.')->group(function () 
     // ============================
     Route::resource('pegawai', MasterPegawaiController::class)->names([
         'index' => 'pegawai.index',
-        'create' => 'pegawai.create', 
+        'create' => 'pegawai.create',
         'store' => 'pegawai.store',
         'show' => 'pegawai.show',
         'edit' => 'pegawai.edit',
         'update' => 'pegawai.update',
         'destroy' => 'pegawai.destroy',
+    ]);
+
+    // ============================
+    // MASTER BIDANG ROUTES - /master/bidang
+    // ============================
+    Route::resource('bidang', MasterBidangController::class)->names([
+        'index' => 'bidang.index',
+        'create' => 'bidang.create',
+        'store' => 'bidang.store',
+        'show' => 'bidang.show',
+        'edit' => 'bidang.edit',
+        'update' => 'bidang.update',
+        'destroy' => 'bidang.destroy',
     ]);
 });
 

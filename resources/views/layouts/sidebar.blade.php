@@ -502,13 +502,13 @@
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('master/jabatan') }}">
-                         <i class="bi bi-circle"></i><span>Jabatan</span>
+                     <a href="{{ route('master.bidang.index') }}">
+                         <i class="bi bi-circle"></i><span>Bidang</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('master/bidang') }}">
-                         <i class="bi bi-circle"></i><span>Bidang</span>
+                     <a href="{{ url('master/jabatan') }}">
+                         <i class="bi bi-circle"></i><span>Jabatan</span>
                      </a>
                  </li>
                  <li>
