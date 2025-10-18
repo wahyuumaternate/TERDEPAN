@@ -1,3 +1,4 @@
+{{-- modules/perjanjian_kinerja/pdf/dokumen.blade.php --}}
 <!DOCTYPE html>
 <html lang="id">
 
@@ -10,20 +11,22 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+
         }
 
-        @page {
+        /* @page {
             margin: 20mm 25mm;
-        }
+        } */
 
         body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 12pt;
-            line-height: 1.5;
+            line-height: 1.2 !important;
             color: #000;
+            margin: 20mm 25mm;
+            /* size: Legal portrait !important; */
         }
 
-        /* Text alignment */
         .text-center {
             text-align: center;
         }
@@ -36,53 +39,57 @@
             text-align: justify;
         }
 
-        /* Spacing */
-        .mt-20 {
-            margin-top: 20px;
-        }
-
-        .mt-30 {
-            margin-top: 30px;
-        }
-
-        .mb-20 {
-            margin-bottom: 20px;
-        }
-
-        /* Headers */
-        h1,
-        h2,
-        h3 {
+        .header-title {
+            font-size: 12pt;
             font-weight: bold;
             text-align: center;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         h2 {
-            font-size: 14pt;
-            margin: 20px 0;
+            font-size: 13pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 12pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 5px 0;
             text-transform: uppercase;
         }
 
-        /* Info Table */
-        table.info-table {
+        table {
             width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.info-table {
             margin: 20px 0;
         }
 
         table.info-table td {
             padding: 3px 0;
             vertical-align: top;
+            font-size: 12pt;
+            line-height: 1.6;
         }
 
         table.info-table td:first-child {
-            width: 150px;
+            width: 130px;
         }
 
         table.info-table td:nth-child(2) {
-            width: 20px;
+            width: 15px;
+            text-align: center;
         }
 
-        /* Sasaran Kinerja Table */
         table.sasaran-table {
             width: 100%;
             border-collapse: collapse;
@@ -93,39 +100,38 @@
         table.sasaran-table td {
             border: 1px solid #000;
             padding: 8px;
-            vertical-align: top;
+            vertical-align: middle;
+            font-size: 11pt;
+            line-height: 1.4;
         }
 
         table.sasaran-table th {
-            background-color: #f0f0f0;
             font-weight: bold;
             text-align: center;
+            background-color: #fff;
         }
 
-        table.sasaran-table td:nth-child(1) {
-            width: 5%;
+        table.program-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table.program-table th,
+        table.program-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            font-size: 11pt;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+
+        table.program-table th {
+            font-weight: bold;
             text-align: center;
+            background-color: #fff;
         }
 
-        table.sasaran-table td:nth-child(2) {
-            width: 35%;
-        }
-
-        table.sasaran-table td:nth-child(3) {
-            width: 15%;
-            text-align: center;
-        }
-
-        table.sasaran-table td:nth-child(4) {
-            width: 30%;
-        }
-
-        table.sasaran-table td:nth-child(5) {
-            width: 15%;
-            text-align: center;
-        }
-
-        /* TTD */
         .ttd-section {
             margin-top: 40px;
             page-break-inside: avoid;
@@ -134,6 +140,7 @@
         table.ttd-table {
             width: 100%;
             margin-top: 30px;
+            border-collapse: collapse;
         }
 
         table.ttd-table td {
@@ -141,6 +148,8 @@
             text-align: center;
             vertical-align: top;
             padding: 0 20px;
+            font-size: 11pt;
+            line-height: 1.2 !important;
         }
 
         .ttd-space {
@@ -150,53 +159,59 @@
         .page-break {
             page-break-after: always;
         }
+
+        p {
+            margin: 0;
+            padding: 0;
+            text-align: justify;
+            line-height: 1.2 !important;
+        }
+
+        p+p {
+            margin-top: 10px;
+
+        }
+
+        .intro-text {
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 
 <body>
     {{-- HALAMAN 1: PERNYATAAN PERJANJIAN --}}
-    {{-- @if ($pk->template->kop_surat_html)
-        {!! $pk->template->kop_surat_html !!}
-    @endif --}}
+    {{-- <div class="header-title">PERNYATAAN PERJANJIAN KINERJA</div> --}}
 
-    <h2>PERJANJIAN KINERJA TAHUN {{ $pk->tahun }}</h2>
+    <h2>PERJANJIAN KINERJA TAHUN {{ $pk->tahun ?? date('Y') }}</h2>
 
-    @if ($pk->pegawai->jabatan)
-        <h3 style="font-size: 12pt;">{{ strtoupper($pk->pegawai->jabatan->nama) }}</h3>
+    @if ($pk->pegawai && $pk->pegawai->jabatan)
+        <h3>{{ strtoupper($pk->pegawai->jabatan->nama) }}</h3>
     @endif
 
-    <h3 style="font-size: 12pt;">BADAN PERENCANAAN PEMBANGUNAN DAERAH</h3>
-    <h3 style="font-size: 12pt;">PROVINSI MALUKU UTARA</h3>
+    <h3>BADAN PERENCANAAN PEMBANGUNAN DAERAH</h3>
+    <h3>PROVINSI MALUKU UTARA</h3>
 
     {{-- PERNYATAAN PEMBUKA --}}
-    <div class="mt-30 text-justify">
-        @if ($pk->template->pernyataan_pembuka)
-            {!! $pk->template->pernyataan_pembuka !!}
-        @else
-            <p>Dalam rangka mewujudkan manajemen pemerintahan yang efektif, transparan dan akuntabel serta
-                berorientasi pada hasil, kami yang bertanda tangan di bawah ini :</p>
-        @endif
+    <div class="intro-text">
+        <p>Dalam rangka mewujudkan manajemen pemerintahan yang efektif, transparan dan akuntabel serta berorientasi pada
+            hasil, kami yang bertanda tangan di bawah ini:</p>
     </div>
 
     {{-- INFO PIHAK PERTAMA (PEGAWAI) --}}
-    <table class="info-table mt-20">
+    <table class="info-table">
         <tr>
             <td>Nama</td>
             <td>:</td>
-            <td>{{ $pk->pegawai->nama }}</td>
-        </tr>
-        <tr>
-            <td>NIP</td>
-            <td>:</td>
-            <td>{{ $pk->pegawai->nomor_identitas }}</td>
+            <td>{{ $pk->pegawai->nama ?? '-' }}</td>
         </tr>
         <tr>
             <td>Jabatan</td>
             <td>:</td>
-            <td>{{ $pk->pegawai->jabatan->nama ?? '-' }}<br>BAPPEDA Provinsi Maluku Utara</td>
+            <td>{{ $pk->pegawai->jabatan->nama ?? '-' }} BAPPEDA Provinsi Maluku Utara</td>
         </tr>
         <tr>
-            <td colspan="3">selanjutnya disebut <strong>Pihak Pertama</strong></td>
+            <td colspan="3" style="padding-top: 10px;">selanjutnya disebut <strong>pihak pertama.</strong></td>
         </tr>
     </table>
 
@@ -208,30 +223,26 @@
             <td>{{ $pk->atasan->nama ?? '-' }}</td>
         </tr>
         <tr>
-            <td>NIP</td>
-            <td>:</td>
-            <td>{{ $pk->atasan->nomor_identitas ?? '-' }}</td>
-        </tr>
-        <tr>
             <td>Jabatan</td>
             <td>:</td>
-            <td>{{ $pk->atasan->jabatan->nama ?? '-' }}<br>BAPPEDA Provinsi Maluku Utara</td>
+            <td>{{ $pk->atasan->jabatan->nama ?? '-' }} BAPPEDA Provinsi Maluku Utara</td>
         </tr>
         <tr>
-            <td colspan="3">selaku atasan pihak pertama, selanjutnya disebut <strong>Pihak Kedua</strong></td>
+            <td colspan="3" style="padding-top: 10px;">selaku atasan langsung pihak pertama. Selanjutnya disebut
+                <strong>pihak kedua.</strong>
+            </td>
         </tr>
     </table>
 
     {{-- PERNYATAAN ISI --}}
-    <div class="mt-20 text-justify">
-        <p style="margin-bottom: 10px;">Pihak pertama berjanji akan mewujudkan target kinerja yang seharusnya sesuai
-            lampiran perjanjian ini, dalam rangka mencapai target kinerja jangka menengah seperti yang telah
-            ditetapkan dalam dokumen perencanaan. Keberhasilan dan kegagalan pencapaian target kinerja
-            tersebut menjadi tanggung jawab kami.</p>
+    <div style="margin-top: 20px; line-height: 0.5;">
+        <p>Pihak pertama berjanji akan mewujudkan target kinerja yang seharusnya sesuai lampiran perjanjian ini, dalam
+            rangka mencapai target kinerja jangka menengah seperti yang telah ditetapkan dalam dokumen perencanaan.
+            Keberhasilan dan kegagalan pencapaian target kinerja tersebut menjadi tanggung jawab kami.</p>
 
-        <p>Pihak kedua akan melakukan supervisi yang diperlukan serta akan melakukan evaluasi terhadap
-            capaian kinerja dari perjanjian ini dan mengambil tindakan yang diperlukan dalam rangka
-            pemberian penghargaan dan sanksi.</p>
+        <p>Pihak kedua akan melakukan supervisi yang diperlukan serta akan melakukan evaluasi terhadap capaian kinerja
+            dari perjanjian ini dan mengambil tindakan yang diperlukan dalam rangka pemberian penghargaan dan sanksi.
+        </p>
     </div>
 
     {{-- TANDA TANGAN HALAMAN 1 --}}
@@ -242,27 +253,27 @@
                 : '........................';
         @endphp
 
-        <p class="text-right">{{ $pk->tempat_ttd ?? 'Sofifi' }}, {{ $tanggalTtd }}</p>
+        <p class="text-right" style="margin-bottom: 20px;">{{ $pk->tempat_ttd ?? 'Sofifi' }}, {{ $tanggalTtd }}</p>
 
         <table class="ttd-table">
             <tr>
                 <td>
-                    <p><strong>Pihak Kedua,</strong></p>
-                    <p>{{ $pk->atasan->jabatan->nama ?? 'Atasan Langsung' }}</p>
-                    <p>BAPPEDA Provinsi Maluku Utara</p>
+                    <p style="font-size:12px;">PIHAK KEDUA</p>
+                    <p style="margin-top: 5px;">{{ strtoupper($pk->atasan->jabatan->nama ?? 'ATASAN LANGSUNG') }}</p>
+                    <p>BAPPEDA PROVINSI MALUKU UTARA,</p>
                     <div class="ttd-space"></div>
-                    <p><strong><u>{{ $pk->atasan->nama ?? '-' }}</u></strong></p>
+                    <p style="margin-top: 10px;"><strong>{{ strtoupper($pk->atasan->nama ?? '-') }}</strong></p>
                     <p>{{ $pk->atasan->pangkat ?? 'Pembina Tk. I' }}</p>
                     <p>NIP. {{ $pk->atasan->nomor_identitas ?? '-' }}</p>
                 </td>
                 <td>
-                    <p><strong>Pihak Pertama,</strong></p>
-                    <p>{{ $pk->pegawai->jabatan->nama ?? 'Pejabat' }}</p>
-                    <p>BAPPEDA Provinsi Maluku Utara</p>
+                    <p style="font-size:12px;">PIHAK PERTAMA</p>
+                    <p style="margin-top: 5px;">{{ strtoupper($pk->pegawai->jabatan->nama ?? 'PEJABAT') }}</p>
+                    <p>BAPPEDA PROVINSI MALUKU UTARA,</p>
                     <div class="ttd-space"></div>
-                    <p><strong><u>{{ $pk->pegawai->nama }}</u></strong></p>
+                    <p style="margin-top: 10px;"><strong>{{ strtoupper($pk->pegawai->nama ?? '-') }}</strong></p>
                     <p>{{ $pk->pegawai->pangkat ?? 'Pembina' }}</p>
-                    <p>NIP. {{ $pk->pegawai->nomor_identitas }}</p>
+                    <p>NIP. {{ $pk->pegawai->nomor_identitas ?? '-' }}</p>
                 </td>
             </tr>
         </table>
@@ -271,26 +282,24 @@
     {{-- PAGE BREAK --}}
     <div class="page-break"></div>
 
-    {{-- HALAMAN 2: TABEL SASARAN KINERJA --}}
-    {{-- @if ($pk->template->kop_surat_html)
-        {!! $pk->template->kop_surat_html !!}
-    @endif --}}
+    {{-- HALAMAN 2: FORMULIR PERJANJIAN KINERJA --}}
+    {{-- <div class="header-title">FORMULIR PERJANJIAN KINERJA</div> --}}
 
-    <h2>PERJANJIAN KINERJA TAHUN {{ $pk->tahun }}</h2>
-    <h3 style="font-size: 12pt;">BADAN PERENCANAAN PEMBANGUNAN DAERAH</h3>
-    <h3 style="font-size: 12pt;">PROVINSI MALUKU UTARA</h3>
+    <h2>PERJANJIAN KINERJA TAHUN {{ $pk->tahun ?? date('Y') }}</h2>
+    <h3>BADAN PERENCANAAN PEMBANGUNAN DAERAH</h3>
+    <h3>PROVINSI MALUKU UTARA</h3>
 
     {{-- INFO PEGAWAI --}}
-    <table class="info-table mt-20">
+    <table class="info-table">
         <tr>
             <td>Nama</td>
             <td>:</td>
-            <td>{{ $pk->pegawai->nama }}</td>
+            <td>{{ $pk->pegawai->nama ?? '-' }}</td>
         </tr>
         <tr>
             <td>NIP</td>
             <td>:</td>
-            <td>{{ $pk->pegawai->nomor_identitas }}</td>
+            <td>{{ $pk->pegawai->nomor_identitas ?? '-' }}</td>
         </tr>
         <tr>
             <td>Jabatan</td>
@@ -303,81 +312,254 @@
     <table class="sasaran-table">
         <thead>
             <tr>
-                <th>No.</th>
-                <th>Sasaran Kinerja</th>
-                <th>Aspek</th>
-                <th>Indikator Kinerja Individu</th>
-                <th>Target</th>
+                <th style="width: 5%;">No.</th>
+                <th style="width: 40%;">Sasaran Kinerja</th>
+                <th style="width: 35%;">Indikator Kinerja Individu</th>
+                <th style="width: 20%;">Target</th>
             </tr>
         </thead>
         <tbody>
             @php
-                $nomorSasaran = 1;
+                // Kumpulkan semua indikator yang akan ditampilkan
+                $allSasaranData = collect();
+                $no = 1;
+
+                if ($pk->sasaran && $pk->sasaran->count() > 0) {
+                    foreach ($pk->sasaran as $sasaran) {
+                        $indikatorItems = collect();
+
+                        if ($sasaran->indikator && $sasaran->indikator->count() > 0) {
+                            foreach ($sasaran->indikator as $indikator) {
+                                $indikatorItems->push([
+                                    'nama' =>
+                                        $indikator->indikator_sasaran ?? 'Indikator ' . ($indikatorItems->count() + 1),
+                                    'target_value' => $indikator->target_value ?? 1,
+                                    'satuan' => $indikator->satuan ?? 'Persen',
+                                ]);
+                            }
+                        }
+
+                        if ($indikatorItems->count() > 0) {
+                            $allSasaranData->push([
+                                'sasaran' => $sasaran->sasaran_strategis ?? 'Sasaran ' . $no,
+                                'indikator' => $indikatorItems,
+                                'rowspan' => $indikatorItems->count(),
+                            ]);
+                        }
+                    }
+                }
             @endphp
-            @foreach ($pk->sasaran as $sasaran)
-                @foreach ($sasaran->indikator as $indikator)
-                    @foreach ($indikator->program as $program)
-                        @foreach ($program->kegiatan as $kegiatan)
-                            @foreach ($kegiatan->subKegiatan as $indexSub => $subKegiatan)
-                                {{-- Kuantitas --}}
-                                <tr>
-                                    @if ($indexSub === 0)
-                                        <td rowspan="3">{{ $nomorSasaran }}</td>
-                                        <td rowspan="3">{{ $subKegiatan->nama_sub_kegiatan }}</td>
-                                    @endif
-                                    <td>Kuantitas</td>
-                                    <td>{{ $subKegiatan->nama_sub_kegiatan }}</td>
-                                    <td>{{ number_format($subKegiatan->target_value, 0, ',', '.') }}
-                                        {{ $subKegiatan->satuan }}</td>
-                                </tr>
-                                {{-- Kualitas --}}
-                                <tr>
-                                    <td>Kualitas</td>
-                                    <td>{{ $subKegiatan->nama_sub_kegiatan }} yang disusun sesuai regulasi yang
-                                        berlaku</td>
-                                    <td>{{ number_format($subKegiatan->target_value, 0, ',', '.') }}
-                                        {{ $subKegiatan->satuan }}</td>
-                                </tr>
-                                {{-- Waktu --}}
-                                <tr>
-                                    <td>Waktu</td>
-                                    <td>Tingkat Ketepatan Waktu {{ $subKegiatan->nama_sub_kegiatan }}</td>
-                                    <td>100%</td>
-                                </tr>
+
+            @if ($allSasaranData->count() > 0)
+                @foreach ($allSasaranData as $sasaranData)
+                    @php $firstRow = true; @endphp
+
+                    @foreach ($sasaranData['indikator'] as $indikator)
+                        <tr>
+                            @if ($firstRow)
+                                <td rowspan="{{ $sasaranData['rowspan'] }}"
+                                    style="text-align: center; vertical-align: middle;">{{ $no }}</td>
+                                <td rowspan="{{ $sasaranData['rowspan'] }}" style="vertical-align: middle;">
+                                    {{ $sasaranData['sasaran'] }}
+                                </td>
                                 @php
-                                    $nomorSasaran++;
+                                    $firstRow = false;
+                                    $no++;
                                 @endphp
-                            @endforeach
-                        @endforeach
+                            @endif
+
+                            <td>{{ $indikator['nama'] }}</td>
+                            <td style="text-align: center;">{{ $indikator['target_value'] }}
+                                {{ $indikator['satuan'] }}</td>
+                        </tr>
                     @endforeach
                 @endforeach
-            @endforeach
+            @else
+                <tr>
+                    <td colspan="4" style="text-align: center;">Belum ada data sasaran kinerja</td>
+                </tr>
+            @endif
+        </tbody>
+    </table>
+
+    {{-- TABEL PROGRAM, KEGIATAN, SUB KEGIATAN --}}
+    <table class="program-table">
+        <thead>
+            <tr>
+                <th style="width: 5%;">No.</th>
+                <th style="width: 28%;">PROGRAM</th>
+                <th style="width: 28%;">KEGIATAN</th>
+                <th style="width: 24%;">SUB KEGIATAN</th>
+                <th style="width: 15%;">ANGGARAN (Rp)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @php
+                // Kumpulkan semua program, kegiatan, dan sub kegiatan
+                $allProgramData = collect();
+                $totalAnggaran = 0;
+                $no = 1;
+
+                // Daftar program yang unik berdasarkan ID
+                $uniquePrograms = collect();
+
+                if ($pk->sasaran && $pk->sasaran->count() > 0) {
+                    foreach ($pk->sasaran as $sasaran) {
+                        if ($sasaran->indikator && $sasaran->indikator->count() > 0) {
+                            foreach ($sasaran->indikator as $indikator) {
+                                if ($indikator->program && $indikator->program->count() > 0) {
+                                    foreach ($indikator->program as $program) {
+                                        // Skip jika program sudah ada
+                                        if ($uniquePrograms->contains('id', $program->id)) {
+                                            continue;
+                                        }
+
+                                        $uniquePrograms->push(['id' => $program->id]);
+
+                                        $programData = [
+                                            'nama' => $program->nama_program,
+                                            'kegiatan' => collect(),
+                                        ];
+
+                                        if ($program->kegiatan && $program->kegiatan->count() > 0) {
+                                            foreach ($program->kegiatan as $kegiatan) {
+                                                $kegiatanData = [
+                                                    'nama' => $kegiatan->nama_kegiatan,
+                                                    'sub_kegiatan' => collect(),
+                                                ];
+
+                                                if ($kegiatan->subKegiatan && $kegiatan->subKegiatan->count() > 0) {
+                                                    foreach ($kegiatan->subKegiatan as $subKegiatan) {
+                                                        $anggaran = $subKegiatan->anggaran ?? 0;
+                                                        $totalAnggaran += $anggaran;
+
+                                                        $kegiatanData['sub_kegiatan']->push([
+                                                            'nama' => $subKegiatan->nama_sub_kegiatan,
+                                                            'anggaran' => $anggaran,
+                                                        ]);
+                                                    }
+                                                }
+
+                                                $programData['kegiatan']->push($kegiatanData);
+                                            }
+                                        }
+
+                                        $allProgramData->push($programData);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            @endphp
+
+            @if ($allProgramData->count() > 0)
+                @foreach ($allProgramData as $programData)
+                    @php
+                        $totalSubKegiatan = 0;
+
+                        // Hitung total sub kegiatan untuk program ini
+                        foreach ($programData['kegiatan'] as $kegiatan) {
+                            $totalSubKegiatan += $kegiatan['sub_kegiatan']->count();
+                        }
+
+                        $firstRowProgram = true;
+                    @endphp
+
+                    @foreach ($programData['kegiatan'] as $kegiatan)
+                        @php
+                            $totalSubKegiatanKegiatan = $kegiatan['sub_kegiatan']->count();
+                            $firstRowKegiatan = true;
+                        @endphp
+
+                        @if ($totalSubKegiatanKegiatan > 0)
+                            @foreach ($kegiatan['sub_kegiatan'] as $subKegiatan)
+                                <tr>
+                                    @if ($firstRowProgram)
+                                        <td rowspan="{{ $totalSubKegiatan > 0 ? $totalSubKegiatan : 1 }}"
+                                            style="text-align: center; vertical-align: middle;">{{ $no }}
+                                        </td>
+                                        <td rowspan="{{ $totalSubKegiatan > 0 ? $totalSubKegiatan : 1 }}"
+                                            style="vertical-align: middle;">
+                                            {{ $programData['nama'] }}
+                                        </td>
+                                        @php $firstRowProgram = false; @endphp
+                                    @endif
+
+                                    @if ($firstRowKegiatan)
+                                        <td rowspan="{{ $totalSubKegiatanKegiatan }}" style="vertical-align: middle;">
+                                            {{ $kegiatan['nama'] }}
+                                        </td>
+                                        @php $firstRowKegiatan = false; @endphp
+                                    @endif
+
+                                    <td>{{ $subKegiatan['nama'] }}</td>
+                                    <td style="text-align: right;">
+                                        {{ number_format($subKegiatan['anggaran'], 0, ',', '.') }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @else
+                            <tr>
+                                @if ($firstRowProgram)
+                                    <td style="text-align: center;">{{ $no }}</td>
+                                    <td>{{ $programData['nama'] }}</td>
+                                    @php $firstRowProgram = false; @endphp
+                                @else
+                                    <td colspan="2"></td>
+                                @endif
+
+                                <td>{{ $kegiatan['nama'] }}</td>
+                                <td>-</td>
+                                <td style="text-align: right;">0</td>
+                            </tr>
+                        @endif
+                    @endforeach
+
+                    @php $no++; @endphp
+                @endforeach
+
+                <tr>
+                    <td colspan="4" style="text-align: center; font-weight: bold;">JUMLAH</td>
+                    <td style="text-align: right; font-weight: bold;">{{ number_format($totalAnggaran, 0, ',', '.') }}
+                    </td>
+                </tr>
+            @else
+                <tr>
+                    <td colspan="5" style="text-align: center;">Belum ada data program/kegiatan</td>
+                </tr>
+
+                <tr>
+                    <td colspan="4" style="text-align: center; font-weight: bold;">JUMLAH</td>
+                    <td style="text-align: right; font-weight: bold;">0</td>
+                </tr>
+            @endif
         </tbody>
     </table>
 
     {{-- TANDA TANGAN HALAMAN 2 --}}
     <div class="ttd-section">
-        <p class="text-right">{{ $pk->tempat_ttd ?? 'Sofifi' }}, {{ $tanggalTtd }}</p>
+        <p class="text-right" style="margin-bottom: 20px;">{{ $pk->tempat_ttd ?? 'Sofifi' }}, {{ $tanggalTtd }}</p>
 
         <table class="ttd-table">
             <tr>
                 <td>
-                    <p><strong>Pihak Kedua,</strong></p>
-                    <p>{{ $pk->atasan->jabatan->nama ?? 'Atasan Langsung' }}</p>
-                    <p>BAPPEDA Provinsi Maluku Utara</p>
+                    <p><strong>PIHAK KEDUA</strong></p>
+                    <p style="margin-top: 5px;">{{ strtoupper($pk->atasan->jabatan->nama ?? 'ATASAN LANGSUNG') }}</p>
+                    <p>BAPPEDA PROVINSI MALUKU UTARA,</p>
                     <div class="ttd-space"></div>
-                    <p><strong><u>{{ $pk->atasan->nama ?? '-' }}</u></strong></p>
+                    <p style="margin-top: 10px;"><strong>{{ strtoupper($pk->atasan->nama ?? '-') }}</strong></p>
                     <p>{{ $pk->atasan->pangkat ?? 'Pembina Tk. I' }}</p>
                     <p>NIP. {{ $pk->atasan->nomor_identitas ?? '-' }}</p>
                 </td>
                 <td>
-                    <p><strong>Pihak Pertama,</strong></p>
-                    <p>{{ $pk->pegawai->jabatan->nama ?? 'Pejabat' }}</p>
-                    <p>BAPPEDA Provinsi Maluku Utara</p>
+                    <p><strong>PIHAK PERTAMA</strong></p>
+                    <p style="margin-top: 5px;">{{ strtoupper($pk->pegawai->jabatan->nama ?? 'PEJABAT') }}</p>
+                    <p>BAPPEDA PROVINSI MALUKU UTARA,</p>
                     <div class="ttd-space"></div>
-                    <p><strong><u>{{ $pk->pegawai->nama }}</u></strong></p>
+                    <p style="margin-top: 10px;"><strong>{{ strtoupper($pk->pegawai->nama ?? '-') }}</strong></p>
                     <p>{{ $pk->pegawai->pangkat ?? 'Pembina' }}</p>
-                    <p>NIP. {{ $pk->pegawai->nomor_identitas }}</p>
+                    <p>NIP. {{ $pk->pegawai->nomor_identitas ?? '-' }}</p>
                 </td>
             </tr>
         </table>

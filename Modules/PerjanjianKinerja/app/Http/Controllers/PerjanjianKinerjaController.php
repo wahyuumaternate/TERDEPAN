@@ -133,7 +133,115 @@ class PerjanjianKinerjaController extends Controller
         ));
     }
 
+    /**
+     * Download PDF dokumen
+     */
+    /**
+     * Download PDF dokumen dengan penanganan khusus untuk mencegah refresh halaman
+     */
+    public function download($id)
+    {
+        try {
+            $pk = PkPerjanjianKinerja::with(['pegawai', 'dokumen' => function ($q) {
+                $q->where('is_latest', true);
+            }])->findOrFail($id);
 
+            $dokumen = $pk->dokumen->first();
+
+            // Cek apakah dokumen ada
+            if (!$dokumen) {
+                Log::warning('Dokumen belum di-generate (ID PK: ' . $id . ')');
+                return redirect()
+                    ->route('perjanjian-kinerja.index')
+                    ->with('error', 'Dokumen belum di-generate. Silakan generate dokumen terlebih dahulu.');
+            }
+
+            // Dapatkan file path yang disimpan di database
+            $dbFilePath = $dokumen->file_path;
+            Log::info('DB file path: ' . $dbFilePath);
+
+            // Coba dengan direct path dulu (normalisasi path di database)
+            $normalizedPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $dbFilePath);
+
+            // Build semua kemungkinan path untuk dicoba
+            $possiblePaths = [
+                $dbFilePath,                                                            // Original path
+                $normalizedPath,                                                        // Normalized path
+                storage_path('app/public/' . $dbFilePath),                              // Absolute path with forward slash
+                storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . $normalizedPath), // Absolute with normalized
+                public_path('storage/' . $dbFilePath),                                  // Public storage path 
+                public_path('storage' . DIRECTORY_SEPARATOR . $normalizedPath),         // Public with normalized
+                str_replace('public/', '', $dbFilePath),                                // Without public/ prefix
+                str_replace('public\\', '', $normalizedPath)                            // Without public\ prefix
+            ];
+
+            // Log semua possible paths untuk debugging
+            Log::info('Trying possible paths:', $possiblePaths);
+
+            // Cari file yang valid dari semua kemungkinan path
+            $validPath = null;
+            foreach ($possiblePaths as $path) {
+                if (file_exists($path) && is_file($path) && filesize($path) > 0) {
+                    $validPath = $path;
+                    Log::info('Found valid file at: ' . $validPath . ' (Size: ' . filesize($validPath) . ' bytes)');
+                    break;
+                }
+            }
+
+            // Jika tidak ada path valid
+            if (!$validPath) {
+                // Cek apakah file ada di storage (gunakan Storage facade sebagai fallback)
+                if (Storage::disk('public')->exists($dbFilePath)) {
+                    $validPath = Storage::disk('public')->path($dbFilePath);
+                    Log::info('Found via Storage facade: ' . $validPath);
+                } else {
+                    Log::error('File not found in any location. Tried paths: ' . implode(', ', $possiblePaths));
+                    return redirect()
+                        ->route('perjanjian-kinerja.show', $id)
+                        ->with('error', 'File PDF tidak ditemukan. Silakan generate ulang dokumen.');
+                }
+            }
+
+            // Update download count
+            $dokumen->increment('download_count');
+
+            // PENGGUNAAN DIRECT PHP UNTUK FORCED DOWNLOAD
+            // Ini adalah cara alternatif yang lebih robust untuk memaksa download
+
+            // Bersihkan semua output buffer
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            // Set header yang lebih lengkap untuk memastikan file didownload
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $dokumen->file_name . '"');
+            header('Content-Transfer-Encoding: binary');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($validPath));
+
+            // Kirim file dengan readfile
+            flush();
+            readfile($validPath);
+            exit; // Penting: Exit setelah mengirim file
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::error('PK Not Found (ID: ' . $id . '): ' . $e->getMessage());
+            return redirect()
+                ->route('perjanjian-kinerja.index')
+                ->with('error', 'Perjanjian Kinerja tidak ditemukan.');
+        } catch (\Exception $e) {
+            Log::error('Error Download PDF (ID: ' . $id . '): ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            return redirect()
+                ->route('perjanjian-kinerja.index')
+                ->with('error', 'Gagal mengunduh PDF: ' . $e->getMessage());
+        }
+    }
 
     /**
      * Display the specified perjanjian kinerja
@@ -1081,35 +1189,187 @@ class PerjanjianKinerjaController extends Controller
     /**
      * Generate PDF dokumen menggunakan template dari database
      */
+    // public function generate($id)
+    // {
+    //     $pk = PkPerjanjianKinerja::with([
+    //         'pegawai.jabatan',
+    //         'pegawai.bidang',
+    //         'atasan.jabatan',
+    //         'template.sections',
+    //         'sasaran' => function ($query) {
+    //             $query->orderBy('urutan')
+    //                 ->with([
+    //                     'indikator' => function ($qi) {
+    //                         $qi->with([
+    //                             'program' => function ($qp) {
+    //                                 $qp->orderBy('urutan')
+    //                                     ->with([
+    //                                         'kegiatan' => function ($qk) {
+    //                                             $qk->orderBy('urutan')
+    //                                                 ->with([
+    //                                                     'subKegiatan' => function ($qs) {
+    //                                                         $qs->orderBy('urutan');
+    //                                                     }
+    //                                                 ]);
+    //                                         }
+    //                                     ]);
+    //                             }
+    //                         ]);
+    //                     }
+    //                 ]);
+    //         }
+    //     ])->findOrFail($id);
+
+    //     DB::beginTransaction();
+    //     try {
+    //         // Validate template exists
+    //         if (!$pk->template) {
+    //             throw new \Exception('Template tidak ditemukan untuk perjanjian kinerja ini.');
+    //         }
+
+    //         // Calculate version number
+    //         $latestVersion = $pk->dokumen()->max('versi') ?? 0;
+    //         $newVersion = $latestVersion + 1;
+
+    //         // Reset previous latest
+    //         $pk->dokumen()->where('is_latest', true)->update(['is_latest' => false]);
+
+    //         // Create PDF menggunakan template
+    //         $data = [
+    //             'pk' => $pk,
+    //             'title' => 'Perjanjian Kinerja - ' . $pk->nomor_perjanjian
+    //         ];
+
+    //         $pdf = PDF::loadView('perjanjiankinerja::pdf.perjanjian_kinerja', $data);
+
+    //         // Set paper size dan orientation dari template
+    //         $pageSize = $pk->template->page_size ?? 'A4';
+    //         $orientation = strtolower($pk->template->orientation ?? 'Portrait');
+    //         $pdf->setPaper($pageSize, $orientation);
+
+    //         // Set margin untuk DomPDF
+    //         if (method_exists($pdf, 'getDomPDF')) {
+    //             $dompdf = $pdf->getDomPDF();
+    //             $dompdf->set_option('isHtml5ParserEnabled', true);
+    //             $dompdf->set_option('isRemoteEnabled', false);
+
+    //             // Margin dalam points (1mm = 2.83465 points)
+    //             // 20mm = 56.7pt, 25mm = 70.9pt
+    //             $dompdf->set_option('margin_top', 56.7);
+    //             $dompdf->set_option('margin_right', 70.9);
+    //             $dompdf->set_option('margin_bottom', 56.7);
+    //             $dompdf->set_option('margin_left', 70.9);
+    //         }
+
+    //         // Set options untuk Snappy/wkhtmltopdf (jika digunakan)
+    //         if (method_exists($pdf, 'setOption')) {
+    //             $pdf->setOption('margin-top', '20mm');
+    //             $pdf->setOption('margin-right', '25mm');
+    //             $pdf->setOption('margin-bottom', '20mm');
+    //             $pdf->setOption('margin-left', '25mm');
+    //             $pdf->setOption('enable-local-file-access', true);
+    //         }
+
+    //         // Generate filename - Format: PK_NIP_2024_v1.pdf
+    //         $nip = $pk->pegawai->nomor_identitas ?? 'NONIP';
+    //         $fileName = sprintf('PK_%s_%s_v%d.pdf', $nip, $pk->tahun, $newVersion);
+
+    //         // Path relatif untuk database
+    //         $relativePath = 'perjanjian/' . $pk->tahun . '/' . $fileName;
+
+    //         // Ensure directory exists
+    //         $directory = 'perjanjian/' . $pk->tahun;
+    //         if (!Storage::disk('public')->exists($directory)) {
+    //             Storage::disk('public')->makeDirectory($directory);
+    //         }
+
+    //         // Get PDF output
+    //         $pdfOutput = $pdf->output();
+
+    //         // Save to storage
+    //         $saved = Storage::disk('public')->put($relativePath, $pdfOutput);
+
+    //         if (!$saved) {
+    //             throw new \Exception('Gagal menyimpan file PDF ke storage');
+    //         }
+
+    //         // Full path untuk verifikasi
+    //         $fullPath = Storage::disk('public')->path($relativePath);
+
+    //         if (!file_exists($fullPath)) {
+    //             throw new \Exception('File PDF tidak ditemukan setelah disimpan: ' . $fullPath);
+    //         }
+
+    //         $fileHash = hash_file('sha256', $fullPath);
+    //         $fileSizeKb = (int) round(filesize($fullPath) / 1024);
+
+    //         // Count pages
+    //         $totalPages = $this->estimatePdfPages($pdfOutput);
+
+    //         // Generate nomor dokumen
+    //         $nomorDokumen = $pk->nomor_perjanjian . '/V' . $newVersion;
+
+    //         // Create document record
+    //         $dokumen = $pk->dokumen()->create([
+    //             'jenis_dokumen' => 'Pernyataan',
+    //             'nomor_dokumen' => $nomorDokumen,
+    //             'file_name' => $fileName,
+    //             'file_path' => $relativePath,
+    //             'file_hash' => $fileHash,
+    //             'file_size_kb' => $fileSizeKb,
+    //             'versi' => $newVersion,
+    //             'total_pages' => $totalPages,
+    //             'generated_by' => Auth::id(),
+    //             'generated_at' => now(),
+    //             'is_latest' => true,
+    //             'perjanjian_kinerja_id' => $pk->id,
+    //         ]);
+
+    //         // Update PK status if still Draft
+    //         if ($pk->status_dokumen === 'Draft') {
+    //             $pk->update(['status_dokumen' => 'Generated']);
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Dokumen PDF berhasil di-generate (Versi ' . $newVersion . ')',
+    //             'dokumen_id' => $dokumen->id,
+    //             'nomor_dokumen' => $nomorDokumen,
+    //             'versi' => $newVersion,
+    //             'file_name' => $fileName,
+    //             'file_size_kb' => $fileSizeKb,
+    //             'total_pages' => $totalPages,
+    //             'download_url' => route('perjanjian-kinerja.download', $pk->id)
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+
+    //         Log::error('Error generating PDF: ' . $e->getMessage(), [
+    //             'pk_id' => $id,
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Gagal membuat dokumen PDF: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+    /**
+     * Generate PDF dokumen menggunakan template dari database
+     */
     public function generate($id)
     {
+
+        // Load data dengan relasi lengkap
         $pk = PkPerjanjianKinerja::with([
             'pegawai.jabatan',
             'pegawai.bidang',
             'atasan.jabatan',
             'template.sections',
-            'sasaran' => function ($query) {
-                $query->orderBy('urutan')
-                    ->with([
-                        'indikator' => function ($qi) {
-                            $qi->with([
-                                'program' => function ($qp) {
-                                    $qp->orderBy('urutan')
-                                        ->with([
-                                            'kegiatan' => function ($qk) {
-                                                $qk->orderBy('urutan')
-                                                    ->with([
-                                                        'subKegiatan' => function ($qs) {
-                                                            $qs->orderBy('urutan');
-                                                        }
-                                                    ]);
-                                            }
-                                        ]);
-                                }
-                            ]);
-                        }
-                    ]);
-            }
+            'sasaran.indikator.program.kegiatan.subKegiatan'
         ])->findOrFail($id);
 
         DB::beginTransaction();
@@ -1125,6 +1385,23 @@ class PerjanjianKinerjaController extends Controller
 
             // Reset previous latest
             $pk->dokumen()->where('is_latest', true)->update(['is_latest' => false]);
+
+            // Calculate total anggaran
+            $totalAnggaran = 0;
+            foreach ($pk->sasaran as $sasaran) {
+                foreach ($sasaran->indikator as $indikator) {
+                    foreach ($indikator->program as $program) {
+                        foreach ($program->kegiatan as $kegiatan) {
+                            foreach ($kegiatan->subKegiatan as $subKegiatan) {
+                                $totalAnggaran += $subKegiatan->anggaran ?? 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update total anggaran di PK
+            $pk->update(['total_anggaran' => $totalAnggaran]);
 
             // Create PDF menggunakan template
             $data = [
@@ -1146,7 +1423,6 @@ class PerjanjianKinerjaController extends Controller
                 $dompdf->set_option('isRemoteEnabled', false);
 
                 // Margin dalam points (1mm = 2.83465 points)
-                // 20mm = 56.7pt, 25mm = 70.9pt
                 $dompdf->set_option('margin_top', 56.7);
                 $dompdf->set_option('margin_right', 70.9);
                 $dompdf->set_option('margin_bottom', 56.7);
@@ -1196,7 +1472,8 @@ class PerjanjianKinerjaController extends Controller
             $fileSizeKb = (int) round(filesize($fullPath) / 1024);
 
             // Count pages
-            $totalPages = $this->estimatePdfPages($pdfOutput);
+            $totalPages = preg_match_all("/\/Page\W/", $pdfOutput, $matches);
+            $totalPages = $totalPages > 0 ? $totalPages : 2;
 
             // Generate nomor dokumen
             $nomorDokumen = $pk->nomor_perjanjian . '/V' . $newVersion;
@@ -1250,34 +1527,220 @@ class PerjanjianKinerjaController extends Controller
         }
     }
 
+
     /**
-     * Download PDF dokumen
+     * Validate data completeness before generating PDF
      */
-    public function download($id)
+    private function validateDataCompleteness($pk)
     {
-        $pk = PkPerjanjianKinerja::findOrFail($id);
-        $dokumen = $pk->dokumen()->where('is_latest', true)->first();
-
-        if (!$dokumen) {
-            return back()->with('error', 'Dokumen belum di-generate.');
+        // Validate pegawai
+        if (!$pk->pegawai) {
+            throw new \Exception('Data pegawai tidak ditemukan');
         }
 
-        if (!Storage::disk('public')->exists($dokumen->file_path)) {
-            return back()->with('error', 'File PDF tidak ditemukan di storage.');
+        if (!$pk->pegawai->nama) {
+            throw new \Exception('Nama pegawai tidak boleh kosong');
         }
 
-        $fullPath = Storage::disk('public')->path($dokumen->file_path);
+        if (!$pk->pegawai->nomor_identitas) {
+            throw new \Exception('NIP pegawai tidak boleh kosong');
+        }
 
-        return response()->download(
-            $fullPath,
-            $dokumen->file_name,
-            ['Content-Type' => 'application/pdf']
-        );
+        // Validate atasan
+        if (!$pk->atasan) {
+            throw new \Exception('Data atasan tidak ditemukan');
+        }
+
+        if (!$pk->atasan->nama) {
+            throw new \Exception('Nama atasan tidak boleh kosong');
+        }
+
+        // Validate sasaran
+        if ($pk->sasaran->count() === 0) {
+            throw new \Exception('Belum ada sasaran yang ditambahkan');
+        }
+
+        // Validate each sasaran has indicators
+        foreach ($pk->sasaran as $sasaran) {
+            if ($sasaran->indikator->count() === 0) {
+                throw new \Exception('Sasaran "' . $sasaran->nama_sasaran . '" belum memiliki indikator');
+            }
+
+            // Validate each indicator has programs
+            foreach ($sasaran->indikator as $indikator) {
+                if ($indikator->program->count() === 0) {
+                    throw new \Exception('Indikator "' . $indikator->indikator_sasaran . '" belum memiliki program');
+                }
+
+                // Validate each program has kegiatan
+                foreach ($indikator->program as $program) {
+                    if ($program->kegiatan->count() === 0) {
+                        throw new \Exception('Program "' . $program->nama_program . '" belum memiliki kegiatan');
+                    }
+
+                    // Validate each kegiatan has sub kegiatan
+                    foreach ($program->kegiatan as $kegiatan) {
+                        if ($kegiatan->subKegiatan->count() === 0) {
+                            throw new \Exception('Kegiatan "' . $kegiatan->nama_kegiatan . '" belum memiliki sub kegiatan');
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
-     * Preview PDF dokumen
+     * Calculate total anggaran from all sub kegiatan
      */
+    private function calculateTotalAnggaran($pk)
+    {
+        $totalAnggaran = 0;
+
+        foreach ($pk->sasaran as $sasaran) {
+            foreach ($sasaran->indikator as $indikator) {
+                foreach ($indikator->program as $program) {
+                    foreach ($program->kegiatan as $kegiatan) {
+                        foreach ($kegiatan->subKegiatan as $subKegiatan) {
+                            $totalAnggaran += $subKegiatan->anggaran ?? 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $totalAnggaran;
+    }
+
+    /**
+     * Get statistics from perjanjian kinerja
+     */
+    private function getStatistics($pk)
+    {
+        $totalSasaran = $pk->sasaran->count();
+
+        $totalIndikator = 0;
+        $totalProgram = 0;
+        $totalKegiatan = 0;
+        $totalSubKegiatan = 0;
+
+        foreach ($pk->sasaran as $sasaran) {
+            $totalIndikator += $sasaran->indikator->count();
+
+            foreach ($sasaran->indikator as $indikator) {
+                $totalProgram += $indikator->program->count();
+
+                foreach ($indikator->program as $program) {
+                    $totalKegiatan += $program->kegiatan->count();
+
+                    foreach ($program->kegiatan as $kegiatan) {
+                        $totalSubKegiatan += $kegiatan->subKegiatan->count();
+                    }
+                }
+            }
+        }
+
+        return [
+            'total_sasaran' => $totalSasaran,
+            'total_indikator' => $totalIndikator,
+            'total_program' => $totalProgram,
+            'total_kegiatan' => $totalKegiatan,
+            'total_sub_kegiatan' => $totalSubKegiatan,
+            'total_anggaran' => $pk->total_anggaran,
+            'total_anggaran_formatted' => 'Rp ' . number_format($pk->total_anggaran, 0, ',', '.'),
+        ];
+    }
+
+    /**
+     * Estimate PDF pages from PDF output
+     */
+    // private function estimatePdfPages($pdfOutput)
+    // {
+    //     try {
+    //         // Try to count pages from PDF
+    //         $pageCount = preg_match_all("/\/Page\W/", $pdfOutput, $matches);
+    //         return $pageCount > 0 ? $pageCount : 2; // Default 2 pages (pernyataan + formulir)
+    //     } catch (\Exception $e) {
+    //         Log::warning('Failed to count PDF pages: ' . $e->getMessage());
+    //         return 2; // Default fallback
+    //     }
+    // }
+
+    // /**
+    //  * Preview PDF in browser
+    //  */
+    // public function preview($id)
+    // {
+    //     try {
+    //         $pk = PkPerjanjianKinerja::with([
+    //             'pegawai.jabatan',
+    //             'atasan.jabatan',
+    //             'template',
+    //             'sasaran' => function ($query) {
+    //                 $query->orderBy('urutan')
+    //                     ->with([
+    //                         'indikator' => function ($qi) {
+    //                             $qi->orderBy('urutan')
+    //                                 ->with([
+    //                                     'program' => function ($qp) {
+    //                                         $qp->orderBy('urutan')
+    //                                             ->with([
+    //                                                 'kegiatan' => function ($qk) {
+    //                                                     $qk->orderBy('urutan')
+    //                                                         ->with([
+    //                                                             'subKegiatan' => function ($qs) {
+    //                                                                 $qs->orderBy('urutan');
+    //                                                             }
+    //                                                         ]);
+    //                                                 }
+    //                                             ]);
+    //                                     }
+    //                                 ]);
+    //                         }
+    //                     ]);
+    //             }
+    //         ])->findOrFail($id);
+
+    //         // Validasi data wajib
+    //         if (!$pk->pegawai) {
+    //             return back()->with('error', 'Data pegawai tidak ditemukan.');
+    //         }
+
+    //         if (!$pk->atasan) {
+    //             return back()->with('error', 'Data atasan tidak ditemukan.');
+    //         }
+
+    //         $data = [
+    //             'pk' => $pk,
+    //             'title' => 'Preview - Perjanjian Kinerja Tahun ' . $pk->tahun
+    //         ];
+
+    //         // Load view PDF
+    //         $pdf = PDF::loadView('perjanjiankinerja::pdf.perjanjian_kinerja', $data);
+
+    //         // Set paper size dan orientation
+    //         $pageSize = $pk->template->page_size ?? 'A4';
+    //         $orientation = strtolower($pk->template->orientation ?? 'portrait');
+    //         $pdf->setPaper($pageSize, $orientation);
+
+    //         // Set options untuk preview yang lebih baik
+    //         $pdf->setOptions([
+    //             'isHtml5ParserEnabled' => true,
+    //             'isRemoteEnabled' => true,
+    //             'defaultFont' => 'Times New Roman'
+    //         ]);
+
+    //         // Stream ke browser
+    //         return $pdf->stream('preview_pk_' . $pk->pegawai->nama . '_' . $pk->tahun . '.pdf');
+    //     } catch (\Exception $e) {
+    //         Log::error('Error Preview PDF: ' . $e->getMessage());
+    //         return back()->with('error', 'Gagal menampilkan preview PDF: ' . $e->getMessage());
+    //     }
+    // }
+    // /**
+    //  * Preview PDF dokumen
+    //  */
     public function preview($id)
     {
         $pk = PkPerjanjianKinerja::findOrFail($id);
