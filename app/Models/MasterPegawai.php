@@ -52,4 +52,12 @@ class MasterPegawai extends Authenticatable
     {
         return $this->hasMany(\Modules\Dokumen\Models\Log::class, 'dokumen_id');
     }
+
+    /**
+     * Get the tugas pokok for the pegawai.
+     */
+    public function tugasPokok()
+    {
+        return $this->hasMany(\Modules\Penugasan\Models\TugasPokok::class, 'pegawai_id');
+    }
 }
