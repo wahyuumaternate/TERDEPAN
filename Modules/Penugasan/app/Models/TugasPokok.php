@@ -73,11 +73,6 @@ class TugasPokok extends Model
         return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_lampiran_id');
     }
 
-    public function indikatorTugas(): HasMany
-    {
-        return $this->hasMany(IndikatorTugas::class, 'tugas_pokok_id');
-    }
-
     public function tugasHarian(): HasMany
     {
         return $this->hasMany(TugasHarian::class, 'tugas_pokok_id');

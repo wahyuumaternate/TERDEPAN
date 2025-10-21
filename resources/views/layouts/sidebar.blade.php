@@ -359,11 +359,6 @@
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('penugasan/indikator') }}">
-                         <i class="bi bi-circle"></i><span>Indikator Tugas</span>
-                     </a>
-                 </li>
-                 <li>
                      <a href="{{ url('penugasan/tugas-harian') }}">
                          <i class="bi bi-circle"></i><span>Tugas Harian</span>
                      </a>
