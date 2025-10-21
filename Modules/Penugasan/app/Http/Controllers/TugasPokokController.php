@@ -162,54 +162,6 @@ class TugasPokokController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $pegawais = MasterPegawai::where('status_aktif', 'Aktif')
-            ->with(['jabatan', 'bidang'])
-            ->orderBy('nama')
-            ->get();
-
-        $pemberiTugas = MasterPegawai::where('status_aktif', 'Aktif')
-            ->whereHas('jabatan', function ($q) {
-                $q->where('is_struktural', true);
-            })
-            ->with('jabatan')
-            ->orderBy('nama')
-            ->get();
-
-        return view('penugasan::penugasan.tugas-pokok.create', compact('pegawais', 'pemberiTugas'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'pegawai_id' => 'required|exists:master_pegawai,id',
-            'pemberi_tugas_id' => 'required|exists:master_pegawai,id',
-            'nama_tugas' => 'required|string|max:255',
-            'deskripsi' => 'nullable|string',
-            'periode_mulai' => 'required|date',
-            'periode_selesai' => 'required|date|after:periode_mulai',
-            'bobot_persen' => 'required|numeric|min:0|max:100',
-            'target_output' => 'nullable|string',
-            'kualitas_output' => 'nullable|string',
-            'waktu_penyelesaian' => 'nullable|string',
-            'biaya_aktivitas' => 'nullable|numeric|min:0',
-        ]);
-
-        $validated['status'] = 'Pending';
-
-        TugasPokok::create($validated);
-
-        return redirect()->route('tugas-pokok.index')
-            ->with('success', 'Tugas pokok berhasil ditambahkan');
-    }
-
-    /**
      * Show the specified resource.
      */
     public function show($id)
@@ -226,67 +178,13 @@ class TugasPokokController extends Controller
         return view('penugasan::penugasan.tugas-pokok.show', compact('tugasPokok'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
+    public function sinkronData()
     {
-        $tugasPokok = TugasPokok::findOrFail($id);
-
-        $pegawais = MasterPegawai::where('status_aktif', 'Aktif')
-            ->with(['jabatan', 'bidang'])
-            ->orderBy('nama')
-            ->get();
-
-        $pemberiTugas = MasterPegawai::where('status_aktif', 'Aktif')
-            ->whereHas('jabatan', function ($q) {
-                $q->where('is_struktural', true);
-            })
-            ->with('jabatan')
-            ->orderBy('nama')
-            ->get();
-
-        return view('penugasan::penugasan.tugas-pokok.edit', compact('tugasPokok', 'pegawais', 'pemberiTugas'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
-    {
-        $tugasPokok = TugasPokok::findOrFail($id);
-
-        $validated = $request->validate([
-            'pegawai_id' => 'required|exists:master_pegawai,id',
-            'pemberi_tugas_id' => 'required|exists:master_pegawai,id',
-            'nama_tugas' => 'required|string|max:255',
-            'deskripsi' => 'nullable|string',
-            'periode_mulai' => 'required|date',
-            'periode_selesai' => 'required|date|after:periode_mulai',
-            'bobot_persen' => 'required|numeric|min:0|max:100',
-            'target_output' => 'nullable|string',
-            'kualitas_output' => 'nullable|string',
-            'waktu_penyelesaian' => 'nullable|string',
-            'biaya_aktivitas' => 'nullable|numeric|min:0',
-            'status' => 'required|in:Pending,Diterima,Dikerjakan,Selesai',
-        ]);
-
-        $tugasPokok->update($validated);
-
-        return redirect()->route('tugas-pokok.index')
-            ->with('success', 'Tugas pokok berhasil diperbarui');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        $tugasPokok = TugasPokok::findOrFail($id);
-        $tugasPokok->delete();
-
-        return redirect()->route('tugas-pokok.index')
-            ->with('success', 'Tugas pokok berhasil dihapus');
+        /**
+         * Mengambil data dari perjanjian kinerja dan indikator (1 indikator = 1 tugas pokok) milik pegawai dengan status aktif
+         * kemudian dimasukan ke dalam database
+         * sebelum dimasukan, dicek apakah data tersebut sudah ada atau belum berdasarkan perjanjian_kinerja_id dan indikator_id
+         */
     }
 
     /**

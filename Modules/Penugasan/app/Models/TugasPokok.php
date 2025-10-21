@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Modules\PerjanjianKinerja\Models\PkIndikator;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
 
 // use Modules\Penugasan\Database\Factories\TugasPokokFactory;
@@ -24,7 +25,7 @@ class TugasPokok extends Model
     protected $fillable = [
         'perjanjian_kinerja_id',
         'pegawai_id',
-        'pemberi_tugas_id',
+        'indikator_id',
         'nama_tugas',
         'deskripsi',
         'bobot_persen',
@@ -45,11 +46,28 @@ class TugasPokok extends Model
         'bobot_persen' => 'decimal:2',
         'progress_persen' => 'decimal:2',
         'target_value' => 'decimal:2',
+        'deleted_at' => 'datetime',
     ];
 
     protected $attributes = [
         'status' => 'Pending',
         'progress_persen' => 0,
+    ];
+
+    // Status constants (sama dengan migrasi)
+    public const STATUS_PENDING = 'Pending';
+    public const STATUS_DITERIMA = 'Diterima';
+    public const STATUS_DIKERJAKAN = 'Dikerjakan';
+    public const STATUS_SELESAI = 'Selesai';
+    public const STATUS_TIDAK_SELESAI = 'Tidak_Selesai';
+    public const STATUS_DIVALIDASI = 'Divalidasi';
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_DITERIMA,
+        self::STATUS_DIKERJAKAN,
+        self::STATUS_SELESAI,
+        self::STATUS_TIDAK_SELESAI,
+        self::STATUS_DIVALIDASI,
     ];
 
     // Relationships
@@ -63,9 +81,9 @@ class TugasPokok extends Model
         return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
     }
 
-    public function pemberiTugas(): BelongsTo
+    public function indikatorPK(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pemberi_tugas_id');
+        return $this->belongsTo(PkIndikator::class, 'indikator_id');
     }
 
     public function dokumenLampiran(): BelongsTo
