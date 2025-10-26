@@ -3,7 +3,7 @@
 @section('main')
     <div class="pagetitle">
         <h1>Selamat Datang di TERDEPAN</h1>
-        <p class="text-muted">Terintegrasi, Responsif, Dinamis, Efektif, Profesional, Akuntabel, iNovatif</p>
+        <p class="text-muted">Terminal Data dan e-Kinerja Perencana</p>
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="index.html">Home</a></li>

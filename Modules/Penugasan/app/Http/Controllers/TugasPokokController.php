@@ -112,7 +112,7 @@ class TugasPokokController extends Controller
                 ->where('status', 'Selesai')->count(),
         ];
 
-        return view('penugasan::penugasan.tugas-pokok.index', compact(
+        return view('penugasan::penugasan.daftar', compact(
             'pegawaiList',
             'tahuns',
             'tahun',
@@ -169,6 +169,21 @@ class TugasPokokController extends Controller
             ->pluck('tahun')
             ->filter();
 
+        // Query tugas harian untuk pegawai ini
+        $tugasHarianQuery = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->with([
+                'tugasPokok',
+                'pemberiTugas',
+                'dokumenLampiran',
+                'progress'
+            ])
+            ->whereYear('tanggal_mulai', $tahun);
+
+        // Sort tugas harian
+        $tugasHarianQuery->orderBy('tanggal_mulai', 'desc');
+
+        $tugasHarian = $tugasHarianQuery->paginate($request->get('per_page_harian', 10), ['*'], 'page_harian');
+
         // Statistics untuk pegawai ini
         $stats = [
             'total' => TugasPokok::where('pegawai_id', $id)
@@ -187,7 +202,7 @@ class TugasPokokController extends Controller
                 ->sum('bobot_persen'),
         ];
 
-        return view('penugasan::penugasan.tugas-pokok.show', compact('pegawai', 'tugasPokok', 'tahuns', 'tahun', 'stats'));
+        return view('penugasan::penugasan.detail', compact('pegawai', 'tugasPokok', 'tugasHarian', 'tahuns', 'tahun', 'stats'));
     }
 
     public function sinkronData()

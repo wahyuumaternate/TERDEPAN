@@ -333,7 +333,7 @@
                 <div class="mb-10">
                     <img src="{{ asset('img/logo-white.png') }}" alt="Logo TERDEPAN" class="w-24 h-24 mx-auto mb-4">
                     <h1 class="text-4xl font-bold mb-2">TERDEPAN</h1>
-                    <p class="text-xl opacity-90">Terminal Data dan Evidensi Perencanaan Pembangunan</p>
+                    <p class="text-xl opacity-90">Terminal Data dan e-Kinerja Perencana</p>
                 </div>
 
                 <div class="flex justify-center items-center mt-8">

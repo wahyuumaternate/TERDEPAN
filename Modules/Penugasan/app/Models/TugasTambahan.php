@@ -25,14 +25,18 @@ class TugasTambahan extends Model
         'nama_tugas',
         'deskripsi',
         'alasan_penugasan',
+        'tanggal_mulai',
         'deadline',
         'bobot_persen',
         'target_value',
         'satuan',
         'status',
+        'prioritas',
+        'dokumen_lampiran_id',
     ];
 
     protected $casts = [
+        'tanggal_mulai' => 'date',
         'deadline' => 'date',
         'bobot_persen' => 'decimal:2',
         'target_value' => 'decimal:2',
@@ -40,6 +44,7 @@ class TugasTambahan extends Model
 
     protected $attributes = [
         'status' => 'Assigned',
+        'prioritas' => 'Normal',
     ];
 
     // Relationships
@@ -51,6 +56,11 @@ class TugasTambahan extends Model
     public function pemberiTugas(): BelongsTo
     {
         return $this->belongsTo(\App\Models\MasterPegawai::class, 'pemberi_tugas_id');
+    }
+
+    public function dokumenLampiran(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_lampiran_id');
     }
 
     public function progress(): HasMany

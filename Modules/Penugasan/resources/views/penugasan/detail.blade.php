@@ -25,7 +25,7 @@
                             </div>
                             <div class="flex-grow-1">
                                 <h4 class="mb-1 fw-bold">{{ $pegawai->nama }}</h4>
-                                <p class="text-muted mb-1">NIP: {{ $pegawai->nip ?? '-' }}</p>
+                                <p class="text-muted mb-1">NIP: {{ $pegawai->nomor_identitas ?? '-' }}</p>
                                 <div class="d-flex gap-2">
                                     <span class="badge bg-primary">{{ $pegawai->jabatan->nama ?? '-' }}</span>
                                     <span class="badge bg-info">{{ $pegawai->bidang->nama ?? '-' }}</span>
@@ -482,10 +482,267 @@
                             <!-- Tugas Harian Tab -->
                             <div class="tab-pane fade" id="tugas-harian-content" role="tabpanel"
                                 aria-labelledby="tugas-harian-tab">
-                                <div class="text-center py-5">
-                                    <i class="bi bi-calendar-day" style="font-size: 4rem; color: #ccc;"></i>
-                                    <h5 class="text-muted mt-3">Tugas Harian</h5>
-                                    <p class="text-muted">Fitur tugas harian akan segera hadir</p>
+
+                                <!-- View Toggle for Tugas Harian -->
+                                <div class="mb-4">
+                                    <div class="btn-group shadow-sm" role="group">
+                                        <input type="radio" class="btn-check" name="viewModeHarian"
+                                            id="viewTableHarian" checked>
+                                        <label class="btn btn-outline-primary px-4" for="viewTableHarian">
+                                            <i class="bi bi-table me-2"></i>Tampilan Tabel
+                                        </label>
+                                        <input type="radio" class="btn-check" name="viewModeHarian"
+                                            id="viewGridHarian">
+                                        <label class="btn btn-outline-primary px-4" for="viewGridHarian">
+                                            <i class="bi bi-grid-3x3-gap me-2"></i>Tampilan Kartu
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Table View -->
+                                <div id="tableViewHarian" class="mb-3">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-striped" id="tugasHarianTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-center" width="50">#</th>
+                                                    <th>Nama Tugas</th>
+                                                    <th>Tugas Pokok</th>
+                                                    <th>Periode</th>
+                                                    <th>Deadline</th>
+                                                    <th>Status</th>
+                                                    <th>Bobot</th>
+                                                    <th>Target</th>
+                                                    <th>Progress</th>
+                                                    <th class="text-center" width="150">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse($tugasHarian as $index => $tugas)
+                                                    <tr>
+                                                        <td class="text-center">
+                                                            {{ ($tugasHarian->currentPage() - 1) * $tugasHarian->perPage() + $index + 1 }}
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <span class="fw-semibold">{{ $tugas->nama_tugas }}</span>
+                                                                @if ($tugas->deskripsi)
+                                                                    <br>
+                                                                    <small
+                                                                        class="text-muted">{{ Str::limit($tugas->deskripsi, 60) }}</small>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            @if ($tugas->tugasPokok)
+                                                                <small class="text-primary">
+                                                                    <i class="bi bi-link-45deg"></i>
+                                                                    {{ Str::limit($tugas->tugasPokok->nama_tugas, 30) }}
+                                                                </small>
+                                                            @else
+                                                                <small class="text-muted">-</small>
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            <small>
+                                                                <span
+                                                                    class="badge bg-info">{{ $tugas->periode_type }}</span>
+                                                            </small>
+                                                        </td>
+                                                        <td>
+                                                            <small>
+                                                                <i class="bi bi-calendar-x text-danger me-1"></i>
+                                                                {{ date('d/m/Y', strtotime($tugas->deadline)) }}
+                                                            </small>
+                                                        </td>
+                                                        <td>
+                                                            @php
+                                                                $statusClassHarian = [
+                                                                    'Assigned' => 'bg-secondary',
+                                                                    'In_Progress' => 'bg-warning',
+                                                                    'Completed' => 'bg-success',
+                                                                    'Overdue' => 'bg-danger',
+                                                                    'Cancelled' => 'bg-dark',
+                                                                ];
+                                                            @endphp
+                                                            <span
+                                                                class="badge {{ $statusClassHarian[$tugas->status] ?? 'bg-secondary' }}">
+                                                                {{ str_replace('_', ' ', $tugas->status) }}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <div class="fw-bold">
+                                                                {{ number_format($tugas->bobot_persen, 1) }}%</div>
+                                                        </td>
+                                                        <td>
+                                                            <span
+                                                                class="text-muted">{{ number_format($tugas->target_value, 0) }}
+                                                                {{ $tugas->satuan }}</span>
+                                                        </td>
+                                                        <td>
+                                                            @if ($tugas->progress->count() > 0)
+                                                                @php
+                                                                    $latestProgress = $tugas->progress->last();
+                                                                    $progressPersen =
+                                                                        $latestProgress->persentase_progress ?? 0;
+                                                                @endphp
+                                                                <div class="progress mb-1" style="height: 8px;">
+                                                                    <div class="progress-bar bg-success"
+                                                                        role="progressbar"
+                                                                        style="width: {{ $progressPersen }}%"
+                                                                        aria-valuenow="{{ $progressPersen }}"
+                                                                        aria-valuemin="0" aria-valuemax="100">
+                                                                    </div>
+                                                                </div>
+                                                                <small
+                                                                    class="text-muted">{{ number_format($progressPersen, 1) }}%</small>
+                                                            @else
+                                                                <span class="text-muted">Belum ada progress</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <div class="btn-group btn-group-sm">
+                                                                <button type="button"
+                                                                    onclick="editTugasHarian({{ $tugas->id }})"
+                                                                    class="btn btn-outline-warning" title="Edit">
+                                                                    <i class="bi bi-pencil-square"></i>
+                                                                </button>
+                                                                <button type="button"
+                                                                    onclick="deleteTugasHarian({{ $tugas->id }}, '{{ $tugas->nama_tugas }}')"
+                                                                    class="btn btn-outline-danger" title="Hapus">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="10" class="text-center py-5">
+                                                            <i class="bi bi-inbox"
+                                                                style="font-size: 3rem; color: #ccc;"></i>
+                                                            <p class="text-muted mt-2">Belum ada tugas harian</p>
+                                                        </td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Pagination -->
+                                    <div class="d-flex justify-content-center mt-4">
+                                        {{ $tugasHarian->withQueryString()->links() }}
+                                    </div>
+                                </div>
+
+                                <!-- Grid View -->
+                                <div id="gridViewHarian" style="display: none;">
+                                    <div class="row">
+                                        @forelse($tugasHarian as $tugas)
+                                            @php
+                                                $statusClassHarian = [
+                                                    'Assigned' => 'bg-secondary',
+                                                    'In_Progress' => 'bg-warning',
+                                                    'Completed' => 'bg-success',
+                                                    'Overdue' => 'bg-danger',
+                                                    'Cancelled' => 'bg-dark',
+                                                ];
+                                            @endphp
+                                            <div class="col-md-6 col-lg-4 mb-4">
+                                                <div class="card tugas-card h-100 shadow-sm">
+                                                    <div class="card-header bg-transparent">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <h6 class="card-title mb-0 text-primary fw-bold">
+                                                                {{ Str::limit($tugas->nama_tugas, 40) }}
+                                                            </h6>
+                                                            <span
+                                                                class="badge {{ $statusClassHarian[$tugas->status] ?? 'bg-secondary' }}">
+                                                                {{ str_replace('_', ' ', $tugas->status) }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        @if ($tugas->tugasPokok)
+                                                            <p class="card-text small d-flex align-items-center mb-2">
+                                                                <i class="bi bi-link-45deg text-primary me-2"></i>
+                                                                <span>{{ Str::limit($tugas->tugasPokok->nama_tugas, 40) }}</span>
+                                                            </p>
+                                                        @endif
+
+                                                        <p class="card-text small d-flex align-items-center mb-2">
+                                                            <i class="bi bi-calendar-x text-danger me-2"></i>
+                                                            <span>
+                                                                <strong>Deadline:</strong>
+                                                                {{ date('d M Y', strtotime($tugas->deadline)) }}
+                                                            </span>
+                                                        </p>
+
+                                                        <p class="card-text small d-flex align-items-center mb-2">
+                                                            <i class="bi bi-percent text-warning me-2"></i>
+                                                            <span><strong>Bobot:</strong>
+                                                                {{ number_format($tugas->bobot_persen, 1) }}%</span>
+                                                        </p>
+
+                                                        <p class="card-text small d-flex align-items-center mb-2">
+                                                            <i class="bi bi-bullseye text-success me-2"></i>
+                                                            <span><strong>Target:</strong>
+                                                                {{ number_format($tugas->target_value, 0) }}
+                                                                {{ $tugas->satuan }}</span>
+                                                        </p>
+
+                                                        @if ($tugas->progress->count() > 0)
+                                                            @php
+                                                                $latestProgress = $tugas->progress->last();
+                                                                $progressPersen =
+                                                                    $latestProgress->persentase_progress ?? 0;
+                                                            @endphp
+                                                            <div class="mb-2">
+                                                                <small class="text-muted">Progress:</small>
+                                                                <div class="progress mb-1" style="height: 8px;">
+                                                                    <div class="progress-bar bg-success"
+                                                                        role="progressbar"
+                                                                        style="width: {{ $progressPersen }}%"
+                                                                        aria-valuenow="{{ $progressPersen }}"
+                                                                        aria-valuemin="0" aria-valuemax="100">
+                                                                    </div>
+                                                                </div>
+                                                                <small
+                                                                    class="text-muted">{{ number_format($progressPersen, 1) }}%</small>
+                                                            </div>
+                                                        @endif
+
+                                                        @if ($tugas->deskripsi)
+                                                            <p class="card-text small text-muted mt-3">
+                                                                {{ Str::limit($tugas->deskripsi, 100) }}
+                                                            </p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="card-footer bg-transparent">
+                                                        <div class="btn-group btn-group-sm w-100">
+                                                            <button onclick="editTugasHarian({{ $tugas->id }})"
+                                                                class="btn btn-outline-warning" title="Edit">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </button>
+                                                            <button
+                                                                onclick="deleteTugasHarian({{ $tugas->id }}, '{{ $tugas->nama_tugas }}')"
+                                                                class="btn btn-outline-danger" title="Hapus">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="col-12 text-center py-5">
+                                                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                                                <p class="text-muted mt-2">Belum ada tugas harian</p>
+                                            </div>
+                                        @endforelse
+                                    </div>
+
+                                    <!-- Pagination for Grid View -->
+                                    <div class="d-flex justify-content-center mt-4">
+                                        {{ $tugasHarian->withQueryString()->links() }}
+                                    </div>
                                 </div>
                             </div>
                             <!-- End Tugas Harian Tab -->
@@ -562,43 +819,77 @@
                         <input type="hidden" name="pegawai_id" value="{{ $pegawai->id }}">
 
                         <div class="mb-3">
-                            <label for="jenis_tugas" class="form-label">Jenis Tugas <span
+                            <label for="jenis_tugas_berikan" class="form-label">Jenis Tugas <span
                                     class="text-danger">*</span></label>
-                            <select class="form-select" id="jenis_tugas" name="jenis_tugas" required>
+                            <select class="form-select" id="jenis_tugas_berikan" name="jenis_tugas" required>
                                 <option value="">Pilih Jenis Tugas</option>
-                                <option value="tugas_pokok">Tugas Pokok</option>
                                 <option value="tugas_harian">Tugas Harian</option>
                                 <option value="tugas_tambahan">Tugas Tambahan</option>
                             </select>
+                            <small class="text-muted">Tugas Harian berdasarkan Tugas Pokok, Tugas Tambahan adalah tugas
+                                mandiri</small>
+                        </div>
+
+                        <!-- Field untuk Tugas Harian -->
+                        <div id="tugasHarianFields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="tugas_pokok_id" class="form-label">Tugas Pokok <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="tugas_pokok_id" name="tugas_pokok_id">
+                                    <option value="">Pilih Tugas Pokok</option>
+                                    @foreach ($tugasPokok as $tp)
+                                        <option value="{{ $tp->id }}">{{ $tp->nama_tugas }}</option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Tugas harian harus berdasarkan tugas pokok pegawai</small>
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="pilih_tugas" class="form-label">Pilih Tugas <span
+                            <label for="nama_tugas_berikan" class="form-label">Nama Tugas <span
                                     class="text-danger">*</span></label>
-                            <select class="form-select" id="pilih_tugas" name="tugas_id" required>
-                                <option value="">Pilih tugas yang akan diberikan</option>
-                            </select>
-                            <small class="text-muted">Pilih jenis tugas terlebih dahulu</small>
+                            <input type="text" class="form-control" id="nama_tugas_berikan" name="nama_tugas"
+                                placeholder="Masukkan nama tugas" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="catatan_penugasan" class="form-label">Catatan</label>
-                            <textarea class="form-control" id="catatan_penugasan" name="catatan" rows="3"
-                                placeholder="Tambahkan catatan atau instruksi khusus..."></textarea>
+                            <label for="deskripsi_tugas_berikan" class="form-label">Deskripsi Tugas</label>
+                            <textarea class="form-control" id="deskripsi_tugas_berikan" name="deskripsi" rows="3"
+                                placeholder="Jelaskan detail tugas..."></textarea>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="tanggal_mulai" class="form-label">Tanggal Mulai <span
+                                <label for="tanggal_mulai_berikan" class="form-label">Tanggal Mulai <span
                                         class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal_mulai" name="tanggal_mulai"
-                                    required>
+                                <input type="date" class="form-control" id="tanggal_mulai_berikan"
+                                    name="tanggal_mulai" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="tanggal_selesai" class="form-label">Tanggal Selesai <span
+                                <label for="deadline_berikan" class="form-label">Deadline <span
                                         class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai"
+                                <input type="date" class="form-control" id="deadline_berikan" name="deadline"
                                     required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="bobot_persen_berikan" class="form-label">Bobot (%)</label>
+                                <input type="number" class="form-control" id="bobot_persen_berikan" name="bobot_persen"
+                                    placeholder="0" min="0" max="100" step="0.1" value="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="target_value_berikan" class="form-label">Target <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="target_value_berikan" name="target_value"
+                                    placeholder="1" min="1" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="satuan_berikan" class="form-label">Satuan <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="satuan_berikan" name="satuan"
+                                    placeholder="Dokumen, Laporan, dll" required>
                             </div>
                         </div>
                     </form>
@@ -696,6 +987,149 @@
                     </button>
                     <button type="button" class="btn btn-primary" id="btnBuatTugas">
                         <i class="bi bi-plus-lg me-1"></i> Buat Tugas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Update Status Tugas Harian -->
+    <div class="modal fade" id="modalUpdateStatusHarian" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Status Tugas Harian</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formUpdateStatusHarian">
+                        @csrf
+                        <input type="hidden" id="status_tugas_harian_id" name="tugas_id">
+
+                        <div class="mb-3">
+                            <label for="status_harian" class="form-label">Status Tugas</label>
+                            <select class="form-select" id="status_harian" name="status" required>
+                                <option value="Assigned">Assigned</option>
+                                <option value="In_Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Overdue">Overdue</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Batal
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnUpdateStatusHarian">
+                        <i class="bi bi-check-circle me-1"></i> Update Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Tugas Harian -->
+    <div class="modal fade" id="modalEditTugasHarian" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Tugas Harian
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditTugasHarian">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" id="edit_tugas_harian_id" name="tugas_id">
+
+                        <div class="mb-3">
+                            <label for="edit_tugas_pokok" class="form-label">Tugas Pokok</label>
+                            <input type="text" class="form-control" id="edit_tugas_pokok" readonly disabled>
+                            <small class="text-muted">Tugas pokok tidak dapat diubah</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_nama_tugas" class="form-label">Nama Tugas <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_nama_tugas" name="nama_tugas"
+                                placeholder="Masukkan nama tugas" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="edit_deskripsi" class="form-label">Deskripsi Tugas</label>
+                            <textarea class="form-control" id="edit_deskripsi" name="deskripsi" rows="3"
+                                placeholder="Jelaskan detail tugas..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_periode_type" class="form-label">Periode <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_periode_type" name="periode_type" required>
+                                    <option value="Harian">Harian</option>
+                                    <option value="Mingguan">Mingguan</option>
+                                    <option value="Bulanan">Bulanan</option>
+                                    <option value="Tahunan">Tahunan</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_status" class="form-label">Status <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_status" name="status" required>
+                                    <option value="Assigned">Assigned</option>
+                                    <option value="In_Progress">In Progress</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Overdue">Overdue</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_tanggal_mulai" class="form-label">Tanggal Mulai <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="edit_tanggal_mulai" name="tanggal_mulai"
+                                    required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_deadline" class="form-label">Deadline <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="edit_deadline" name="deadline" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="edit_bobot_persen" class="form-label">Bobot (%)</label>
+                                <input type="number" class="form-control" id="edit_bobot_persen" name="bobot_persen"
+                                    placeholder="0" min="0" max="100" step="0.1">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="edit_target_value" class="form-label">Target <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="edit_target_value" name="target_value"
+                                    placeholder="1" min="1" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="edit_satuan" class="form-label">Satuan <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_satuan" name="satuan"
+                                    placeholder="Dokumen, Laporan, dll" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Batal
+                    </button>
+                    <button type="button" class="btn btn-warning" id="btnUpdateTugasHarian">
+                        <i class="bi bi-check-circle me-1"></i> Update Tugas
                     </button>
                 </div>
             </div>
@@ -915,6 +1349,11 @@
 
         // Function to show Berikan Tugas modal
         function showBerikanTugasModal() {
+            // Reset form
+            $('#formBerikanTugas')[0].reset();
+            $('#tugasHarianFields').hide();
+            $('#tugas_pokok_id').prop('required', false);
+
             $('#modalBerikanTugas').modal('show');
         }
 
@@ -923,7 +1362,20 @@
             $('#modalBuatTugas').modal('show');
         }
 
-        // Load tugas list based on jenis tugas
+        // Handle jenis tugas change in Berikan Tugas modal
+        $('#jenis_tugas_berikan').change(function() {
+            const jenisTugas = $(this).val();
+
+            if (jenisTugas === 'tugas_harian') {
+                $('#tugasHarianFields').show();
+                $('#tugas_pokok_id').prop('required', true);
+            } else {
+                $('#tugasHarianFields').hide();
+                $('#tugas_pokok_id').prop('required', false);
+            }
+        });
+
+        // Load tugas list based on jenis tugas (for Buat Tugas modal)
         $('#jenis_tugas').change(function() {
             const jenisTugas = $(this).val();
             const selectTugas = $('#pilih_tugas');
@@ -960,10 +1412,56 @@
 
         // Handle Berikan Tugas submission
         $('#btnBerikanTugas').click(function() {
+            // Validation
+            const jenisTugas = $('#jenis_tugas_berikan').val();
+            const namaTugas = $('#nama_tugas_berikan').val().trim();
+            const tanggalMulai = $('#tanggal_mulai_berikan').val();
+            const deadline = $('#deadline_berikan').val();
+            const targetValue = $('#target_value_berikan').val();
+            const satuan = $('#satuan_berikan').val().trim();
+
+            if (!jenisTugas) {
+                Swal.fire('Peringatan', 'Pilih jenis tugas terlebih dahulu', 'warning');
+                return;
+            }
+
+            if (jenisTugas === 'tugas_harian') {
+                const tugasPokokId = $('#tugas_pokok_id').val();
+                if (!tugasPokokId) {
+                    Swal.fire('Peringatan', 'Pilih tugas pokok untuk tugas harian', 'warning');
+                    return;
+                }
+            }
+
+            if (!namaTugas) {
+                Swal.fire('Peringatan', 'Nama tugas harus diisi', 'warning');
+                return;
+            }
+
+            if (!tanggalMulai) {
+                Swal.fire('Peringatan', 'Tanggal mulai harus diisi', 'warning');
+                return;
+            }
+
+            if (!deadline) {
+                Swal.fire('Peringatan', 'Deadline harus diisi', 'warning');
+                return;
+            }
+
+            if (!targetValue || targetValue <= 0) {
+                Swal.fire('Peringatan', 'Target harus diisi dengan nilai lebih dari 0', 'warning');
+                return;
+            }
+
+            if (!satuan) {
+                Swal.fire('Peringatan', 'Satuan harus diisi', 'warning');
+                return;
+            }
+
             const formData = $('#formBerikanTugas').serialize();
 
             $.ajax({
-                url: "{{ url('penugasan/berikan-tugas') }}",
+                url: "{{ route('penugasan.berikan-tugas') }}",
                 type: 'POST',
                 data: formData,
                 beforeSend: function() {
@@ -975,6 +1473,7 @@
                 success: function(response) {
                     $('#modalBerikanTugas').modal('hide');
                     $('#formBerikanTugas')[0].reset();
+                    $('#tugasHarianFields').hide();
 
                     Swal.fire({
                         icon: 'success',
@@ -990,12 +1489,15 @@
                     let errorMessage = 'Terjadi kesalahan saat memberikan tugas';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        const errors = xhr.responseJSON.errors;
+                        errorMessage = Object.values(errors).flat().join('<br>');
                     }
 
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal!',
-                        text: errorMessage
+                        html: errorMessage
                     });
                 },
                 complete: function() {
@@ -1054,5 +1556,254 @@
                 }
             });
         });
+
+        // ===== TUGAS HARIAN FUNCTIONS =====
+
+        // View mode toggle for Tugas Harian
+        $('input[name="viewModeHarian"]').change(function() {
+            let viewMode = $(this).attr('id');
+            if (viewMode === 'viewGridHarian') {
+                $('#gridViewHarian').show();
+                $('#tableViewHarian').hide();
+                localStorage.setItem('tugas_harian_view_mode', 'grid');
+            } else {
+                $('#tableViewHarian').show();
+                $('#gridViewHarian').hide();
+                localStorage.setItem('tugas_harian_view_mode', 'table');
+            }
+        });
+
+        // Restore view mode from localStorage for Tugas Harian
+        const savedViewModeHarian = localStorage.getItem('tugas_harian_view_mode');
+        if (savedViewModeHarian === 'grid') {
+            $('#viewGridHarian').prop('checked', true).trigger('change');
+        }
+
+        // Function to show status modal for Tugas Harian
+        function showStatusModalHarian(id, currentStatus) {
+            $('#status_tugas_harian_id').val(id);
+            $('#status_harian').val(currentStatus);
+            $('#modalUpdateStatusHarian').modal('show');
+        }
+
+        // Update Status button handler for Tugas Harian
+        $('#btnUpdateStatusHarian').click(function() {
+            const tugasId = $('#status_tugas_harian_id').val();
+            const status = $('#status_harian').val();
+            updateStatusHarian(tugasId, status);
+        });
+
+        // Function to update status for Tugas Harian
+        function updateStatusHarian(id, status) {
+            $.ajax({
+                url: "{{ url('penugasan/tugas-harian') }}/" + id + "/update-status",
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    status: status
+                },
+                beforeSend: function() {
+                    $('#btnUpdateStatusHarian').html(
+                        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...'
+                    );
+                    $('#btnUpdateStatusHarian').prop('disabled', true);
+                },
+                success: function(response) {
+                    $('#modalUpdateStatusHarian').modal('hide');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message || 'Status tugas harian berhasil diperbarui',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Terjadi kesalahan saat memperbarui status';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: errorMessage
+                    });
+                },
+                complete: function() {
+                    $('#btnUpdateStatusHarian').html('<i class="bi bi-check-circle me-1"></i> Update Status');
+                    $('#btnUpdateStatusHarian').prop('disabled', false);
+                }
+            });
+        }
+
+        // Function to edit Tugas Harian
+        function editTugasHarian(id) {
+            // Fetch tugas harian data via AJAX
+            $.ajax({
+                url: "{{ url('penugasan/tugas-harian') }}/" + id + "/edit",
+                type: 'GET',
+                success: function(response) {
+                    // Fill form with data
+                    $('#edit_tugas_harian_id').val(response.id);
+                    $('#edit_tugas_pokok').val(response.tugas_pokok ? response.tugas_pokok.nama_tugas : '-');
+                    $('#edit_nama_tugas').val(response.nama_tugas);
+                    $('#edit_deskripsi').val(response.deskripsi);
+                    $('#edit_periode_type').val(response.periode_type);
+                    $('#edit_status').val(response.status);
+                    $('#edit_tanggal_mulai').val(response.tanggal_mulai);
+                    $('#edit_deadline').val(response.deadline);
+                    $('#edit_bobot_persen').val(response.bobot_persen);
+                    $('#edit_target_value').val(response.target_value);
+                    $('#edit_satuan').val(response.satuan);
+
+                    // Show modal
+                    $('#modalEditTugasHarian').modal('show');
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: 'Tidak dapat memuat data tugas harian'
+                    });
+                }
+            });
+        }
+
+        // Handle Update Tugas Harian button click
+        $('#btnUpdateTugasHarian').click(function() {
+            const tugasId = $('#edit_tugas_harian_id').val();
+            const formData = {
+                _token: '{{ csrf_token() }}',
+                _method: 'PUT',
+                nama_tugas: $('#edit_nama_tugas').val(),
+                deskripsi: $('#edit_deskripsi').val(),
+                periode_type: $('#edit_periode_type').val(),
+                status: $('#edit_status').val(),
+                tanggal_mulai: $('#edit_tanggal_mulai').val(),
+                deadline: $('#edit_deadline').val(),
+                bobot_persen: $('#edit_bobot_persen').val(),
+                target_value: $('#edit_target_value').val(),
+                satuan: $('#edit_satuan').val()
+            };
+
+            // Validation
+            if (!formData.nama_tugas) {
+                Swal.fire('Peringatan', 'Nama tugas harus diisi', 'warning');
+                return;
+            }
+            if (!formData.tanggal_mulai) {
+                Swal.fire('Peringatan', 'Tanggal mulai harus diisi', 'warning');
+                return;
+            }
+            if (!formData.deadline) {
+                Swal.fire('Peringatan', 'Deadline harus diisi', 'warning');
+                return;
+            }
+            if (!formData.target_value || formData.target_value < 1) {
+                Swal.fire('Peringatan', 'Target minimal 1', 'warning');
+                return;
+            }
+            if (!formData.satuan) {
+                Swal.fire('Peringatan', 'Satuan harus diisi', 'warning');
+                return;
+            }
+
+            // Submit via AJAX
+            $.ajax({
+                url: "{{ url('penugasan/tugas-harian') }}/" + tugasId,
+                type: 'POST',
+                data: formData,
+                beforeSend: function() {
+                    $('#btnUpdateTugasHarian').html(
+                        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...'
+                    );
+                    $('#btnUpdateTugasHarian').prop('disabled', true);
+                },
+                success: function(response) {
+                    $('#modalEditTugasHarian').modal('hide');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message || 'Tugas harian berhasil diperbarui',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Terjadi kesalahan saat memperbarui tugas';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        const errors = xhr.responseJSON.errors;
+                        errorMessage = Object.values(errors).flat().join('<br>');
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        html: errorMessage
+                    });
+                },
+                complete: function() {
+                    $('#btnUpdateTugasHarian').html(
+                        '<i class="bi bi-check-circle me-1"></i> Update Tugas');
+                    $('#btnUpdateTugasHarian').prop('disabled', false);
+                }
+            });
+        });
+
+        // Function to delete Tugas Harian
+        function deleteTugasHarian(id, namaTugas) {
+            Swal.fire({
+                title: 'Konfirmasi Hapus',
+                html: `Apakah Anda yakin ingin menghapus tugas harian:<br><strong>${namaTugas}</strong>?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ url('penugasan/tugas-harian') }}/" + id,
+                        type: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: response.message || 'Tugas harian berhasil dihapus',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Terjadi kesalahan saat menghapus tugas';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: errorMessage
+                            });
+                        }
+                    });
+                }
+            });
+        }
     </script>
 @endpush

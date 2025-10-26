@@ -41,16 +41,114 @@ class TugasHarianController extends Controller
      */
     public function edit($id)
     {
-        return view('penugasan::edit');
+        try {
+            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::with(['tugasPokok', 'pegawai', 'pemberiTugas'])
+                ->findOrFail($id);
+
+            // Return JSON response for AJAX request
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json($tugasHarian);
+            }
+
+            // Return view for regular request (fallback)
+            return view('penugasan::penugasan.tugas-harian.edit', compact('tugasHarian'));
+        } catch (\Exception $e) {
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tugas harian tidak ditemukan'
+                ], 404);
+            }
+            return redirect()->back()->with('error', 'Tugas harian tidak ditemukan');
+        }
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id) {}
+    public function update(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'nama_tugas' => 'required|string|max:500',
+                'deskripsi' => 'nullable|string',
+                'periode_type' => 'required|in:Harian,Mingguan,Bulanan,Tahunan',
+                'tanggal_mulai' => 'required|date',
+                'deadline' => 'required|date|after_or_equal:tanggal_mulai',
+                'bobot_persen' => 'required|numeric|min:0|max:100',
+                'target_value' => 'nullable|numeric|min:0',
+                'satuan' => 'nullable|string|max:100',
+                'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled',
+            ]);
+
+            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+            $tugasHarian->update($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tugas harian berhasil diperbarui'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id) {}
+    public function destroy($id)
+    {
+        try {
+            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+
+            // Check if user has permission to delete
+            // Only pemberi_tugas or admin can delete
+            $currentUserId = \Illuminate\Support\Facades\Auth::id();
+            if ($tugasHarian->pemberi_tugas_id !== $currentUserId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki izin untuk menghapus tugas ini'
+                ], 403);
+            }
+
+            $tugasHarian->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tugas harian berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update status tugas harian
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled'
+        ]);
+
+        $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+        $tugasHarian->update(['status' => $validated['status']]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status tugas harian berhasil diperbarui'
+        ]);
+    }
 }

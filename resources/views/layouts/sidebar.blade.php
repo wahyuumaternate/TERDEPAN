@@ -355,29 +355,34 @@
              <ul id="tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
                      <a href="{{ route('penugasan.tugas-pokok.index') }}">
-                         <i class="bi bi-circle"></i><span>Tugas Pokok</span>
+                         <i class="bi bi-circle"></i><span>Monitoring</span>
+                     </a>
+                 </li>
+                 <li>
+                     <a href="{{ route('penugasan.tugas-pokok.index') }}">
+                         <i class="bi bi-circle"></i><span>Tugas Saya</span>
                      </a>
                  </li>
                  <li>
                      <a href="{{ url('penugasan/tugas-harian') }}">
-                         <i class="bi bi-circle"></i><span>Tugas Harian</span>
+                         <i class="bi bi-circle"></i><span>Progress & Validasi</span>
                      </a>
                  </li>
-                 <li>
-                     <a href="{{ url('penugasan/tugas-tambahan') }}">
-                         <i class="bi bi-circle"></i><span>Tugas Tambahan</span>
+                 {{-- <li>
+                     <a href="{{ url('penugasan/tugas-harian') }}">
+                         <i class="bi bi-circle"></i><span>Penilaian</span>
                      </a>
-                 </li>
-                 <li>
+                 </li> --}}
+                 {{-- <li>
                      <a href="{{ url('penugasan/mandiri') }}">
                          <i class="bi bi-circle"></i><span>Penugasan Mandiri</span>
                      </a>
-                 </li>
+                 </li> --}}
              </ul>
          </li><!-- End Penugasan Nav -->
 
          <!-- Progress & Validasi Nav -->
-         <li class="nav-item">
+         {{-- <li class="nav-item">
              <a class="nav-link collapsed" data-bs-target="#progress-nav" data-bs-toggle="collapse" href="#">
                  <i class="bi bi-graph-up"></i><span>Progress & Validasi</span><i
                      class="bi bi-chevron-down ms-auto"></i>
@@ -409,7 +414,7 @@
                      </a>
                  </li>
              </ul>
-         </li><!-- End Progress & Validasi Nav -->
+         </li><!-- End Progress & Validasi Nav --> --}}
 
          <!-- Penilaian Nav -->
          <li class="nav-item">
