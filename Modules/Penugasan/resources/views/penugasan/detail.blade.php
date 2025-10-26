@@ -261,10 +261,8 @@
                                                     <th>Nama Tugas</th>
                                                     <th>Periode</th>
                                                     <th>Status</th>
-                                                    <th>Bobot</th>
                                                     <th>Target</th>
                                                     <th>Progress</th>
-                                                    <th class="text-center" width="150">Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -308,11 +306,6 @@
                                                             </span>
                                                         </td>
                                                         <td>
-                                                            <div class="fw-bold">
-                                                                {{ number_format($tugas->bobot_persen, 1) }}%
-                                                            </div>
-                                                        </td>
-                                                        <td>
                                                             <span
                                                                 class="text-muted">{{ number_format($tugas->target_value, 0) }}
                                                                 {{ $tugas->satuan }}</span>
@@ -335,27 +328,13 @@
                                                                 <small
                                                                     class="text-muted">{{ number_format($progressPersen, 1) }}%</small>
                                                             @else
-                                                                <span class="text-muted">Belum ada progress</span>
+                                                                <span class="text-muted">-</span>
                                                             @endif
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <div class="btn-group btn-group-sm">
-                                                                <button type="button"
-                                                                    onclick="showStatusModal({{ $tugas->id }}, '{{ $tugas->status }}')"
-                                                                    class="btn btn-outline-info" title="Update Status">
-                                                                    <i class="bi bi-arrow-repeat"></i>
-                                                                </button>
-                                                                <button type="button"
-                                                                    onclick="viewDetail({{ $tugas->id }})"
-                                                                    class="btn btn-outline-primary" title="Detail">
-                                                                    <i class="bi bi-eye"></i>
-                                                                </button>
-                                                            </div>
                                                         </td>
                                                     </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="8" class="text-center py-5">
+                                                        <td colspan="6" class="text-center py-5">
                                                             <i class="bi bi-inbox"
                                                                 style="font-size: 3rem; color: #ccc;"></i>
                                                             <p class="text-muted mt-2">Belum ada tugas pokok untuk tahun
@@ -410,12 +389,6 @@
                                                         </p>
 
                                                         <p class="card-text small d-flex align-items-center mb-2">
-                                                            <i class="bi bi-percent text-warning me-2"></i>
-                                                            <span><strong>Bobot:</strong>
-                                                                {{ number_format($tugas->bobot_persen, 1) }}%</span>
-                                                        </p>
-
-                                                        <p class="card-text small d-flex align-items-center mb-2">
                                                             <i class="bi bi-bullseye text-success me-2"></i>
                                                             <span><strong>Target:</strong>
                                                                 {{ number_format($tugas->target_value, 0) }}
@@ -447,19 +420,6 @@
                                                                 {{ Str::limit($tugas->deskripsi, 100) }}
                                                             </p>
                                                         @endif
-                                                    </div>
-                                                    <div class="card-footer bg-transparent">
-                                                        <div class="btn-group btn-group-sm w-100">
-                                                            <button
-                                                                onclick="showStatusModal({{ $tugas->id }}, '{{ $tugas->status }}')"
-                                                                class="btn btn-outline-info" title="Update Status">
-                                                                <i class="bi bi-arrow-repeat"></i>
-                                                            </button>
-                                                            <button onclick="viewDetail({{ $tugas->id }})"
-                                                                class="btn btn-outline-primary" title="Detail">
-                                                                <i class="bi bi-eye"></i>
-                                                            </button>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -838,7 +798,8 @@
                                 <select class="form-select" id="tugas_pokok_id" name="tugas_pokok_id">
                                     <option value="">Pilih Tugas Pokok</option>
                                     @foreach ($tugasPokok as $tp)
-                                        <option value="{{ $tp->id }}">{{ $tp->nama_tugas }}</option>
+                                        <option value="{{ $tp->id }}" data-satuan="{{ $tp->satuan }}">
+                                            {{ $tp->nama_tugas }}</option>
                                     @endforeach
                                 </select>
                                 <small class="text-muted">Tugas harian harus berdasarkan tugas pokok pegawai</small>
@@ -874,22 +835,18 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="bobot_persen_berikan" class="form-label">Bobot (%)</label>
-                                <input type="number" class="form-control" id="bobot_persen_berikan" name="bobot_persen"
-                                    placeholder="0" min="0" max="100" step="0.1" value="0">
-                            </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="target_value_berikan" class="form-label">Target <span
                                         class="text-danger">*</span></label>
                                 <input type="number" class="form-control" id="target_value_berikan" name="target_value"
                                     placeholder="1" min="1" required>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="satuan_berikan" class="form-label">Satuan <span
                                         class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="satuan_berikan" name="satuan"
-                                    placeholder="Dokumen, Laporan, dll" required>
+                                    placeholder="Dokumen, Laporan, dll" required readonly>
+                                <small class="text-muted">Satuan akan mengikuti tugas pokok yang dipilih</small>
                             </div>
                         </div>
                     </form>
@@ -1353,6 +1310,8 @@
             $('#formBerikanTugas')[0].reset();
             $('#tugasHarianFields').hide();
             $('#tugas_pokok_id').prop('required', false);
+            $('#satuan_berikan').prop('readonly', false);
+            $('#satuan_berikan').val('');
 
             $('#modalBerikanTugas').modal('show');
         }
@@ -1369,9 +1328,24 @@
             if (jenisTugas === 'tugas_harian') {
                 $('#tugasHarianFields').show();
                 $('#tugas_pokok_id').prop('required', true);
+                $('#satuan_berikan').prop('readonly', true);
             } else {
                 $('#tugasHarianFields').hide();
                 $('#tugas_pokok_id').prop('required', false);
+                $('#satuan_berikan').prop('readonly', false);
+                $('#satuan_berikan').val('');
+            }
+        });
+
+        // Handle tugas pokok change to set satuan
+        $('#tugas_pokok_id').change(function() {
+            const selectedOption = $(this).find('option:selected');
+            const satuan = selectedOption.data('satuan');
+
+            if (satuan) {
+                $('#satuan_berikan').val(satuan);
+            } else {
+                $('#satuan_berikan').val('');
             }
         });
 
@@ -1474,6 +1448,8 @@
                     $('#modalBerikanTugas').modal('hide');
                     $('#formBerikanTugas')[0].reset();
                     $('#tugasHarianFields').hide();
+                    $('#satuan_berikan').prop('readonly', false);
+                    $('#satuan_berikan').val('');
 
                     Swal.fire({
                         icon: 'success',

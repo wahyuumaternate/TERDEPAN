@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Penugasan\Http\Controllers\PenugasanController;
 use Modules\Penugasan\Http\Controllers\TugasPokokController;
 use Modules\Penugasan\Http\Controllers\TugasHarianController;
+use Modules\Penugasan\Http\Controllers\TugasTambahanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,9 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // PENUGASAN GENERAL ROUTES
     // ============================================
     Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
+    Route::post('/validasi-tugas/{id}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
+    Route::post('/catatan-monitoring', [PenugasanController::class, 'catatanMonitoring'])->name('catatan-monitoring');
+    Route::get('/dashboard-monitoring', [PenugasanController::class, 'dashboardMonitoring'])->name('dashboard-monitoring');
 
     // ============================================
     // TUGAS POKOK ROUTES - /tugas-pokok
@@ -33,9 +37,23 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // TUGAS HARIAN ROUTES - /tugas-harian
     // ============================================
     Route::prefix('tugas-harian')->name('tugas-harian.')->group(function () {
+        Route::get('/', [TugasHarianController::class, 'index'])->name('index');
         Route::get('/{id}/edit', [TugasHarianController::class, 'edit'])->name('edit');
         Route::put('/{id}', [TugasHarianController::class, 'update'])->name('update');
         Route::delete('/{id}', [TugasHarianController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/update-status', [TugasHarianController::class, 'updateStatus'])->name('update-status');
+        Route::post('/{id}/update-progress', [TugasHarianController::class, 'updateProgress'])->name('update-progress');
+    });
+
+    // ============================================
+    // TUGAS TAMBAHAN ROUTES - /tugas-tambahan
+    // ============================================
+    Route::prefix('tugas-tambahan')->name('tugas-tambahan.')->group(function () {
+        Route::get('/', [TugasTambahanController::class, 'index'])->name('index');
+        Route::get('/{id}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [TugasTambahanController::class, 'update'])->name('update');
+        Route::delete('/{id}', [TugasTambahanController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/update-status', [TugasTambahanController::class, 'updateStatus'])->name('update-status');
+        Route::post('/{id}/update-progress', [TugasTambahanController::class, 'updateProgress'])->name('update-progress');
     });
 });

@@ -17,20 +17,38 @@ return new class extends Migration
             $table->foreignId('pemberi_tugas_id')->constrained('master_pegawai')->comment('Atasan yang assign');
             $table->string('nama_tugas')->comment('Nama tugas');
             $table->text('deskripsi')->comment('Deskripsi tugas');
-            $table->text('alasan_penugasan')->comment('Mandatory: kenapa pegawai ini');
+            $table->text('alasan_penugasan')->nullable()->comment('Kenapa pegawai ini yang ditugaskan');
+            $table->date('tanggal_mulai')->comment('Tanggal mulai tugas');
             $table->date('deadline')->comment('Deadline tugas');
-            $table->decimal('bobot_persen', 5, 2)->comment('Bobot, CHECK total <=20%');
+            
+            // Field penilaian (ganti bobot_persen)
+            $table->decimal('target_penilaian', 5, 2)->nullable()->comment('Target penilaian 0-100');
+            $table->decimal('penilaian', 5, 2)->nullable()->comment('Penilaian aktual 0-100');
+            $table->decimal('nilai_akhir', 5, 2)->nullable()->comment('Nilai akhir 0-100');
+            $table->date('tanggal_penilaian')->nullable()->comment('Tanggal pemberian penilaian');
+            
             $table->decimal('target_value', 10, 2)->comment('Target');
             $table->string('satuan', 30)->comment('Satuan');
-            $table->enum('status', ['Assigned', 'In_Progress', 'Submitted', 'Validated', 'Rejected'])->default('Assigned');
+            $table->enum('status', ['Assigned', 'In_Progress', 'Completed', 'Overdue', 'Cancelled'])->default('Assigned');
+            
+            // Field validasi berjenjang
+            $table->enum('status_validasi', ['menunggu', 'divalidasi', 'revisi', 'disetujui'])->default('menunggu');
+            $table->foreignId('validasi_oleh')->nullable()->constrained('master_pegawai')->comment('Yang melakukan validasi');
+            $table->date('tanggal_validasi')->nullable()->comment('Tanggal validasi');
+            $table->text('catatan_validasi')->nullable()->comment('Catatan validasi/revisi');
+            
+            // Dokumen lampiran
+            $table->foreignId('dokumen_lampiran_id')->nullable()->constrained('doc_dokumen')->comment('Foreign key ke DOC_DOKUMEN');
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(['pegawai_id', 'status']);
+            $table->index(['pegawai_id', 'status_validasi']);
             $table->index('pemberi_tugas_id');
+            $table->index('validasi_oleh');
             $table->index('deadline');
 
-            // Check constraint for total bobot_persen <= 20% akan diimplementasikan di level aplikasi
+            // Catatan: Constraint penilaian 0-100 dan validasi bisnis lainnya diimplementasikan di level aplikasi
         });
     }
 

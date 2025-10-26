@@ -9,6 +9,7 @@ use App\Models\MasterPegawai;
 use Illuminate\Http\Request;
 use Modules\Penugasan\Models\TugasPokok;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class TugasPokokController extends Controller
 {
@@ -23,10 +24,23 @@ class TugasPokokController extends Controller
         // Query untuk mendapatkan daftar pegawai dengan statistik tugas pokok
         $pegawaiQuery = MasterPegawai::where('status_aktif', 'Aktif')
             ->with(['jabatan', 'bidang'])
+            // Kecualikan admin utama (ID 1) dan user yang sedang login
+            ->where('id', '!=', 1) // Asumsikan ID 1 adalah admin utama
+            ->where('id', '!=', Auth::id()) // Kecualikan user yang sedang login
             ->withCount([
-                'tugasPokok as total_tugas' => function ($q) use ($tahun) {
+                // Count tugas pokok
+                'tugasPokok as tugas_pokok_count' => function ($q) use ($tahun) {
                     $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun]);
                 },
+                // Count tugas harian
+                'tugasHarian as tugas_harian_count' => function ($q) use ($tahun) {
+                    $q->whereRaw('EXTRACT(YEAR FROM tanggal_mulai) = ?', [$tahun]);
+                },
+                // Count tugas tambahan
+                'tugasTambahan as tugas_tambahan_count' => function ($q) use ($tahun) {
+                    $q->whereRaw('EXTRACT(YEAR FROM tanggal_mulai) = ?', [$tahun]);
+                },
+                // Keep these for backward compatibility
                 'tugasPokok as pending_tugas' => function ($q) use ($tahun) {
                     $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
                         ->where('status', 'Pending');
@@ -80,6 +94,14 @@ class TugasPokokController extends Controller
         }
 
         $pegawaiList = $pegawaiQuery->paginate($request->get('per_page', 15));
+
+        // Hitung total_tugas dari semua jenis tugas
+        $pegawaiList->getCollection()->transform(function ($pegawai) {
+            $pegawai->total_tugas = ($pegawai->tugas_pokok_count ?? 0) +
+                ($pegawai->tugas_harian_count ?? 0) +
+                ($pegawai->tugas_tambahan_count ?? 0);
+            return $pegawai;
+        });
 
         // Get filter options
         $tahuns = TugasPokok::selectRaw('EXTRACT(YEAR FROM periode_mulai) as tahun')

@@ -2,12 +2,12 @@
 
 @section('main')
     <div class="pagetitle">
-        <h1>Tugas Pokok Pegawai</h1>
+        <h1>Daftar Penugasan Pegawai</h1>
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
-                <li class="breadcrumb-item active">Tugas Pokok</li>
+                <li class="breadcrumb-item active">Daftar Pegawai</li>
             </ol>
         </nav>
     </div>
@@ -221,12 +221,11 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th class="text-center" width="50">#</th>
-                                            <th width="300">Nama Pegawai</th>
-                                            <th width="250">Bidang / Jabatan</th>
-                                            <th class="text-center" width="100">Total Tugas</th>
-                                            <th class="text-center" width="90">Pending</th>
-                                            <th class="text-center" width="100">Dikerjakan</th>
-                                            <th class="text-center" width="90">Selesai</th>
+                                            <th width="280">Nama Pegawai</th>
+                                            <th width="220">Bidang / Jabatan</th>
+                                            <th class="text-center" width="90">Pokok</th>
+                                            <th class="text-center" width="90">Harian</th>
+                                            <th class="text-center" width="100">Tambahan</th>
                                             <th class="text-center" width="120">Aksi</th>
                                         </tr>
                                     </thead>
@@ -265,31 +264,15 @@
                                                 </td>
                                                 <td class="text-center align-middle">
                                                     <span
-                                                        class="badge bg-primary rounded-pill">{{ $pegawai->total_tugas }}</span>
+                                                        class="badge bg-primary rounded-pill">{{ $pegawai->tugas_pokok_count ?? 0 }}</span>
                                                 </td>
                                                 <td class="text-center align-middle">
-                                                    @if ($pegawai->pending_tugas > 0)
-                                                        <span
-                                                            class="badge bg-secondary rounded-pill">{{ $pegawai->pending_tugas }}</span>
-                                                    @else
-                                                        <span class="text-muted">-</span>
-                                                    @endif
+                                                    <span
+                                                        class="badge bg-info rounded-pill">{{ $pegawai->tugas_harian_count ?? 0 }}</span>
                                                 </td>
                                                 <td class="text-center align-middle">
-                                                    @if ($pegawai->dikerjakan_tugas > 0)
-                                                        <span
-                                                            class="badge bg-warning rounded-pill">{{ $pegawai->dikerjakan_tugas }}</span>
-                                                    @else
-                                                        <span class="text-muted">-</span>
-                                                    @endif
-                                                </td>
-                                                <td class="text-center align-middle">
-                                                    @if ($pegawai->selesai_tugas > 0)
-                                                        <span
-                                                            class="badge bg-success rounded-pill">{{ $pegawai->selesai_tugas }}</span>
-                                                    @else
-                                                        <span class="text-muted">-</span>
-                                                    @endif
+                                                    <span
+                                                        class="badge bg-warning rounded-pill">{{ $pegawai->tugas_tambahan_count ?? 0 }}</span>
                                                 </td>
                                                 <td class="text-center align-middle">
                                                     <a href="{{ route('penugasan.tugas-pokok.show', $pegawai->id) }}"
@@ -323,13 +306,13 @@
                                     <div class="col-md-6 col-lg-4 mb-4">
                                         <div class="card pegawai-card h-100 shadow-sm">
                                             <div class="card-body">
-                                                <div class="d-flex align-items-start mb-3">
+                                                <div class="d-flex align-items-start pt-3 mb-3">
                                                     <div class="avatar-circle-lg me-3">
                                                         {{ strtoupper(substr($pegawai->nama, 0, 2)) }}
                                                     </div>
                                                     <div class="flex-grow-1">
                                                         <h6 class="mb-1 fw-bold">{{ $pegawai->nama }}</h6>
-                                                        <p class="text-muted mb-1 small">{{ $pegawai->nip ?? '-' }}</p>
+                                                        <p class="text-muted mb-1 small">{{ $pegawai->nomor_identitas ?? '-' }}</p>
                                                         <span
                                                             class="badge bg-info text-white">{{ $pegawai->jabatan->nama ?? '-' }}</span>
                                                     </div>
@@ -338,45 +321,39 @@
                                                 <div class="mb-3">
                                                     <small class="text-muted d-flex align-items-center">
                                                         <i class="bi bi-building me-2"></i>
-                                                        <span>{{ $pegawai->bidang->nama ?? '-' }}</span>
+                                                        <span>{{ $pegawai->bidang->kode ?? '-' }}</span>
                                                     </small>
                                                 </div>
 
                                                 <hr>
 
                                                 <div class="row text-center mb-3">
-                                                    <div class="col-3">
+                                                    <div class="col-4 mb-2">
                                                         <div class="stat-box">
-                                                            <h5 class="mb-0 text-primary">{{ $pegawai->total_tugas }}</h5>
-                                                            <small class="text-muted">Total</small>
+                                                            <h5 class="mb-0 text-primary">
+                                                                {{ $pegawai->tugas_pokok_count ?? 0 }}</h5>
+                                                            <small class="text-muted">Tugas Pokok</small>
                                                         </div>
                                                     </div>
-                                                    <div class="col-3">
+                                                    <div class="col-4 mb-2">
                                                         <div class="stat-box">
-                                                            <h5 class="mb-0 text-secondary">{{ $pegawai->pending_tugas }}
-                                                            </h5>
-                                                            <small class="text-muted">Pending</small>
+                                                            <h5 class="mb-0 text-info">
+                                                                {{ $pegawai->tugas_harian_count ?? 0 }}</h5>
+                                                            <small class="text-muted">Tugas Harian</small>
                                                         </div>
                                                     </div>
-                                                    <div class="col-3">
+                                                    <div class="col-4">
                                                         <div class="stat-box">
-                                                            <h5 class="mb-0 text-warning">{{ $pegawai->dikerjakan_tugas }}
-                                                            </h5>
-                                                            <small class="text-muted">Proses</small>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-3">
-                                                        <div class="stat-box">
-                                                            <h5 class="mb-0 text-success">{{ $pegawai->selesai_tugas }}
-                                                            </h5>
-                                                            <small class="text-muted">Selesai</small>
+                                                            <h5 class="mb-0 text-warning">
+                                                                {{ $pegawai->tugas_tambahan_count ?? 0 }}</h5>
+                                                            <small class="text-muted">Tugas Tambahan</small>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <a href="{{ route('penugasan.tugas-pokok.show', $pegawai->id) }}"
                                                     class="btn btn-primary w-100">
-                                                    <i class="bi bi-eye me-1"></i> Lihat Tugas Pokok
+                                                    <i class="bi bi-eye me-1"></i> Detail
                                                 </a>
                                             </div>
                                         </div>

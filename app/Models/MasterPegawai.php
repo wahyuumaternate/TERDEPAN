@@ -60,4 +60,20 @@ class MasterPegawai extends Authenticatable
     {
         return $this->hasMany(\Modules\Penugasan\Models\TugasPokok::class, 'pegawai_id');
     }
+
+    /**
+     * Get the tugas harian for the pegawai.
+     */
+    public function tugasHarian()
+    {
+        return $this->hasMany(\Modules\Penugasan\Models\TugasHarian::class, 'pegawai_id');
+    }
+
+    /**
+     * Get the tugas tambahan for the pegawai.
+     */
+    public function tugasTambahan()
+    {
+        return $this->hasMany(\Modules\Penugasan\Models\TugasTambahan::class, 'pegawai_id');
+    }
 }

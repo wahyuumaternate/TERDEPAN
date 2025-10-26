@@ -355,11 +355,11 @@
              <ul id="tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
                      <a href="{{ route('penugasan.tugas-pokok.index') }}">
-                         <i class="bi bi-circle"></i><span>Monitoring</span>
+                         <i class="bi bi-circle"></i><span>Daftar Penugasan</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ route('penugasan.tugas-pokok.index') }}">
+                     <a href="{{ route('penugasan.tugas-pokok.show', AUTH::user()->id) }}">
                          <i class="bi bi-circle"></i><span>Tugas Saya</span>
                      </a>
                  </li>

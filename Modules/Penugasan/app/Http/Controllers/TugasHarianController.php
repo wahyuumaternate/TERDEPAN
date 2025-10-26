@@ -10,9 +10,32 @@ class TugasHarianController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('penugasan::index');
+        $query = \Modules\Penugasan\Models\TugasHarian::with(['tugasPokok', 'pegawai', 'pemberiTugas', 'dokumenLampiran'])
+            ->orderBy('tanggal_mulai', 'desc');
+
+        // Filter berdasarkan status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter berdasarkan status validasi
+        if ($request->filled('status_validasi')) {
+            $query->where('status_validasi', $request->status_validasi);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('nama_tugas', 'like', "%{$request->search}%")
+                    ->orWhere('deskripsi', 'like', "%{$request->search}%");
+            });
+        }
+
+        $tugasHarian = $query->paginate($request->get('per_page', 15));
+
+        return view('penugasan::tugas-harian.index', compact('tugasHarian'));
     }
 
     /**
@@ -75,9 +98,9 @@ class TugasHarianController extends Controller
                 'periode_type' => 'required|in:Harian,Mingguan,Bulanan,Tahunan',
                 'tanggal_mulai' => 'required|date',
                 'deadline' => 'required|date|after_or_equal:tanggal_mulai',
-                'bobot_persen' => 'required|numeric|min:0|max:100',
-                'target_value' => 'nullable|numeric|min:0',
-                'satuan' => 'nullable|string|max:100',
+                'target_penilaian' => 'nullable|numeric|min:0|max:100',
+                'target_value' => 'required|numeric|min:0',
+                'satuan' => 'required|string|max:100',
                 'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled',
             ]);
 
@@ -149,6 +172,32 @@ class TugasHarianController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Status tugas harian berhasil diperbarui'
+        ]);
+    }
+
+    /**
+     * Update progress tugas harian
+     */
+    public function updateProgress(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'persentase_progress' => 'required|numeric|min:0|max:100',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+
+        // Create progress record
+        $tugasHarian->progress()->create([
+            'tanggal_update' => now(),
+            'persentase_progress' => $validated['persentase_progress'],
+            'keterangan' => $validated['keterangan'],
+            'updated_by' => \Illuminate\Support\Facades\Auth::id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Progress tugas berhasil diperbarui'
         ]);
     }
 }
