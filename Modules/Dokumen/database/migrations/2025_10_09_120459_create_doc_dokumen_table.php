@@ -12,23 +12,31 @@ return new class extends Migration
             $table->id();
             $table->string('nomor')->unique()->nullable();
             $table->foreignId('folder_id')->constrained('doc_folder')->cascadeOnDelete();
-            $table->foreignId('jenis_id')->constrained('doc_jenis')->restrictOnDelete();
             $table->string('judul');
             $table->text('deskripsi')->nullable();
-            $table->date('tanggal_dokumen');
+            $table->jsonb('metadata')->nullable()->comment('Flexible metadata storage');
+            $table->date('tanggal_dokumen')->nullable();
             $table->string('nomor_surat')->nullable();
             $table->enum('status', ['Draft', 'Final', 'Archived'])->default('Draft');
             $table->integer('version')->default(1);
             $table->integer('views')->default(0);
             $table->integer('downloads')->default(0);
             $table->foreignId('uploaded_by')->constrained('master_pegawai')->restrictOnDelete();
+
+            // Polymorphic relation untuk attach ke tugas, PK, dll
+            $table->string('related_type')->nullable()->comment('Polymorphic type: tugas_harian, tugas_tambahan, etc');
+            $table->unsignedBigInteger('related_id')->nullable()->comment('Polymorphic ID');
+            $table->boolean('is_public')->default(false)->comment('Public access flag');
+
             $table->timestamps();
 
-            $table->index(['nomor', 'jenis_id', 'status']);
+            $table->index(['nomor', 'status']);
+            $table->index(['related_type', 'related_id']);
+            $table->index('folder_id');
         });
+        // Table untuk template dokumen (optional - bisa dihapus jika tidak dipakai)
         Schema::create('doc_template', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('jenis_id')->constrained('doc_jenis')->onDelete('cascade');
             $table->string('nama');
             $table->string('kode')->unique();
             $table->text('deskripsi')->nullable();
@@ -44,8 +52,6 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('master_pegawai')->onDelete('set null');
             $table->timestamps();
             $table->softDeletes();
-
-            $table->index(['jenis_id', 'is_active']);
         });
 
         // Table untuk tracking generated documents

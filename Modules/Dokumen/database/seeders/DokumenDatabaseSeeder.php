@@ -13,8 +13,9 @@ class DokumenDatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            KategoriDokumenSeeder::class,
-            DocJenisSeeder::class,
+            // KategoriDokumenSeeder::class,
+            // DocJenisSeeder::class,
+            DocFolderSeeder::class, // Seed folder hierarchy
         ]);
     }
 }

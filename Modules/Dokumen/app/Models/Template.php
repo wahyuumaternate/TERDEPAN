@@ -15,7 +15,6 @@ class Template extends Model
     protected $table = 'doc_template';
 
     protected $fillable = [
-        'jenis_id',
         'nama',
         'kode',
         'deskripsi',
@@ -41,11 +40,6 @@ class Template extends Model
     ];
 
     // Relationships
-    public function jenis()
-    {
-        return $this->belongsTo(JenisDokumen::class, 'jenis_id');
-    }
-
     public function creator()
     {
         return $this->belongsTo(MasterPegawai::class, 'created_by');
@@ -65,11 +59,6 @@ class Template extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
-    }
-
-    public function scopeByJenis($query, $jenisId)
-    {
-        return $query->where('jenis_id', $jenisId);
     }
 
     // Methods

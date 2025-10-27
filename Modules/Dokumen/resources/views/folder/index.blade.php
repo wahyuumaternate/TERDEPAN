@@ -13,11 +13,54 @@
     </div>
 
     <section class="section">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="stats-card bg-gradient-success text-white rounded-3 p-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 text-white">Folder Utama</h6>
+                            <h3 class="mb-0 fw-bold" id="totalRootFolder">0</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-folder2-open" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stats-card bg-gradient-primary text-white rounded-3 p-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 text-white">Total Folder</h6>
+                            <h3 class="mb-0 fw-bold" id="totalFolder">0</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-folder-fill" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stats-card bg-gradient-warning text-white rounded-3 p-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 text-white">Total File</h6>
+                            <h3 class="mb-0 fw-bold" id="totalFiles">0</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-file-earmark-text" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-lg-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
-                        <!-- Header -->
+                        {{-- <!-- Header -->
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <div>
                                 <h5 class="card-title mb-1 d-flex align-items-center">
@@ -31,78 +74,12 @@
                                     </div>
                                 </h5>
                             </div>
-                            <div>
-                                <button type="button" class="btn btn-primary btn-lg shadow-sm px-4 py-2"
-                                    onclick="showCreateModal()">
-                                    <i class="bi bi-folder-plus me-2"></i>Tambah Folder
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Stats Cards -->
-                        <div class="row mb-4">
-                            <div class="col-md-3 mb-3">
-                                <div class="stats-card bg-gradient-primary text-white rounded-3 p-3 shadow-sm">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1 text-white">Total Folder</h6>
-                                            <h3 class="mb-0 fw-bold" id="totalFolder">0</h3>
-                                        </div>
-                                        <div class="stats-icon">
-                                            <i class="bi bi-folder-fill" style="font-size: 2.5rem; "></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div class="stats-card bg-gradient-success text-white rounded-3 p-3 shadow-sm">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1 text-white">Root Folder</h6>
-                                            <h3 class="mb-0 fw-bold" id="totalRootFolder">0</h3>
-                                        </div>
-                                        <div class="stats-icon">
-                                            <i class="bi bi-folder2-open" style="font-size: 2.5rem; "></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div class="stats-card bg-gradient-info text-white rounded-3 p-3 shadow-sm">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1 text-white">Auto Folder</h6>
-                                            <h3 class="mb-0 fw-bold" id="totalAutoFolder">0</h3>
-                                        </div>
-                                        <div class="stats-icon">
-                                            <i class="bi bi-gear-fill" style="font-size: 2.5rem; "></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div class="stats-card bg-gradient-warning text-white rounded-3 p-3 shadow-sm">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1 text-white">Total Files</h6>
-                                            <h3 class="mb-0 fw-bold" id="totalFiles">0</h3>
-                                        </div>
-                                        <div class="stats-icon">
-                                            <i class="bi bi-file-earmark-text" style="font-size: 2.5rem; "></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        </div> --}}
 
                         <!-- View Toggle -->
                         <div class="mb-3">
                             <div class="btn-group shadow-sm" role="group">
-                                <input type="radio" class="btn-check" name="viewMode" id="viewTree" checked>
-                                <label class="btn btn-outline-primary px-4" for="viewTree">
-                                    <i class="bi bi-diagram-3 me-2"></i>Tree View
-                                </label>
-                                <input type="radio" class="btn-check" name="viewMode" id="viewGrid">
+                                <input type="radio" class="btn-check" name="viewMode" id="viewGrid" checked>
                                 <label class="btn btn-outline-primary px-4" for="viewGrid">
                                     <i class="bi bi-grid-3x3-gap me-2"></i>Grid View
                                 </label>
@@ -113,15 +90,8 @@
                             </div>
                         </div>
 
-                        <!-- Tree View -->
-                        <div id="treeView">
-                            <div class="folder-tree-container p-3 bg-light rounded-3">
-                                <div id="folderTree"></div>
-                            </div>
-                        </div>
-
                         <!-- Grid View -->
-                        <div id="gridView" style="display: none;">
+                        <div id="gridView">
                             <div class="row" id="folderGrid"></div>
                         </div>
 
@@ -130,14 +100,11 @@
                             <table class="table datatable" id="folderTable">
                                 <thead>
                                     <tr>
-                                        <th>No</th>
-                                        <th>Nama Folder</th>
-                                        <th>Path</th>
-                                        <th>Bidang</th>
-                                        <th>Level</th>
-                                        <th>Total Files</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
+                                        <th>Nama</th>
+                                        <th>Dibuat Oleh</th>
+                                        <th>Tanggal Diubah</th>
+                                        <th>Total</th>
+                                        <th width="80">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -264,7 +231,9 @@
             </div>
         </div>
     </div>
+@endsection
 
+@push('styles')
     <style>
         /* Stats Cards */
         .stats-card {
@@ -293,80 +262,129 @@
             background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
         }
 
-        /* Folder Tree */
-        .folder-tree-container {
-            min-height: 400px;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .folder-item {
-            padding: 12px 16px;
-            margin: 6px 0;
+        /* Google Drive Style Folder Cards */
+        .gdrive-folder-card {
             background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .folder-item:hover {
-            background: #f8f9fa;
-            border-color: #0d6efd;
-            transform: translateX(5px);
-        }
-
-        .folder-item.has-children::before {
-            content: '▼';
-            display: inline-block;
-            margin-right: 8px;
-            transition: transform 0.3s ease;
-        }
-
-        .folder-item.collapsed::before {
-            transform: rotate(-90deg);
-        }
-
-        .folder-children {
-            margin-left: 30px;
-            border-left: 2px dashed #dee2e6;
-            padding-left: 10px;
-        }
-
-        /* Folder Card */
-        .folder-card {
+            transition: all 0.2s ease;
+            overflow: visible;
             position: relative;
+        }
+
+        .gdrive-folder-card:hover {
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .3), 0 2px 6px 2px rgba(60, 64, 67, .15);
+            border-color: transparent;
+        }
+
+        .gdrive-folder-content {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+        }
+
+        .gdrive-folder-icon {
+            flex-shrink: 0;
+        }
+
+        .gdrive-folder-icon i {
+            font-size: 24px;
+            color: #5f6368;
+        }
+
+        .gdrive-folder-card:hover .gdrive-folder-icon i {
+            color: #1a73e8;
+        }
+
+        .gdrive-folder-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .gdrive-folder-title {
+            font-size: 14px;
+            color: #202124;
+            font-weight: 400;
+            line-height: 20px;
             overflow: hidden;
-            border-radius: 16px !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid #f0f0f0 !important;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 2px;
         }
 
-        .folder-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
-            border-color: #0d6efd !important;
+        .gdrive-folder-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
         }
 
-        .folder-icon-wrapper {
-            width: 80px;
-            height: 80px;
+        .gdrive-folder-meta small,
+        .gdrive-folder-meta span {
+            font-size: 12px;
+            color: #5f6368;
+        }
+
+        .gdrive-folder-meta .text-muted {
+            color: #5f6368 !important;
+        }
+
+        .gdrive-folder-menu {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .gdrive-folder-card:hover .gdrive-folder-menu {
+            opacity: 1;
+        }
+
+        .gdrive-folder-menu .btn-link {
+            color: #5f6368;
+            text-decoration: none;
+            padding: 4px;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-            transition: all 0.3s ease;
         }
 
-        .folder-card:hover .folder-icon-wrapper {
-            transform: scale(1.1) rotate(5deg);
+        .gdrive-folder-menu .btn-link:hover {
+            background-color: #f1f3f4;
+            color: #202124;
         }
 
-        .folder-icon {
-            font-size: 2.5rem;
-            color: white;
+        /* Dropdown menu styling */
+        .gdrive-folder-menu .dropdown-menu {
+            border: 1px solid #dadce0;
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .3), 0 2px 6px 2px rgba(60, 64, 67, .15);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 160px;
+        }
+
+        .gdrive-folder-menu .dropdown-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #202124;
+        }
+
+        .gdrive-folder-menu .dropdown-item:hover {
+            background-color: #f1f3f4;
+        }
+
+        .gdrive-folder-menu .dropdown-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .gdrive-folder-menu .dropdown-divider {
+            margin: 8px 0;
+            border-color: #e8eaed;
         }
 
         /* Badge */
@@ -404,13 +422,13 @@
             color: #495057;
         }
     </style>
-@endsection
+@endpush
 
 @push('scripts')
     <script>
         let allFolders = [];
         let allBidang = [];
-        let viewMode = 'tree';
+        let viewMode = 'grid';
         let dataTable = null;
 
         $(document).ready(function() {
@@ -420,8 +438,7 @@
             // View mode toggle
             $('input[name="viewMode"]').change(function() {
                 const selectedView = $(this).attr('id');
-                viewMode = selectedView === 'viewTree' ? 'tree' : (selectedView === 'viewGrid' ? 'grid' :
-                    'table');
+                viewMode = selectedView === 'viewGrid' ? 'grid' : 'table';
                 toggleView();
             });
 
@@ -551,77 +568,15 @@
         }
 
         function toggleView() {
-            $('#treeView, #gridView, #tableView').hide();
+            $('#gridView, #tableView').hide();
 
-            if (viewMode === 'tree') {
-                $('#treeView').show();
-                renderTree(allFolders);
-            } else if (viewMode === 'grid') {
+            if (viewMode === 'grid') {
                 $('#gridView').show();
                 renderGrid(allFolders);
             } else {
                 $('#tableView').show();
                 renderTable(allFolders);
             }
-        }
-
-        function renderTree(folders) {
-            if (!Array.isArray(folders) || folders.length === 0) {
-                $('#folderTree').html(`
-                    <div class="empty-state text-center">
-                        <i class="bi bi-folder-x empty-state-icon"></i>
-                        <h4 class="text-muted mb-2">Belum ada folder</h4>
-                        <p class="text-muted mb-4">Mulai dengan menambahkan folder baru</p>
-                        <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
-                            <i class="bi bi-folder-plus me-2"></i>Tambah Folder Pertama
-                        </button>
-                    </div>
-                `);
-                return;
-            }
-
-            const rootFolders = folders.filter(f => !f.parent_id);
-            let html = buildTreeHTML(rootFolders, folders);
-            $('#folderTree').html(html);
-        }
-
-        function buildTreeHTML(items, allItems) {
-            let html = '';
-            items.forEach(item => {
-                const children = allItems.filter(f => f.parent_id === item.id);
-                const hasChildren = children.length > 0;
-                const bidangName = item.bidang ? item.bidang.nama : '-';
-
-                html += `
-            <div class="folder-item ${hasChildren ? 'has-children' : ''}" data-id="${item.id}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div onclick="navigateToFolderFiles(${item.id})" style="cursor:pointer; flex-grow: 1;">
-                        <i class="bi bi-folder-fill text-warning me-2"></i>
-                        <strong>${item.nama}</strong>
-                        <small class="text-muted ms-2">${item.path}</small>
-                        ${item.is_auto ? '<span class="badge badge-auto ms-2"><i class="bi bi-gear-fill me-1"></i>Auto</span>' : ''}
-                    </div>
-                    <div>
-                        <span class="badge bg-secondary me-2">${item.total_files} files</span>
-                        <button class="btn btn-sm btn-outline-primary" onclick="showDetail(${item.id})">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" onclick="showEditModal(${item.id})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteFolder(${item.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-                if (hasChildren) {
-                    html += `<div class="folder-children">${buildTreeHTML(children, allItems)}</div>`;
-                }
-            });
-            return html;
         }
 
         function navigateToFolderFiles(folderId) {
@@ -692,43 +647,71 @@
                 return;
             }
 
-            let html = '<div class="row">';
-            folders.forEach(item => {
+            // Filter hanya folder level 1 (root folders)
+            const level1Folders = folders.filter(f => f.level === 0 || !f.parent_id);
+
+            if (level1Folders.length === 0) {
+                $('#folderGrid').html(`
+            <div class="col-12 empty-state text-center">
+                <i class="bi bi-folder-x empty-state-icon"></i>
+                <h4 class="text-muted mb-2">Belum ada folder level 1</h4>
+                <p class="text-muted mb-4">Mulai dengan menambahkan folder utama</p>
+                <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
+                    <i class="bi bi-folder-plus me-2"></i>Tambah Folder
+                </button>
+            </div>
+        `);
+                return;
+            }
+
+            let html = '<div class="row g-3">';
+            level1Folders.forEach(item => {
                 const bidangName = item.bidang ? item.bidang.nama : 'Tidak ada bidang';
+                // Hitung jumlah subfolder
+                const subfolderCount = folders.filter(f => f.parent_id === item.id).length;
+
                 html += `
-            <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
-                <div class="card folder-card h-100 shadow-sm" onclick="navigateToFolderFiles(${item.id})" style="cursor:pointer;">
-                    <div class="card-body text-center">
-                        <div class="folder-icon-wrapper mt-3">
-                            <i class="bi bi-folder-fill folder-icon"></i>
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="gdrive-folder-card" onclick="navigateToFolderFiles(${item.id})">
+                    <div class="gdrive-folder-content">
+                        <div class="gdrive-folder-icon">
+                            <i class="bi bi-folder-fill"></i>
                         </div>
-                        <h5 class="mb-2 fw-bold">${item.nama}</h5>
-                        <p class="text-muted small mb-2">${item.path}</p>
-                        <span class="badge bg-secondary mb-2">${bidangName}</span>
-                        <div class="d-flex justify-content-center gap-2 flex-wrap">
-                            <span class="badge badge-level">Level ${item.level}</span>
-                            ${item.is_auto ? '<span class="badge badge-auto"><i class="bi bi-gear-fill me-1"></i>Auto</span>' : ''}
-                        </div>
-                        <div class="mt-3">
-                            <h6 class="mb-0">${item.total_files} <small class="text-muted">files</small></h6>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent border-0 pb-3 px-3" onclick="event.stopPropagation();">
-                        <div class="d-grid gap-2">
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-primary" onclick="navigateToFolderFiles(${item.id})">
-                                    <i class="bi bi-folder2-open me-1"></i>Dokumen
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="showDetail(${item.id})">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning" onclick="showEditModal(${item.id})">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteFolder(${item.id})">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                        <div class="gdrive-folder-info">
+                            <div class="gdrive-folder-title" title="${item.nama}">
+                                ${item.nama}
                             </div>
+                            <div class="gdrive-folder-meta">
+                                <small class="text-muted">${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</small>
+                                ${subfolderCount > 0 ? ` <span class="text-muted">• ${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="gdrive-folder-menu" onclick="event.stopPropagation();">
+                            <button class="btn btn-sm btn-link p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles(${item.id}); return false;">
+                                    <i class="bi bi-download me-2"></i>Unduh
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${item.id}); return false;">
+                                    <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                                    <i class="bi bi-gear me-2"></i>Atur
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="showDetail(${item.id}); return false;">
+                                    <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder(${item.id}); return false;">
+                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                </a></li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -745,38 +728,66 @@
                 dataTable.destroy();
             }
 
+            // Filter hanya folder level 1
+            const level1Folders = folders.filter(f => f.level === 0 || !f.parent_id);
+
             let tbody = '';
-            folders.forEach((item, index) => {
-                const bidangName = item.bidang ? item.bidang.nama : '-';
+            level1Folders.forEach((item, index) => {
+                // Hitung subfolder
+                const subfolderCount = folders.filter(f => f.parent_id === item.id).length;
+
+                // Format tanggal (hanya tanggal, tanpa waktu)
+                const updatedDate = item.updated_at ? formatDateOnly(item.updated_at) : '-';
+
+                // Nama pembuat
+                const creatorName = item.creator ? item.creator.name : (item.created_by ? 'User #' + item
+                    .created_by : '-');
+
                 tbody += `
-            <tr style="cursor:pointer;" onclick="navigateToFolderFiles(${item.id})">
-                <td>${index + 1}</td>
-                <td><strong>${item.nama}</strong></td>
-                <td><code>${item.path}</code></td>
-                <td>${bidangName}</td>
-                <td><span class="badge badge-level">Level ${item.level}</span></td>
-                <td><span class="badge bg-secondary">${item.total_files}</span></td>
-                <td>
-                    ${item.is_auto ? '<span class="badge badge-auto"><i class="bi bi-gear-fill me-1"></i>Auto</span>' : '<span class="badge bg-light text-dark">Manual</span>'}
-                </td>
-                <td onclick="event.stopPropagation();">
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="navigateToFolderFiles(${item.id})">
-                            <i class="bi bi-folder2-open me-1"></i>Dokumen
+                <tr style="cursor:pointer;" onclick="navigateToFolderFiles(${item.id})">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
+                            <strong>${item.nama}</strong>
+                        </div>
+                    </td>
+                    <td>${creatorName ?? '-'}</td>
+                    <td>${updatedDate}</td>
+                    <td>
+                        <div style="line-height: 1.4;">
+                            <div>${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</div>
+                            <div>${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</div>
+                        </div>
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
                         </button>
-                        <button class="btn btn-outline-secondary" onclick="showDetail(${item.id})">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-outline-warning" onclick="showEditModal(${item.id})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="deleteFolder(${item.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles(${item.id}); return false;">
+                                <i class="bi bi-download me-2"></i>Unduh
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${item.id}); return false;">
+                                <i class="bi bi-link-45deg me-2"></i>Salin Link
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                                <i class="bi bi-gear me-2"></i>Atur
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="showDetail(${item.id}); return false;">
+                                <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder(${item.id}); return false;">
+                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                            </a></li>
+                        </ul>
+                    </td>
+                </tr>
+                `;
             });
 
             $('#folderTable tbody').html(tbody);
@@ -816,7 +827,10 @@
 
         function showEditModal(id) {
             $.ajax({
-                url: `/dokumen/folder/${id}`,
+                url: ` / dokumen / folder / $ {
+                    id
+                }
+                `,
                 type: 'GET',
                 success: function(response) {
                     $('#modalTitle').html('<i class="bi bi-pencil-square me-2"></i>Edit Folder');
@@ -851,7 +865,10 @@
         function saveFolder() {
             let id = $('#folder_id').val();
             let method = $('#_method').val();
-            let url = id ? `/dokumen/folder/${id}` : '/dokumen/folder';
+            let url = id ? ` / dokumen / folder / $ {
+                    id
+                }
+                ` : '/dokumen/folder';
 
             let formData = {
                 _token: '{{ csrf_token() }}',
@@ -901,7 +918,9 @@
                         errorMessage = '<ul class="text-start">';
                         Object.keys(errors).forEach(key => {
                             errors[key].forEach(error => {
-                                errorMessage += `<li>${error}</li>`;
+                                errorMessage += ` < li > $ {
+                    error
+                } < /li>`;
                             });
                         });
                         errorMessage += '</ul>';
@@ -934,88 +953,88 @@
                     const creatorName = response.creator ? response.creator.nama : 'Unknown';
 
                     let html = `
-                        <div class="text-center mb-4 p-4 rounded-3" style="background: linear-gradient(135deg, #ffc10715 0%, #ff980005 100%);">
-                            <div class="d-inline-block p-4 rounded-circle mb-3" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
-                                <i class="bi bi-folder-fill" style="font-size: 5rem; color: white;"></i>
+                            <div class="text-center mb-4 p-4 rounded-3" style="background: linear-gradient(135deg, #ffc10715 0%, #ff980005 100%);">
+                                <div class="d-inline-block p-4 rounded-circle mb-3" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                                    <i class="bi bi-folder-fill" style="font-size: 5rem; color: white;"></i>
+                                </div>
+                                <h3 class="fw-bold mb-2">${response.nama}</h3>
+                                <p class="text-muted mb-2"><code>${response.path}</code></p>
+                                <div class="d-flex justify-content-center align-items-center flex-wrap gap-2">
+                                    <span class="badge badge-level px-3 py-2">Level ${response.level}</span>
+                                    ${response.is_auto ? 
+                                        '<span class="badge badge-auto px-3 py-2"><i class="bi bi-gear-fill me-1"></i>Auto Generated</span>' : 
+                                        '<span class="badge bg-secondary px-3 py-2"><i class="bi bi-hand-thumbs-up me-1"></i>Manual</span>'}
+                                </div>
                             </div>
-                            <h3 class="fw-bold mb-2">${response.nama}</h3>
-                            <p class="text-muted mb-2"><code>${response.path}</code></p>
-                            <div class="d-flex justify-content-center align-items-center flex-wrap gap-2">
-                                <span class="badge badge-level px-3 py-2">Level ${response.level}</span>
-                                ${response.is_auto ? 
-                                    '<span class="badge badge-auto px-3 py-2"><i class="bi bi-gear-fill me-1"></i>Auto Generated</span>' : 
-                                    '<span class="badge bg-secondary px-3 py-2"><i class="bi bi-hand-thumbs-up me-1"></i>Manual</span>'}
-                            </div>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-folder-fill text-primary me-2"></i>
-                                            <small class="text-muted">Parent Folder</small>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-folder-fill text-primary me-2"></i>
+                                                <small class="text-muted">Parent Folder</small>
+                                            </div>
+                                            <h6 class="mb-0 fw-bold">${parentName}</h6>
                                         </div>
-                                        <h6 class="mb-0 fw-bold">${parentName}</h6>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-building text-primary me-2"></i>
+                                                <small class="text-muted">Bidang</small>
+                                            </div>
+                                            <h6 class="mb-0 fw-bold">${bidangName}</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                                <small class="text-muted">Total Files</small>
+                                            </div>
+                                            <h5 class="mb-0 fw-bold">${response.total_files}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-person-fill text-primary me-2"></i>
+                                                <small class="text-muted">Dibuat Oleh</small>
+                                            </div>
+                                            <h6 class="mb-0 fw-bold">${creatorName}</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-calendar-plus text-primary me-2"></i>
+                                                <small class="text-muted">Dibuat</small>
+                                            </div>
+                                            <p class="mb-0 fw-semibold">${formatDateTime(response.created_at)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-calendar-check text-primary me-2"></i>
+                                                <small class="text-muted">Terakhir Diupdate</small>
+                                            </div>
+                                            <p class="mb-0 fw-semibold">${formatDateTime(response.updated_at)}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-building text-primary me-2"></i>
-                                            <small class="text-muted">Bidang</small>
-                                        </div>
-                                        <h6 class="mb-0 fw-bold">${bidangName}</h6>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-file-earmark-text text-primary me-2"></i>
-                                            <small class="text-muted">Total Files</small>
-                                        </div>
-                                        <h5 class="mb-0 fw-bold">${response.total_files}</h5>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-person-fill text-primary me-2"></i>
-                                            <small class="text-muted">Dibuat Oleh</small>
-                                        </div>
-                                        <h6 class="mb-0 fw-bold">${creatorName}</h6>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-calendar-plus text-primary me-2"></i>
-                                            <small class="text-muted">Dibuat</small>
-                                        </div>
-                                        <p class="mb-0 fw-semibold">${formatDateTime(response.created_at)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <i class="bi bi-calendar-check text-primary me-2"></i>
-                                            <small class="text-muted">Terakhir Diupdate</small>
-                                        </div>
-                                        <p class="mb-0 fw-semibold">${formatDateTime(response.updated_at)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                        `;
 
                     $('#detailFolderContent').html(html);
                     $('#modalDetailFolder').modal('show');
@@ -1079,6 +1098,49 @@
                 text: message,
                 confirmButtonColor: '#0d6efd'
             });
+        }
+
+        function copyFolderLink(id) {
+            const link = `${window.location.origin}/dokumen/folder/${id}/dokumen`;
+
+            // Copy to clipboard
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(link).then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Link folder berhasil disalin',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                });
+            } else {
+                // Fallback untuk browser lama
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Link folder berhasil disalin',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        }
+
+        function formatDateOnly(dateString) {
+            if (!dateString) return '-';
+            let date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
         }
 
         function formatDateTime(dateString) {

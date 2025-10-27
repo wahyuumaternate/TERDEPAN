@@ -135,29 +135,20 @@
                                 <div class="card bg-light border-0">
                                     <div class="card-body">
                                         <div class="row g-3">
-                                            <div class="col-md-4">
-                                                <label class="form-label">Jenis Dokumen</label>
-                                                <select class="form-select" id="filterJenis">
-                                                    <option value="">Semua Jenis</option>
-                                                    <!-- Options will be loaded by JS -->
-                                                </select>
-                                            </div>
-                                            <div class="col-md-4">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Status</label>
                                                 <select class="form-select" id="filterStatus">
                                                     <option value="">Semua Status</option>
                                                     <option value="Draft">Draft</option>
                                                     <option value="Final">Final</option>
-                                                    <option value="Archived">Archived</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-md-6">
                                                 <label class="form-label">Pencarian</label>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="searchDokumen"
                                                         placeholder="Cari dokumen...">
-                                                    <button class="btn btn-outline-primary" type="button"
-                                                        id="btnSearch">
+                                                    <button class="btn btn-outline-primary" type="button" id="btnSearch">
                                                         <i class="bi bi-search"></i>
                                                     </button>
                                                 </div>
@@ -197,7 +188,6 @@
                                                 <th scope="col" width="50">#</th>
                                                 <th scope="col">Nomor</th>
                                                 <th scope="col">Dokumen</th>
-                                                <th scope="col">Jenis</th>
                                                 <th scope="col">Tanggal</th>
                                                 <th scope="col">Status</th>
                                                 <th scope="col" width="140">Aksi</th>
@@ -228,10 +218,6 @@
                                                             } else {
                                                                 $fileIcon = 'bi bi-file-earmark-text';
                                                             }
-
-                                                            $metadataCount = $item->metadata
-                                                                ? count($item->metadata)
-                                                                : 0;
                                                         @endphp
                                                         <div class="d-flex align-items-center">
                                                             <div class="icon-box rounded-3 p-2 me-2 bg-light">
@@ -250,20 +236,8 @@
                                                                     <small class="text-muted d-block">No. Surat:
                                                                         {{ $item->nomor_surat }}</small>
                                                                 @endif
-                                                                @if ($metadataCount > 0)
-                                                                    <span class="badge bg-secondary">
-                                                                        <i
-                                                                            class="bi bi-tag-fill me-1"></i>{{ $metadataCount }}
-                                                                    </span>
-                                                                @endif
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                    <td>
-                                                        <span
-                                                            class="badge bg-info text-dark bg-opacity-25 px-3 py-2 rounded-pill">
-                                                            {{ $item->jenis->nama ?? '-' }}
-                                                        </span>
                                                     </td>
                                                     <td>{{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
                                                     </td>
@@ -332,11 +306,11 @@
                         <!-- Grid View -->
                         <div id="gridView" style="display: none;">
                             @if (count($dokumen) > 0)
-                                <div class="row g-4">
+                                <div class="row g-3">
                                     @foreach ($dokumen as $item)
                                         @php
                                             $fileIcon = 'bi-file-earmark-text';
-                                            $fileIconColor = '#4154f1';
+                                            $fileIconColor = '#5f6368';
                                             if ($item->files && count($item->files) > 0) {
                                                 $extension = $item->files[0]->extension ?? 'pdf';
                                                 if ($extension == 'pdf') {
@@ -344,82 +318,63 @@
                                                     $fileIconColor = '#dc3545';
                                                 } elseif (in_array($extension, ['doc', 'docx'])) {
                                                     $fileIcon = 'bi-file-earmark-word-fill';
-                                                    $fileIconColor = '#0d6efd';
+                                                    $fileIconColor = '#2b579a';
                                                 } elseif (in_array($extension, ['xls', 'xlsx'])) {
                                                     $fileIcon = 'bi-file-earmark-excel-fill';
-                                                    $fileIconColor = '#198754';
+                                                    $fileIconColor = '#1d6f42';
+                                                } elseif (in_array($extension, ['ppt', 'pptx'])) {
+                                                    $fileIcon = 'bi-file-earmark-ppt-fill';
+                                                    $fileIconColor = '#d24726';
                                                 }
                                             }
 
                                             $statusClass = 'bg-secondary';
-                                            $statusIcon = 'bi-clock';
                                             if ($item->status === 'Final') {
                                                 $statusClass = 'bg-success';
-                                                $statusIcon = 'bi-check-circle';
                                             } elseif ($item->status === 'Draft') {
                                                 $statusClass = 'bg-warning text-dark';
-                                                $statusIcon = 'bi-pencil';
-                                            } elseif ($item->status === 'Archived') {
-                                                $statusClass = 'bg-secondary';
-                                                $statusIcon = 'bi-archive';
                                             }
-
-                                            $metadataCount = $item->metadata ? count($item->metadata) : 0;
                                         @endphp
 
-                                        <div class="col-md-4 col-lg-3">
-                                            <div class="card dokumen-card h-100 shadow-sm">
-                                                <div class="card-body text-center p-4">
-                                                    <div class="position-relative document-icon-wrapper mb-3">
-                                                        <i class="bi {{ $fileIcon }}"
-                                                            style="font-size: 3.5rem; color: {{ $fileIconColor }};"></i>
-                                                        @if ($item->version > 1)
-                                                            <span
-                                                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">
-                                                                v{{ $item->version }}
-                                                            </span>
-                                                        @endif
+                                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                                            <div class="gdrive-card" onclick="showDetail({{ $item->id }})">
+                                                <div class="gdrive-card-preview">
+                                                    <i class="bi {{ $fileIcon }}"
+                                                        style="color: {{ $fileIconColor }};"></i>
+                                                </div>
+                                                <div class="gdrive-card-body">
+                                                    <div class="gdrive-card-title" title="{{ $item->judul }}">
+                                                        {{ $item->judul }}
                                                     </div>
-                                                    <h6 class="card-title mb-2 fw-bold">{{ Str::limit($item->judul, 50) }}
-                                                    </h6>
-                                                    <div class="document-info">
-                                                        <p class="card-text small text-muted mb-1">
-                                                            @if ($item->nomor)
-                                                                <span class="d-block mb-1">{{ $item->nomor }}</span>
-                                                            @endif
-                                                            <i
-                                                                class="bi bi-calendar me-1"></i>{{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
-                                                        </p>
+                                                    <div class="gdrive-card-meta">
+                                                        <small class="text-muted">
+                                                            {{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
+                                                        </small>
                                                         <span
-                                                            class="badge bg-info text-dark bg-opacity-25 mb-2">{{ $item->jenis->nama ?? '-' }}</span>
-                                                        <div class="mb-3">
-                                                            <span
-                                                                class="badge {{ $statusClass }} rounded-pill px-3 py-2">
-                                                                <i
-                                                                    class="bi {{ $statusIcon }} me-1"></i>{{ $item->status }}
-                                                            </span>
-                                                        </div>
+                                                            class="badge {{ $statusClass }} badge-sm">{{ $item->status }}</span>
                                                     </div>
                                                 </div>
-                                                <div class="card-footer bg-white border-0 p-3">
-                                                    <div class="d-flex gap-2">
-                                                        <button type="button" class="btn btn-primary btn-sm flex-grow-1"
-                                                            onclick="showDetail({{ $item->id }})">
-                                                            <i class="bi bi-eye me-1"></i> Detail
-                                                        </button>
-                                                        <a href="{{ route('dokumen.download', $item->id) }}"
-                                                            class="btn btn-success btn-sm">
-                                                            <i class="bi bi-download"></i>
-                                                        </a>
-                                                        <button type="button" class="btn btn-warning btn-sm"
-                                                            onclick="editDokumen({{ $item->id }})">
-                                                            <i class="bi bi-pencil"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-danger btn-sm"
-                                                            onclick="deleteDokumen({{ $item->id }})">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </div>
+                                                <div class="gdrive-card-actions">
+                                                    <button type="button" class="btn btn-sm btn-link text-secondary p-1"
+                                                        onclick="event.stopPropagation(); showDetail({{ $item->id }})"
+                                                        title="Detail">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                    <a href="{{ route('dokumen.download', $item->id) }}"
+                                                        class="btn btn-sm btn-link text-secondary p-1"
+                                                        onclick="event.stopPropagation()" title="Download">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-link text-secondary p-1"
+                                                        onclick="event.stopPropagation(); editDokumen({{ $item->id }})"
+                                                        title="Edit">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-link text-danger p-1"
+                                                        onclick="event.stopPropagation(); deleteDokumen({{ $item->id }})"
+                                                        title="Hapus">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -471,101 +426,65 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="jenis_id" class="form-label fw-semibold">
-                                Jenis Dokumen <span class="text-danger">*</span>
+                        <!-- File Upload - Main Focus -->
+                        <div class="mb-4">
+                            <label for="file" class="form-label fw-semibold fs-5">
+                                <i class="bi bi-cloud-upload me-2"></i>Pilih File <span class="text-danger">*</span>
                             </label>
-                            <select class="form-select form-select-lg" id="jenis_id" name="jenis_id" required>
-                                <option value="">Pilih Jenis Dokumen</option>
-                            </select>
-                            <div class="form-text">Pilih jenis dokumen sesuai dengan konten yang akan diupload</div>
+                            <input type="file" class="form-control form-control-lg" id="file" name="file"
+                                required>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Semua format file didukung (Max: 50MB)
+                            </div>
                         </div>
 
+                        <!-- Judul - Auto filled from filename -->
                         <div class="mb-3">
                             <label for="judul" class="form-label fw-semibold">
-                                Judul Dokumen <span class="text-danger">*</span>
+                                Nama Dokumen <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control form-control-lg" id="judul" name="judul"
-                                required placeholder="Masukkan judul dokumen yang deskriptif">
+                                required placeholder="Otomatis dari nama file">
+                            <div class="form-text">Nama akan otomatis diisi dari nama file, Anda bisa mengubahnya</div>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="nomor_surat" class="form-label fw-semibold">Nomor Surat</label>
-                                <input type="text" class="form-control" id="nomor_surat" name="nomor_surat"
-                                    placeholder="Nomor surat eksternal (jika ada)">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="tanggal_dokumen" class="form-label fw-semibold">
-                                    Tanggal Dokumen <span class="text-danger">*</span>
+                        <!-- Deskripsi - Optional & Collapsible -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="showDesc">
+                                <label class="form-check-label" for="showDesc">
+                                    Tambahkan deskripsi (opsional)
                                 </label>
-                                <input type="date" class="form-control" id="tanggal_dokumen" name="tanggal_dokumen"
-                                    required value="{{ date('Y-m-d') }}">
+                            </div>
+                            <div id="descContainer" style="display: none;" class="mt-2">
+                                <textarea class="form-control" id="deskripsi" name="deskripsi" rows="2"
+                                    placeholder="Tambahkan deskripsi singkat"></textarea>
                             </div>
                         </div>
 
+                        <!-- Status - Simple -->
                         <div class="mb-3">
-                            <label for="deskripsi" class="form-label fw-semibold">Deskripsi</label>
-                            <textarea class="form-control" id="deskripsi" name="deskripsi" rows="3"
-                                placeholder="Masukkan deskripsi singkat tentang dokumen"></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="status" class="form-label fw-semibold">Status Dokumen</label>
+                            <label class="form-label fw-semibold">Status</label>
                             <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="status" id="statusDraft"
-                                        value="Draft">
-                                    <label class="form-check-label" for="statusDraft">
-                                        Draft
-                                    </label>
-                                </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="status" id="statusFinal"
                                         value="Final" checked>
                                     <label class="form-check-label" for="statusFinal">
-                                        Final
+                                        <i class="bi bi-check-circle text-success me-1"></i>Final
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="status" id="statusArchived"
-                                        value="Archived">
-                                    <label class="form-check-label" for="statusArchived">
-                                        Archived
+                                    <input class="form-check-input" type="radio" name="status" id="statusDraft"
+                                        value="Draft">
+                                    <label class="form-check-label" for="statusDraft">
+                                        <i class="bi bi-pencil text-warning me-1"></i>Draft
                                     </label>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Metadata Section -->
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                                <span>Metadata</span>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddMetadata">
-                                    <i class="bi bi-plus-circle me-1"></i>Tambah Metadata
-                                </button>
-                            </label>
-                            <div id="metadataContainer" class="pt-2">
-                                <!-- Metadata fields will be added here dynamically -->
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="file" class="form-label fw-semibold">
-                                Upload File <span class="text-danger">*</span>
-                            </label>
-                            <input type="file" class="form-control form-control-lg" id="file" name="file"
-                                required>
-                            <div class="form-text" id="fileHelp">
-                                Format: PDF, DOCX, XLSX (Max: 10MB)
-                            </div>
-                            <div class="alert alert-light mt-2 p-2 small">
-                                <i class="bi bi-info-circle-fill me-2"></i>
-                                Untuk file Shapefile (.shp), harap di-zip terlebih dahulu bersama file pendukung (.shx,
-                                .dbf, .prj)
-                            </div>
-                        </div>
-
+                        <!-- Upload Progress -->
                         <div id="uploadProgress" class="mt-3" style="display: none;">
                             <label class="form-label fw-semibold">Proses Upload</label>
                             <div class="progress" style="height: 25px;">
@@ -613,15 +532,6 @@
                                     <strong>{{ $folder->nama }}</strong>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="edit_jenis_id" class="form-label fw-semibold">
-                                Jenis Dokumen <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select form-select-lg" id="edit_jenis_id" name="jenis_id" required>
-                                <option value="">Pilih Jenis Dokumen</option>
-                            </select>
                         </div>
 
                         <div class="mb-3">
@@ -676,20 +586,6 @@
                                     </label>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Metadata Section for Edit -->
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                                <span>Metadata</span>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddEditMetadata">
-                                    <i class="bi bi-plus-circle me-1"></i>Tambah Metadata
-                                </button>
-                            </label>
-                            <div id="editMetadataContainer" class="pt-2">
-                                <!-- Existing metadata will be loaded here -->
-                            </div>
-                            <input type="hidden" name="metadata_delete" id="metadata_delete" value="">
                         </div>
 
                         <div class="mb-3">
@@ -774,7 +670,101 @@
     </div>
 
     <style>
-        /* Card Styles */
+        /* Google Drive Style Cards */
+        .gdrive-card {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .gdrive-card:hover {
+            box-shadow: 0 1px 3px 0 rgba(60, 64, 67, .3), 0 4px 8px 3px rgba(60, 64, 67, .15);
+            border-color: transparent;
+        }
+
+        .gdrive-card-preview {
+            background: #f1f3f4;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #e8eaed;
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gdrive-card-preview i {
+            font-size: 64px;
+        }
+
+        .gdrive-card-body {
+            padding: 12px 16px;
+            flex: 1;
+        }
+
+        .gdrive-card-title {
+            font-size: 14px;
+            color: #202124;
+            font-weight: 400;
+            line-height: 20px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 8px;
+        }
+
+        .gdrive-card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .gdrive-card-meta small {
+            font-size: 12px;
+            color: #5f6368;
+        }
+
+        .gdrive-card-meta .badge-sm {
+            font-size: 10px;
+            padding: 2px 6px;
+        }
+
+        .gdrive-card-actions {
+            padding: 8px 12px;
+            border-top: 1px solid #e8eaed;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .gdrive-card:hover .gdrive-card-actions {
+            opacity: 1;
+        }
+
+        .gdrive-card-actions .btn {
+            padding: 4px 8px;
+            font-size: 14px;
+        }
+
+        .gdrive-card-actions .btn-link {
+            text-decoration: none;
+            color: #5f6368;
+        }
+
+        .gdrive-card-actions .btn-link:hover {
+            background-color: #f1f3f4;
+            color: #202124;
+        }
+
+        /* Card Styles (old - for backward compatibility) */
         .dokumen-card {
             position: relative;
             overflow: hidden;
@@ -911,8 +901,6 @@
 
 @push('scripts')
     <script>
-        let metadataCounter = 0;
-        let deletedMetadataIds = [];
         let dataTable = null;
 
         $(document).ready(function() {
@@ -921,8 +909,30 @@
             // Initialize metadata handling
             initMetadataHandling();
 
-            // Load jenis dokumen for dropdowns
-            loadJenis();
+            // Auto-fill judul from filename
+            $('#file').on('change', function() {
+                let file = this.files[0];
+                if (file) {
+                    // Get filename without extension
+                    let filename = file.name;
+                    let nameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
+
+                    // Set to judul field if empty
+                    if (!$('#judul').val()) {
+                        $('#judul').val(nameWithoutExt);
+                    }
+                }
+            });
+
+            // Toggle description
+            $('#showDesc').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#descContainer').slideDown();
+                } else {
+                    $('#descContainer').slideUp();
+                    $('#deskripsi').val('');
+                }
+            });
 
             // Initialize DataTable
             initializeDataTable();
@@ -934,7 +944,6 @@
 
             // Reset filter
             $('#resetFilter').click(function() {
-                $('#filterJenis').val('');
                 $('#filterStatus').val('');
                 $('#searchDokumen').val('');
             });
@@ -962,45 +971,25 @@
                 }
             });
 
-            // Handler untuk perubahan jenis dokumen di form upload
-            $('#jenis_id').change(function() {
-                updateFileRequirements($(this), '#file', '#fileHelp');
-            });
-
-            // Handler untuk perubahan jenis dokumen di form edit
-            $('#edit_jenis_id').change(function() {
-                updateFileRequirements($(this), '#edit_file', '#editFileHelp');
-            });
-
             // Modal setup
             $('#modalUploadDokumen').on('shown.bs.modal', function() {
-                // Focus on first field
-                $('#jenis_id').focus();
-
-                // If jenis_id is selected, update file requirements
-                if ($('#jenis_id').val()) {
-                    updateFileRequirements($('#jenis_id'), '#file', '#fileHelp');
-                }
+                // Focus on file input
+                $('#file').focus();
             });
 
             // Reset form when modal is closed
             $('#modalUploadDokumen').on('hidden.bs.modal', function() {
                 $('#formUploadDokumen')[0].reset();
-                $('#metadataContainer').empty();
-                metadataCounter = 0;
+                $('#showDesc').prop('checked', false);
+                $('#descContainer').hide();
                 $('#uploadProgress').hide();
                 $('#uploadProgress .progress-bar').css('width', '0%');
                 $('#uploadProgressText').text('Mempersiapkan upload...');
-                $('#fileHelp').html('Format: PDF, DOCX, XLSX (Max: 10MB)');
             });
 
             // Reset edit form when modal is closed
             $('#modalEditDokumen').on('hidden.bs.modal', function() {
                 $('#formEditDokumen')[0].reset();
-                $('#editMetadataContainer').empty();
-                deletedMetadataIds = [];
-                $('#metadata_delete').val('');
-                metadataCounter = 0;
                 $('#editProgress').hide();
                 $('#editProgress .progress-bar').css('width', '0%');
                 $('#editProgressText').text('Mempersiapkan update...');
@@ -1040,7 +1029,7 @@
                                     percentComplete + '%');
                                 $('#uploadProgressText').text(
                                     `Upload ${Math.round(percentComplete)}% selesai`
-                                    );
+                                );
 
                                 if (percentComplete >= 100) {
                                     $('#uploadProgressText').text(
@@ -1132,7 +1121,7 @@
                                     percentComplete + '%');
                                 $('#editProgressText').text(
                                     `Upload ${Math.round(percentComplete)}% selesai`
-                                    );
+                                );
 
                                 if (percentComplete >= 100) {
                                     $('#editProgressText').text(
@@ -1206,149 +1195,6 @@
                 }
             });
         });
-
-        // ============================================
-        // METADATA HANDLING FUNCTIONS
-        // ============================================
-
-        function initMetadataHandling() {
-            $('#btnAddMetadata').click(function() {
-                addMetadataField();
-            });
-
-            $('#btnAddEditMetadata').click(function() {
-                addEditMetadataField();
-            });
-        }
-
-        function addMetadataField() {
-            metadataCounter++;
-            const html = `
-                <div class="row mb-3 metadata-row align-items-center" id="metadata-row-${metadataCounter}">
-                    <div class="col-md-5">
-                        <input type="text" class="form-control" name="metadata[${metadataCounter}][key]" 
-                            placeholder="Nama Properti" required>
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" name="metadata[${metadataCounter}][value]" 
-                            placeholder="Nilai" required>
-                    </div>
-                    <div class="col-md-1 text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
-                            onclick="removeMetadataField(${metadataCounter})" title="Hapus">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            $('#metadataContainer').append(html);
-        }
-
-        function removeMetadataField(counter) {
-            $(`#metadata-row-${counter}`).fadeOut(300, function() {
-                $(this).remove();
-            });
-        }
-
-        function addEditMetadataField(existingMeta = null) {
-            metadataCounter++;
-
-            let html = `
-                <div class="row mb-3 metadata-row align-items-center" id="edit-metadata-row-${metadataCounter}">
-                    <div class="col-md-5">
-                        <input type="text" class="form-control" name="metadata[${metadataCounter}][key]"
-                            placeholder="Nama Properti" value="${existingMeta ? existingMeta.key : ''}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" name="metadata[${metadataCounter}][value]"
-                            placeholder="Nilai" value="${existingMeta ? existingMeta.value : ''}" required>
-                    </div>
-                    <div class="col-md-1 text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle"
-                            ${existingMeta ? `onclick="deleteMetadata(${existingMeta.id}, ${metadataCounter})"`
-                                        : `onclick="removeEditMetadataField(${metadataCounter})"`}
-                            title="Hapus">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            if (existingMeta) {
-                html = html.replace(`name="metadata[${metadataCounter}][key]"`,
-                    `name="metadata[${metadataCounter}][key]" data-id="${existingMeta.id}"`);
-                html = html + `<input type="hidden" name="metadata[${metadataCounter}][id]" value="${existingMeta.id}">`;
-            }
-
-            $('#editMetadataContainer').append(html);
-        }
-
-        function removeEditMetadataField(counter) {
-            $(`#edit-metadata-row-${counter}`).fadeOut(300, function() {
-                $(this).remove();
-            });
-        }
-
-        function deleteMetadata(id, counter) {
-            deletedMetadataIds.push(id);
-            $('#metadata_delete').val(deletedMetadataIds.join(','));
-            $(`#edit-metadata-row-${counter}`).fadeOut(300, function() {
-                $(this).remove();
-            });
-        }
-
-        // ============================================
-        // DATA LOADING FUNCTIONS
-        // ============================================
-
-        function loadJenis() {
-            $.ajax({
-                url: '{{ route('dokumen.jenis') }}',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Jenis loaded:', response);
-                    let optionsUpload = '<option value="">Pilih Jenis Dokumen</option>';
-                    let optionsFilter = '<option value="">Semua Jenis</option>';
-
-                    if (Array.isArray(response) && response.length > 0) {
-                        response.forEach(jenis => {
-                            let allowedExt = jenis.allowed_ext || 'pdf,doc,docx,xls,xlsx';
-                            let maxSize = jenis.max_size_mb || 10;
-
-                            optionsUpload += `<option value="${jenis.id}"
-                                data-allowed-ext="${allowedExt}"
-                                data-max-size="${maxSize}">
-                                ${jenis.nama}
-                            </option>`;
-                            optionsFilter += `<option value="${jenis.id}">${jenis.nama}</option>`;
-                        });
-                    }
-
-                    $('#jenis_id').html(optionsUpload);
-                    $('#edit_jenis_id').html(optionsUpload);
-                    $('#filterJenis').html(optionsFilter);
-
-                    // Set default file format info
-                    if (response.length > 0) {
-                        let firstJenis = response[0];
-                        let defaultExt = firstJenis.allowed_ext || 'pdf,doc,docx,xls,xlsx';
-                        let defaultSize = firstJenis.max_size_mb || 10;
-                        let extList = defaultExt.toUpperCase().replace(/,/g, ', ');
-                        $('#fileHelp').html(`Format: ${extList} (Max: ${defaultSize}MB)`);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error loading jenis:', error);
-
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Gagal Memuat Data',
-                        text: 'Gagal memuat jenis dokumen. Silakan refresh halaman.',
-                    });
-                }
-            });
-        }
 
         // ============================================
         // DATATABLE INITIALIZATION
@@ -1655,13 +1501,9 @@
                 success: function(response) {
                     console.log('Edit data loaded:', response);
 
-                    // Reset metadata
-                    deletedMetadataIds = [];
-                    $('#metadata_delete').val('');
                     $('#edit_dokumen_id').val(response.id);
 
                     // Fill form fields
-                    $('#edit_jenis_id').val(response.jenis_id);
                     $('#edit_judul').val(response.judul);
                     $('#edit_nomor_surat').val(response.nomor_surat || '');
 
@@ -1672,19 +1514,6 @@
 
                     // Set status radio buttons
                     $(`input[name="status"][value="${response.status}"]`).prop('checked', true);
-
-                    // Load metadata
-                    $('#editMetadataContainer').empty();
-                    metadataCounter = 0;
-
-                    if (response.metadata && response.metadata.length > 0) {
-                        response.metadata.forEach(meta => {
-                            addEditMetadataField(meta);
-                        });
-                    }
-
-                    // Update file requirements based on jenis
-                    updateFileRequirements($('#edit_jenis_id'), '#edit_file', '#editFileHelp');
 
                     // Show current file info
                     if (response.files && response.files.length > 0) {
@@ -1783,20 +1612,6 @@
         // ============================================
         // UTILITY FUNCTIONS
         // ============================================
-
-        function updateFileRequirements(selectElement, fileInputId, textElementSelector) {
-            let selectedOption = selectElement.find('option:selected');
-            let allowedExt = selectedOption.data('allowed-ext') || 'pdf,doc,docx,xls,xlsx';
-            let maxSize = selectedOption.data('max-size') || 10;
-
-            // Update file input accept attribute
-            let acceptTypes = allowedExt.split(',').map(ext => '.' + ext.trim()).join(',');
-            $(fileInputId).attr('accept', acceptTypes);
-
-            // Update text info
-            let extList = allowedExt.toUpperCase().replace(/,/g, ', ');
-            $(textElementSelector).html(`Format: ${extList} (Max: ${maxSize}MB)`);
-        }
 
         function formatDate(dateString) {
             if (!dateString) return '-';

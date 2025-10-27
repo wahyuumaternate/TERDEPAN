@@ -8,15 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Table ini optional - untuk auto-generate nomor dokumen per bidang per tahun
+        // Bisa dihapus jika tidak butuh fitur penomoran otomatis
         Schema::create('doc_nomor_counter', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('jenis_id')->constrained('doc_jenis')->cascadeOnDelete();
             $table->foreignId('bidang_id')->constrained('master_bidang')->cascadeOnDelete();
             $table->integer('tahun');
             $table->integer('counter')->default(0);
             $table->timestamps();
 
-            $table->unique(['jenis_id', 'bidang_id', 'tahun']);
+            $table->unique(['bidang_id', 'tahun']);
         });
     }
 

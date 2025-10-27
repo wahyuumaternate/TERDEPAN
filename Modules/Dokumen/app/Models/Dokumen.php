@@ -6,7 +6,7 @@ namespace Modules\Dokumen\Models;
 use App\Models\MasterPegawai;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Support\Facades\Auth;
 
 class Dokumen extends Model
 {
@@ -17,7 +17,6 @@ class Dokumen extends Model
     protected $fillable = [
         'nomor',
         'folder_id',
-        'jenis_id',
         'judul',
         'deskripsi',
         'tanggal_dokumen',
@@ -26,17 +25,22 @@ class Dokumen extends Model
         'version',
         'views',
         'downloads',
-        'uploaded_by'
+        'uploaded_by',
+        'metadata', // JSON field untuk data fleksibel
+        'related_type', // Polymorphic type
+        'related_id', // Polymorphic id
+        'is_public',
     ];
 
     protected $casts = [
         'folder_id' => 'integer',
-        'jenis_id' => 'integer',
         'tanggal_dokumen' => 'date',
         'version' => 'integer',
         'views' => 'integer',
         'downloads' => 'integer',
         'uploaded_by' => 'integer',
+        'metadata' => 'array',
+        'is_public' => 'boolean',
     ];
 
     protected $appends = ['status_badge'];
@@ -47,14 +51,15 @@ class Dokumen extends Model
         return $this->belongsTo(Folder::class, 'folder_id');
     }
 
-    public function jenis()
-    {
-        return $this->belongsTo(JenisDokumen::class, 'jenis_id');
-    }
-
     public function uploader()
     {
         return $this->belongsTo(MasterPegawai::class, 'uploaded_by');
+    }
+
+    // Polymorphic relation untuk attach ke tugas, PK, dll
+    public function related()
+    {
+        return $this->morphTo();
     }
 
     public function files()
@@ -93,11 +98,6 @@ class Dokumen extends Model
     public function scopeArchived($query)
     {
         return $query->where('status', 'Archived');
-    }
-
-    public function scopeByJenis($query, $jenisId)
-    {
-        return $query->where('jenis_id', $jenisId);
     }
 
     public function scopeByFolder($query, $folderId)
@@ -194,7 +194,7 @@ class Dokumen extends Model
     public function logActivity($action, $userId = null, $ipAddress = null)
     {
         return $this->logs()->create([
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId ?? Auth::user()?->id,
             'action' => $action,
             'ip_address' => $ipAddress ?? request()->ip(),
         ]);

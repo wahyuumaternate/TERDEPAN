@@ -5,7 +5,7 @@ namespace Modules\Dokumen\Models;
 use App\Models\MasterPegawai;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Support\Facades\Auth;
 
 class Log extends Model
 {
@@ -102,7 +102,7 @@ class Log extends Model
     {
         return self::create([
             'dokumen_id' => $dokumenId,
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId ?? Auth::user()->id,
             'action' => $action,
             'ip_address' => $ipAddress ?? request()->ip(),
         ]);
@@ -156,11 +156,6 @@ class NomorCounter extends Model
     ];
 
     // Relationships
-    public function jenis()
-    {
-        return $this->belongsTo(Jenis::class, 'jenis_id');
-    }
-
     public function bidang()
     {
         return $this->belongsTo(MasterBidang::class, 'bidang_id');

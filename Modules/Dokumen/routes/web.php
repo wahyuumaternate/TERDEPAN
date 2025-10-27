@@ -2,8 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Dokumen\Http\Controllers\DocumentHistoryController;
-use Modules\Dokumen\Http\Controllers\KategoriController;
-use Modules\Dokumen\Http\Controllers\JenisController;
 use Modules\Dokumen\Http\Controllers\FolderController;
 use Modules\Dokumen\Http\Controllers\DokumenController;
 use Modules\Dokumen\Http\Controllers\FileController;
@@ -17,33 +15,6 @@ use Modules\Dokumen\Http\Controllers\TemplateController;
 */
 
 Route::middleware(['auth'])->group(function () {
-
-    // ============================================
-    // KATEGORI ROUTES - /dokumen/kategori
-    // ============================================
-    Route::prefix('dokumen/kategori')->name('dokumen.kategori.')->group(function () {
-        Route::get('/', [KategoriController::class, 'index'])->name('index');
-        Route::get('/create', [KategoriController::class, 'create'])->name('create');
-        Route::post('/', [KategoriController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [KategoriController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [KategoriController::class, 'update'])->name('update');
-        Route::get('/{id}', [KategoriController::class, 'show'])->name('show');
-        Route::delete('/{id}', [KategoriController::class, 'destroy'])->name('destroy');
-    });
-
-    // ============================================
-    // JENIS ROUTES - /dokumen/jenis
-    // ============================================
-    Route::prefix('dokumen/jenis')->name('dokumen.jenis.')->group(function () {
-        Route::get('/', [JenisController::class, 'index'])->name('index');
-        Route::get('/create', [JenisController::class, 'create'])->name('create');
-        Route::post('/', [JenisController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [JenisController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [JenisController::class, 'update'])->name('update');
-        Route::get('/{id}', [JenisController::class, 'show'])->name('show');
-        Route::delete('/{id}', [JenisController::class, 'destroy'])->name('destroy');
-    });
-
     // ============================================
     // FOLDER ROUTES - /dokumen/folder
     // ============================================
@@ -96,8 +67,6 @@ Route::middleware(['auth'])->group(function () {
     // API ROUTES - /dokumen/api/*
     // ============================================
     Route::get('/dokumen/api/folders', [DokumenController::class, 'getFolders'])->name('dokumen.folders');
-    Route::get('/dokumen/api/jenis', [DokumenController::class, 'getJenis'])->name('dokumen.jenis');
-    // Route untuk get bidang - PRIMARY
     Route::get('/dokumen/get-bidang', [DokumenController::class, 'getBidang'])->name('dokumen.get.bidang');
     Route::get('dokumen/folder/{id}/children', 'Modules\Dokumen\Http\Controllers\FolderController@getChildren')->name('dokumen.folder.children');
     // Route untuk master bidang - FALLBACK 1

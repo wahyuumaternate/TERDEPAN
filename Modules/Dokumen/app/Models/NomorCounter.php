@@ -4,6 +4,7 @@ namespace Modules\Dokumen\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\MasterBidang;
 
 class NomorCounter extends Model
 {
@@ -12,7 +13,6 @@ class NomorCounter extends Model
     protected $table = 'doc_nomor_counter';
 
     protected $fillable = [
-        'jenis_id',
         'bidang_id',
         'tahun',
         'counter'
@@ -24,13 +24,8 @@ class NomorCounter extends Model
     ];
 
     // Relations
-    public function jenis()
-    {
-        return $this->belongsTo(JenisDokumen::class, 'jenis_id');
-    }
-
     public function bidang()
     {
-        return $this->belongsTo(\App\Models\MasterBidang::class, 'bidang_id');
+        return $this->belongsTo(MasterBidang::class, 'bidang_id');
     }
 }

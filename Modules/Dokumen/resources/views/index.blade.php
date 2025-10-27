@@ -41,20 +41,14 @@
                         <!-- Filter Section -->
                         <div class="row mb-4">
                             <div class="col-md-3">
-                                <label class="form-label">Kategori</label>
-                                <select class="form-select" id="filterKategori">
-                                    <option value="">Semua Kategori</option>
-                                    <option value="1">Umum</option>
-                                    <option value="2">Bahan Tayang</option>
-                                    <option value="3">Lintas Sektor</option>
-                                    <option value="4">Data Spasial</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Jenis Dokumen</label>
-                                <select class="form-select" id="filterJenis">
-                                    <option value="">Semua Jenis</option>
-                                </select>
+                                <label class="form-label">Pencarian</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="searchDokumen"
+                                        placeholder="Cari dokumen...">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Status</label>
@@ -64,16 +58,6 @@
                                     <option value="Final">Final</option>
                                     <option value="Archived">Archived</option>
                                 </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Pencarian</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="searchDokumen"
-                                        placeholder="Cari dokumen...">
-                                    <button class="btn btn-outline-secondary" type="button">
-                                        <i class="bi bi-search"></i>
-                                    </button>
-                                </div>
                             </div>
                         </div>
 
@@ -444,7 +428,6 @@
 
             // Load initial data
             loadFolders();
-            loadJenis();
             loadDokumen();
 
             // Trigger saat modal upload dibuka
@@ -790,51 +773,6 @@
             });
         }
 
-        function loadJenis() {
-            console.log('Loading jenis dokumen...');
-            $.ajax({
-                url: '{{ route('dokumen.jenis') }}',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Jenis loaded:', response);
-                    let optionsUpload = '<option value="">Pilih Jenis</option>';
-                    let optionsFilter = '<option value="">Semua Jenis</option>';
-
-                    if (Array.isArray(response) && response.length > 0) {
-                        response.forEach(jenis => {
-                            let allowedExt = jenis.allowed_ext || 'pdf,doc,docx,xls,xlsx';
-                            let maxSize = jenis.max_size_mb || 10;
-
-                            optionsUpload += `<option value="${jenis.id}"
-                                data-allowed-ext="${allowedExt}"
-                                data-max-size="${maxSize}">
-                                ${jenis.nama}
-                            </option>`;
-                            optionsFilter += `<option value="${jenis.id}">${jenis.nama}</option>`;
-                        });
-                    }
-
-                    $('#jenis_id').html(optionsUpload);
-                    $('#edit_jenis_id').html(optionsUpload);
-                    $('#filterJenis').html(optionsFilter);
-
-                    // Set default info
-                    if (response.length > 0) {
-                        let firstJenis = response[0];
-                        let defaultExt = firstJenis.allowed_ext || 'pdf,doc,docx,xls,xlsx';
-                        let defaultSize = firstJenis.max_size_mb || 10;
-                        let extList = defaultExt.toUpperCase().replace(/,/g, ', ');
-                        $('#file + .form-text').html(`Format: ${extList} (Max: ${defaultSize}MB)`);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error loading jenis:', error);
-                    console.error('Response:', xhr.responseText);
-                }
-            });
-        }
-
         function loadDokumen() {
             console.log('Loading dokumen...');
             $.ajax({
@@ -1106,32 +1044,6 @@
                         options += `<option value="${folder.id}" ${selected}>${folder.nama}</option>`;
                     });
                     $('#edit_folder_id').html(options);
-                }
-            });
-
-            // Load jenis
-            $.ajax({
-                url: '{{ route('dokumen.jenis') }}',
-                type: 'GET',
-                dataType: 'json',
-                success: function(jenis) {
-                    let options = '<option value="">Pilih Jenis</option>';
-                    jenis.forEach(j => {
-                        let selected = j.id == dokumenData.jenis_id ? 'selected' : '';
-                        let allowedExt = j.allowed_ext || 'pdf,doc,docx,xls,xlsx';
-                        let maxSize = j.max_size_mb || 10;
-
-                        options += `<option value="${j.id}" ${selected}
-                            data-allowed-ext="${allowedExt}"
-                            data-max-size="${maxSize}">
-                            ${j.nama}
-                        </option>`;
-                    });
-                    $('#edit_jenis_id').html(options);
-
-                    if (dokumenData.jenis_id) {
-                        updateFileRequirements($('#edit_jenis_id'), '#edit_file', '#edit_file + .form-text');
-                    }
                 }
             });
         }
