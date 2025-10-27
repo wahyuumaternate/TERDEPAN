@@ -20,11 +20,6 @@ class TugasHarianController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Filter berdasarkan status validasi
-        if ($request->filled('status_validasi')) {
-            $query->where('status_validasi', $request->status_validasi);
-        }
-
         // Search
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -95,13 +90,10 @@ class TugasHarianController extends Controller
             $validated = $request->validate([
                 'nama_tugas' => 'required|string|max:500',
                 'deskripsi' => 'nullable|string',
-                'periode_type' => 'required|in:Harian,Mingguan,Bulanan,Tahunan',
                 'tanggal_mulai' => 'required|date',
                 'deadline' => 'required|date|after_or_equal:tanggal_mulai',
-                'target_penilaian' => 'nullable|numeric|min:0|max:100',
                 'target_value' => 'required|numeric|min:0',
                 'satuan' => 'required|string|max:100',
-                'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled',
             ]);
 
             $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
@@ -163,7 +155,7 @@ class TugasHarianController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled'
+            'status' => 'required|in:pending,dikerjakan,validasi,revisi,selesai'
         ]);
 
         $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);

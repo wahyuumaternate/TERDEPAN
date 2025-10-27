@@ -30,10 +30,9 @@ return new class extends Migration
 
             $table->decimal('target_value', 10, 2)->comment('Target');
             $table->string('satuan', 30)->comment('Satuan target');
-            $table->enum('status', ['Assigned', 'In_Progress', 'Completed', 'Overdue', 'Cancelled'])->default('Assigned');
+            $table->enum('status', ['pending', 'dikerjakan', 'validasi', 'revisi', 'selesai'])->default('pending');
 
             // Field validasi berjenjang
-            $table->enum('status_validasi', ['menunggu', 'divalidasi', 'revisi', 'disetujui'])->default('menunggu');
             $table->foreignId('validasi_oleh')->nullable()->constrained('master_pegawai')->comment('Yang melakukan validasi');
             $table->date('tanggal_validasi')->nullable()->comment('Tanggal validasi');
             $table->text('catatan_validasi')->nullable()->comment('Catatan validasi/revisi');
@@ -43,7 +42,6 @@ return new class extends Migration
 
             // Index untuk performa query
             $table->index(['pegawai_id', 'status']);
-            $table->index(['pegawai_id', 'status_validasi']);
             $table->index('tugas_pokok_id');
             $table->index('deadline');
             $table->index('validasi_oleh');

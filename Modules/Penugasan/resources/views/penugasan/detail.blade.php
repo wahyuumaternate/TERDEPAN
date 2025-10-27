@@ -18,7 +18,7 @@
         <div class="row mb-4">
             <div class="col-lg-12">
                 <div class="card shadow-sm border-0">
-                    <div class="card-body">
+                    <div class="card-body pt-3">
                         <div class="d-flex align-items-center">
                             <div class="avatar-circle-xl me-3">
                                 {{ strtoupper(substr($pegawai->nama, 0, 2)) }}
@@ -198,17 +198,14 @@
                                             <label class="form-label">Status</label>
                                             <select class="form-select" id="filterStatus" name="status">
                                                 <option value="">Semua Status</option>
-                                                <option value="Pending"
-                                                    {{ request()->status == 'Pending' ? 'selected' : '' }}>
+                                                <option value="pending"
+                                                    {{ request()->status == 'pending' ? 'selected' : '' }}>
                                                     Pending</option>
-                                                <option value="Diterima"
-                                                    {{ request()->status == 'Diterima' ? 'selected' : '' }}>
-                                                    Diterima</option>
-                                                <option value="Dikerjakan"
-                                                    {{ request()->status == 'Dikerjakan' ? 'selected' : '' }}>Dikerjakan
+                                                <option value="dikerjakan"
+                                                    {{ request()->status == 'dikerjakan' ? 'selected' : '' }}>Dikerjakan
                                                 </option>
-                                                <option value="Selesai"
-                                                    {{ request()->status == 'Selesai' ? 'selected' : '' }}>
+                                                <option value="selesai"
+                                                    {{ request()->status == 'selesai' ? 'selected' : '' }}>
                                                     Selesai</option>
                                             </select>
                                         </div>
@@ -292,17 +289,14 @@
                                                         <td>
                                                             @php
                                                                 $statusClass = [
-                                                                    'Pending' => 'bg-secondary',
-                                                                    'Diterima' => 'bg-info',
-                                                                    'Dikerjakan' => 'bg-warning',
-                                                                    'Selesai' => 'bg-success',
-                                                                    'Tidak_Selesai' => 'bg-danger',
-                                                                    'Divalidasi' => 'bg-primary',
+                                                                    'pending' => 'bg-secondary',
+                                                                    'dikerjakan' => 'bg-warning',
+                                                                    'selesai' => 'bg-success',
                                                                 ];
                                                             @endphp
                                                             <span
                                                                 class="badge {{ $statusClass[$tugas->status] ?? 'bg-secondary' }}">
-                                                                {{ str_replace('_', ' ', $tugas->status) }}
+                                                                {{ ucfirst($tugas->status) }}
                                                             </span>
                                                         </td>
                                                         <td>
@@ -358,12 +352,9 @@
                                         @forelse($tugasPokok as $tugas)
                                             @php
                                                 $statusClass = [
-                                                    'Pending' => 'bg-secondary',
-                                                    'Diterima' => 'bg-info',
-                                                    'Dikerjakan' => 'bg-warning',
-                                                    'Selesai' => 'bg-success',
-                                                    'Tidak_Selesai' => 'bg-danger',
-                                                    'Divalidasi' => 'bg-primary',
+                                                    'pending' => 'bg-secondary',
+                                                    'dikerjakan' => 'bg-warning',
+                                                    'selesai' => 'bg-success',
                                                 ];
                                             @endphp
                                             <div class="col-md-6 col-lg-4 mb-4">
@@ -375,7 +366,7 @@
                                                             </h6>
                                                             <span
                                                                 class="badge {{ $statusClass[$tugas->status] ?? 'bg-secondary' }}">
-                                                                {{ str_replace('_', ' ', $tugas->status) }}
+                                                                {{ ucfirst($tugas->status) }}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -466,24 +457,20 @@
                                             <thead class="table-light">
                                                 <tr>
                                                     <th class="text-center" width="50">#</th>
-                                                    <th>Nama Tugas</th>
-                                                    <th>Tugas Pokok</th>
-                                                    <th>Periode</th>
-                                                    <th>Deadline</th>
-                                                    <th>Status</th>
-                                                    <th>Bobot</th>
-                                                    <th>Target</th>
-                                                    <th>Progress</th>
-                                                    <th class="text-center" width="150">Aksi</th>
+                                                    <th width="250">Nama Tugas</th>
+                                                    <th width="200">Tugas Pokok</th>
+                                                    <th width="180">Periode</th>
+                                                    <th class="text-center" width="120">Status</th>
+                                                    <th class="text-center" width="100">Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @forelse($tugasHarian as $index => $tugas)
                                                     <tr>
-                                                        <td class="text-center">
+                                                        <td class="text-center align-middle">
                                                             {{ ($tugasHarian->currentPage() - 1) * $tugasHarian->perPage() + $index + 1 }}
                                                         </td>
-                                                        <td>
+                                                        <td class="align-middle">
                                                             <div>
                                                                 <span class="fw-semibold">{{ $tugas->nama_tugas }}</span>
                                                                 @if ($tugas->deskripsi)
@@ -493,7 +480,7 @@
                                                                 @endif
                                                             </div>
                                                         </td>
-                                                        <td>
+                                                        <td class="align-middle">
                                                             @if ($tugas->tugasPokok)
                                                                 <small class="text-primary">
                                                                     <i class="bi bi-link-45deg"></i>
@@ -503,81 +490,103 @@
                                                                 <small class="text-muted">-</small>
                                                             @endif
                                                         </td>
-                                                        <td>
+                                                        <td class="align-middle">
                                                             <small>
-                                                                <span
-                                                                    class="badge bg-info">{{ $tugas->periode_type }}</span>
-                                                            </small>
-                                                        </td>
-                                                        <td>
-                                                            <small>
-                                                                <i class="bi bi-calendar-x text-danger me-1"></i>
+                                                                <i class="bi bi-calendar-range text-info me-1"></i>
+                                                                {{ date('d/m/Y', strtotime($tugas->tanggal_mulai)) }}<br>
+                                                                <i class="bi bi-calendar-check text-success me-1"></i>
                                                                 {{ date('d/m/Y', strtotime($tugas->deadline)) }}
                                                             </small>
                                                         </td>
-                                                        <td>
+                                                        <td class="text-center align-middle">
                                                             @php
-                                                                $statusClassHarian = [
-                                                                    'Assigned' => 'bg-secondary',
-                                                                    'In_Progress' => 'bg-warning',
-                                                                    'Completed' => 'bg-success',
-                                                                    'Overdue' => 'bg-danger',
-                                                                    'Cancelled' => 'bg-dark',
+                                                                $statusClass = [
+                                                                    'pending' => 'bg-secondary',
+                                                                    'dikerjakan' => 'bg-warning',
+                                                                    'validasi' => 'bg-info',
+                                                                    'revisi' => 'bg-danger',
+                                                                    'selesai' => 'bg-success',
                                                                 ];
                                                             @endphp
                                                             <span
-                                                                class="badge {{ $statusClassHarian[$tugas->status] ?? 'bg-secondary' }}">
-                                                                {{ str_replace('_', ' ', $tugas->status) }}
+                                                                class="badge {{ $statusClass[$tugas->status] ?? 'bg-secondary' }}">
+                                                                {{ ucfirst($tugas->status) }}
                                                             </span>
                                                         </td>
-                                                        <td>
-                                                            <div class="fw-bold">
-                                                                {{ number_format($tugas->bobot_persen, 1) }}%</div>
-                                                        </td>
-                                                        <td>
-                                                            <span
-                                                                class="text-muted">{{ number_format($tugas->target_value, 0) }}
-                                                                {{ $tugas->satuan }}</span>
-                                                        </td>
-                                                        <td>
-                                                            @if ($tugas->progress->count() > 0)
-                                                                @php
-                                                                    $latestProgress = $tugas->progress->last();
-                                                                    $progressPersen =
-                                                                        $latestProgress->persentase_progress ?? 0;
-                                                                @endphp
-                                                                <div class="progress mb-1" style="height: 8px;">
-                                                                    <div class="progress-bar bg-success"
-                                                                        role="progressbar"
-                                                                        style="width: {{ $progressPersen }}%"
-                                                                        aria-valuenow="{{ $progressPersen }}"
-                                                                        aria-valuemin="0" aria-valuemax="100">
-                                                                    </div>
-                                                                </div>
-                                                                <small
-                                                                    class="text-muted">{{ number_format($progressPersen, 1) }}%</small>
-                                                            @else
-                                                                <span class="text-muted">Belum ada progress</span>
-                                                            @endif
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <div class="btn-group btn-group-sm">
-                                                                <button type="button"
-                                                                    onclick="editTugasHarian({{ $tugas->id }})"
-                                                                    class="btn btn-outline-warning" title="Edit">
-                                                                    <i class="bi bi-pencil-square"></i>
+                                                        <td class="text-center align-middle">
+                                                            <div class="dropdown">
+                                                                <button
+                                                                    class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                                    type="button" data-bs-toggle="dropdown"
+                                                                    aria-expanded="false">
+                                                                    <i class="bi bi-gear"></i>
                                                                 </button>
-                                                                <button type="button"
-                                                                    onclick="deleteTugasHarian({{ $tugas->id }}, '{{ $tugas->nama_tugas }}')"
-                                                                    class="btn btn-outline-danger" title="Hapus">
-                                                                    <i class="bi bi-trash"></i>
-                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                                    <!-- Validasi -->
+                                                                    <li>
+                                                                        <a href="javascript:void(0)"
+                                                                            onclick="validasiTugas({{ $tugas->id }}, 'tugas_harian')"
+                                                                            class="dropdown-item {{ $tugas->status === 'selesai' ? 'disabled' : '' }}">
+                                                                            <i
+                                                                                class="bi bi-check-circle text-success me-2"></i>
+                                                                            Validasi
+                                                                        </a>
+                                                                    </li>
+
+                                                                    <!-- Kerjakan (jika status pending) atau Upload Bukti (jika status dikerjakan) -->
+                                                                    @if ($tugas->status === 'pending')
+                                                                        <li>
+                                                                            <a href="javascript:void(0)"
+                                                                                onclick="kerjakanTugas({{ $tugas->id }})"
+                                                                                class="dropdown-item">
+                                                                                <i
+                                                                                    class="bi bi-play-circle text-info me-2"></i>
+                                                                                Kerjakan
+                                                                            </a>
+                                                                        </li>
+                                                                    @elseif($tugas->status === 'dikerjakan')
+                                                                        <li>
+                                                                            <a href="javascript:void(0)"
+                                                                                onclick="uploadBukti({{ $tugas->id }})"
+                                                                                class="dropdown-item">
+                                                                                <i
+                                                                                    class="bi bi-cloud-upload text-primary me-2"></i>
+                                                                                Upload Bukti
+                                                                            </a>
+                                                                        </li>
+                                                                    @endif
+
+                                                                    <li>
+                                                                        <hr class="dropdown-divider">
+                                                                    </li>
+
+                                                                    <!-- Edit -->
+                                                                    <li>
+                                                                        <a href="javascript:void(0)"
+                                                                            onclick="editTugasHarian({{ $tugas->id }})"
+                                                                            class="dropdown-item">
+                                                                            <i
+                                                                                class="bi bi-pencil-square text-warning me-2"></i>
+                                                                            Edit
+                                                                        </a>
+                                                                    </li>
+
+                                                                    <!-- Hapus -->
+                                                                    <li>
+                                                                        <a href="javascript:void(0)"
+                                                                            onclick="deleteTugasHarian({{ $tugas->id }}, '{{ $tugas->nama_tugas }}')"
+                                                                            class="dropdown-item">
+                                                                            <i class="bi bi-trash text-danger me-2"></i>
+                                                                            Hapus
+                                                                        </a>
+                                                                    </li>
+                                                                </ul>
                                                             </div>
                                                         </td>
                                                     </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="10" class="text-center py-5">
+                                                        <td colspan="6" class="text-center py-5">
                                                             <i class="bi bi-inbox"
                                                                 style="font-size: 3rem; color: #ccc;"></i>
                                                             <p class="text-muted mt-2">Belum ada tugas harian</p>
@@ -741,12 +750,9 @@
                         <div class="mb-3">
                             <label for="status" class="form-label">Status Tugas</label>
                             <select class="form-select" id="status" name="status" required>
-                                <option value="Pending">Pending</option>
-                                <option value="Diterima">Diterima</option>
-                                <option value="Dikerjakan">Dikerjakan</option>
-                                <option value="Selesai">Selesai</option>
-                                <option value="Tidak_Selesai">Tidak Selesai</option>
-                                <option value="Divalidasi">Divalidasi</option>
+                                <option value="pending">Pending</option>
+                                <option value="dikerjakan">Dikerjakan</option>
+                                <option value="selesai">Selesai</option>
                             </select>
                         </div>
                     </form>
@@ -966,11 +972,11 @@
                         <div class="mb-3">
                             <label for="status_harian" class="form-label">Status Tugas</label>
                             <select class="form-select" id="status_harian" name="status" required>
-                                <option value="Assigned">Assigned</option>
-                                <option value="In_Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Overdue">Overdue</option>
-                                <option value="Cancelled">Cancelled</option>
+                                <option value="pending">Pending</option>
+                                <option value="dikerjakan">Dikerjakan</option>
+                                <option value="validasi">Validasi</option>
+                                <option value="revisi">Revisi</option>
+                                <option value="selesai">Selesai</option>
                             </select>
                         </div>
                     </form>
@@ -1022,29 +1028,6 @@
                                 placeholder="Jelaskan detail tugas..."></textarea>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="edit_periode_type" class="form-label">Periode <span
-                                        class="text-danger">*</span></label>
-                                <select class="form-select" id="edit_periode_type" name="periode_type" required>
-                                    <option value="Harian">Harian</option>
-                                    <option value="Mingguan">Mingguan</option>
-                                    <option value="Bulanan">Bulanan</option>
-                                    <option value="Tahunan">Tahunan</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="edit_status" class="form-label">Status <span
-                                        class="text-danger">*</span></label>
-                                <select class="form-select" id="edit_status" name="status" required>
-                                    <option value="Assigned">Assigned</option>
-                                    <option value="In_Progress">In Progress</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Overdue">Overdue</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -1061,22 +1044,18 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="edit_bobot_persen" class="form-label">Bobot (%)</label>
-                                <input type="number" class="form-control" id="edit_bobot_persen" name="bobot_persen"
-                                    placeholder="0" min="0" max="100" step="0.1">
-                            </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="edit_target_value" class="form-label">Target <span
                                         class="text-danger">*</span></label>
                                 <input type="number" class="form-control" id="edit_target_value" name="target_value"
                                     placeholder="1" min="1" required>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="edit_satuan" class="form-label">Satuan <span
                                         class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="edit_satuan" name="satuan"
-                                    placeholder="Dokumen, Laporan, dll" required>
+                                    placeholder="Dokumen, Laporan, dll" required readonly>
+                                <small class="text-muted">Satuan mengikuti tugas pokok yang dipilih</small>
                             </div>
                         </div>
                     </form>
@@ -1142,6 +1121,21 @@
 
         #tugasTable tbody tr:hover {
             background-color: rgba(0, 123, 255, 0.03);
+        }
+
+        /* Fix dropdown menu overflow */
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        .table-responsive table {
+            overflow: visible !important;
+        }
+
+        /* Ensure dropdown shows properly */
+        .dropdown-menu {
+            position: absolute !important;
+            z-index: 1050;
         }
 
         /* Avatar Styles */
@@ -1628,11 +1622,8 @@
                     $('#edit_tugas_pokok').val(response.tugas_pokok ? response.tugas_pokok.nama_tugas : '-');
                     $('#edit_nama_tugas').val(response.nama_tugas);
                     $('#edit_deskripsi').val(response.deskripsi);
-                    $('#edit_periode_type').val(response.periode_type);
-                    $('#edit_status').val(response.status);
                     $('#edit_tanggal_mulai').val(response.tanggal_mulai);
                     $('#edit_deadline').val(response.deadline);
-                    $('#edit_bobot_persen').val(response.bobot_persen);
                     $('#edit_target_value').val(response.target_value);
                     $('#edit_satuan').val(response.satuan);
 
@@ -1657,11 +1648,8 @@
                 _method: 'PUT',
                 nama_tugas: $('#edit_nama_tugas').val(),
                 deskripsi: $('#edit_deskripsi').val(),
-                periode_type: $('#edit_periode_type').val(),
-                status: $('#edit_status').val(),
                 tanggal_mulai: $('#edit_tanggal_mulai').val(),
                 deadline: $('#edit_deadline').val(),
-                bobot_persen: $('#edit_bobot_persen').val(),
                 target_value: $('#edit_target_value').val(),
                 satuan: $('#edit_satuan').val()
             };
@@ -1767,6 +1755,222 @@
                         },
                         error: function(xhr) {
                             let errorMessage = 'Terjadi kesalahan saat menghapus tugas';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: errorMessage
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Function to validasi tugas
+        function validasiTugas(tugasId, jenisTugas) {
+            Swal.fire({
+                title: 'Validasi Tugas',
+                html: `
+                    <div class="mb-3">
+                        <label class="form-label">Status Validasi</label>
+                        <select class="form-select" id="status_validasi_input">
+                            <option value="divalidasi">Divalidasi</option>
+                            <option value="revisi">Perlu Revisi</option>
+                            <option value="disetujui">Disetujui</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Catatan Validasi (opsional)</label>
+                        <textarea class="form-control" id="catatan_validasi_input" rows="3" placeholder="Tulis catatan..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Penilaian (0-100)</label>
+                        <input type="number" class="form-control" id="penilaian_input" min="0" max="100" placeholder="Masukkan nilai">
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Simpan Validasi',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const statusValidasi = document.getElementById('status_validasi_input').value;
+                    const catatanValidasi = document.getElementById('catatan_validasi_input').value;
+                    const penilaian = document.getElementById('penilaian_input').value;
+
+                    if (!statusValidasi) {
+                        Swal.showValidationMessage('Status validasi harus dipilih');
+                        return false;
+                    }
+
+                    return {
+                        statusValidasi,
+                        catatanValidasi,
+                        penilaian
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ route('penugasan.validasi-tugas', '') }}/" + tugasId,
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            jenis_tugas: jenisTugas,
+                            status_validasi: result.value.statusValidasi,
+                            catatan_validasi: result.value.catatanValidasi,
+                            penilaian: result.value.penilaian
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: 'Validasi berhasil disimpan',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Terjadi kesalahan saat validasi';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: errorMessage
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Function to start working on a task (change status from pending to dikerjakan)
+        function kerjakanTugas(tugasId) {
+            Swal.fire({
+                title: 'Mulai Mengerjakan Tugas?',
+                text: 'Apakah Anda yakin ingin mulai mengerjakan tugas ini? Status akan diubah menjadi "Dikerjakan"',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Kerjakan!',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#0dcaf0',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ url('penugasan/tugas-harian') }}/" + tugasId + "/update-status",
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            status: 'dikerjakan'
+                        },
+                        beforeSend: function() {
+                            Swal.fire({
+                                title: 'Memproses...',
+                                text: 'Sedang mengubah status tugas',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: 'Status tugas berhasil diubah menjadi "Dikerjakan". Anda sekarang dapat mengupload bukti pengerjaan.',
+                                confirmButtonText: 'OK',
+                                timer: 3000
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: xhr.responseJSON?.message ||
+                                    'Terjadi kesalahan saat mengubah status tugas',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Function to upload bukti
+        function uploadBukti(tugasId) {
+            Swal.fire({
+                title: 'Upload Bukti Pengerjaan',
+                html: `
+                    <div class="mb-3">
+                        <label class="form-label">File Bukti</label>
+                        <input type="file" class="form-control" id="file_bukti_input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                        <small class="text-muted">Format: PDF, JPG, PNG, DOC, DOCX (Max: 5MB)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Keterangan</label>
+                        <textarea class="form-control" id="keterangan_bukti_input" rows="3" placeholder="Jelaskan bukti yang diupload..."></textarea>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Upload',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const file = document.getElementById('file_bukti_input').files[0];
+                    const keterangan = document.getElementById('keterangan_bukti_input').value;
+
+                    if (!file) {
+                        Swal.showValidationMessage('File bukti harus dipilih');
+                        return false;
+                    }
+
+                    if (file.size > 5 * 1024 * 1024) {
+                        Swal.showValidationMessage('Ukuran file maksimal 5MB');
+                        return false;
+                    }
+
+                    return {
+                        file,
+                        keterangan
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData();
+                    formData.append('_token', '{{ csrf_token() }}');
+                    formData.append('tugas_id', tugasId);
+                    formData.append('file_bukti', result.value.file);
+                    formData.append('keterangan', result.value.keterangan);
+
+                    $.ajax({
+                        url: "{{ url('penugasan/upload-bukti') }}",
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: 'Bukti berhasil diupload',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Terjadi kesalahan saat upload';
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 errorMessage = xhr.responseJSON.message;
                             }

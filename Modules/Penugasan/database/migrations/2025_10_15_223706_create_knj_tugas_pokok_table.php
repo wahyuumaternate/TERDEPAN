@@ -25,7 +25,7 @@ return new class extends Migration
 
             $table->decimal('target_value', 10, 2)->comment('Target yang harus dicapai');
             $table->string('satuan', 30)->comment('Satuan target');
-            $table->enum('status', ['Pending', 'Diterima', 'Dikerjakan', 'Selesai', 'Tidak_Selesai', 'Divalidasi'])->default('Pending');
+            $table->enum('status', ['pending', 'dikerjakan', 'selesai'])->default('pending');
             $table->decimal('progress_persen', 5, 2)->default(0)->comment('Progress 0-100%, auto-calc');
 
             $table->timestamp('diterima_at')->nullable()->comment('Waktu pegawai terima');

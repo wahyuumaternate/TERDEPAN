@@ -43,19 +43,19 @@ class TugasPokokController extends Controller
                 // Keep these for backward compatibility
                 'tugasPokok as pending_tugas' => function ($q) use ($tahun) {
                     $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                        ->where('status', 'Pending');
+                        ->where('status', 'pending');
                 },
                 'tugasPokok as diterima_tugas' => function ($q) use ($tahun) {
                     $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                        ->where('status', 'Diterima');
+                        ->where('status', 'diterima');
                 },
                 'tugasPokok as dikerjakan_tugas' => function ($q) use ($tahun) {
                     $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                        ->where('status', 'Dikerjakan');
+                        ->where('status', 'dikerjakan');
                 },
                 'tugasPokok as selesai_tugas' => function ($q) use ($tahun) {
                     $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                        ->where('status', 'Selesai');
+                        ->where('status', 'selesai');
                 }
             ]);
 
@@ -127,11 +127,11 @@ class TugasPokokController extends Controller
                 })->count(),
             'total_tugas' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])->count(),
             'pending' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                ->where('status', 'Pending')->count(),
+                ->where('status', 'pending')->count(),
             'dikerjakan' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                ->where('status', 'Dikerjakan')->count(),
+                ->where('status', 'dikerjakan')->count(),
             'selesai' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                ->where('status', 'Selesai')->count(),
+                ->where('status', 'selesai')->count(),
         ];
 
         return view('penugasan::penugasan.daftar', compact(
@@ -212,13 +212,13 @@ class TugasPokokController extends Controller
                 ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])->count(),
             'pending' => TugasPokok::where('pegawai_id', $id)
                 ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                ->where('status', 'Pending')->count(),
+                ->where('status', 'pending')->count(),
             'dikerjakan' => TugasPokok::where('pegawai_id', $id)
                 ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                ->where('status', 'Dikerjakan')->count(),
+                ->where('status', 'dikerjakan')->count(),
             'selesai' => TugasPokok::where('pegawai_id', $id)
                 ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                ->where('status', 'Selesai')->count(),
+                ->where('status', 'selesai')->count(),
             'total_bobot' => TugasPokok::where('pegawai_id', $id)
                 ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
                 ->sum('bobot_persen'),
@@ -335,7 +335,7 @@ class TugasPokokController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:Pending,Diterima,Dikerjakan,Selesai'
+            'status' => 'required|in:pending,dikerjakan,selesai'
         ]);
 
         $tugasPokok = TugasPokok::findOrFail($id);

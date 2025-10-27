@@ -28,23 +28,33 @@ class TugasHarian extends Model
         'periode_type',
         'tanggal_mulai',
         'deadline',
-        'bobot_persen',
+        'target_penilaian',
+        'penilaian',
+        'nilai_akhir',
+        'tanggal_penilaian',
         'target_value',
         'satuan',
         'status',
+        'validasi_oleh',
+        'tanggal_validasi',
+        'catatan_validasi',
         'dokumen_lampiran_id',
     ];
 
     protected $casts = [
         'tanggal_mulai' => 'date',
         'deadline' => 'date',
-        'bobot_persen' => 'decimal:2',
+        'tanggal_penilaian' => 'date',
+        'tanggal_validasi' => 'date',
+        'target_penilaian' => 'decimal:2',
+        'penilaian' => 'decimal:2',
+        'nilai_akhir' => 'decimal:2',
         'target_value' => 'decimal:2',
     ];
 
     protected $attributes = [
         'periode_type' => 'Harian',
-        'status' => 'Assigned',
+        'status' => 'pending',
     ];
 
     // Relationships
@@ -61,6 +71,11 @@ class TugasHarian extends Model
     public function pemberiTugas(): BelongsTo
     {
         return $this->belongsTo(\App\Models\MasterPegawai::class, 'pemberi_tugas_id');
+    }
+
+    public function validasiOleh(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MasterPegawai::class, 'validasi_oleh');
     }
 
     public function dokumenLampiran(): BelongsTo
@@ -86,7 +101,7 @@ class TugasHarian extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $query->whereIn('status', ['Assigned', 'In_Progress']);
+        return $query->whereIn('status', ['pending', 'dikerjakan']);
     }
 
     public function scopeByPegawai($query, $pegawaiId)

@@ -117,8 +117,7 @@ class PenugasanController extends Controller
                     'target_penilaian' => $validated['target_penilaian'] ?? null,
                     'target_value' => $validated['target_value'],
                     'satuan' => $validated['satuan'],
-                    'status' => 'Assigned',
-                    'status_validasi' => 'menunggu', // Tambahan
+                    'status' => 'pending', // Sesuai dengan enum di migrasi
                 ]);
 
                 $message = 'Tugas harian berhasil diberikan kepada pegawai';
@@ -132,11 +131,7 @@ class PenugasanController extends Controller
                     'tanggal_mulai' => $validated['tanggal_mulai'],
                     'deadline' => $validated['deadline'],
                     'target_penilaian' => $validated['target_penilaian'] ?? null,
-                    'target_value' => $validated['target_value'],
-                    'satuan' => $validated['satuan'],
-                    'status' => 'Assigned',
-                    'status_validasi' => 'menunggu', // Tambahan
-                    'prioritas' => 'Normal',
+                    'status' => 'pending', // Sesuai dengan enum di migrasi
                 ]);
 
                 $message = 'Tugas tambahan berhasil diberikan kepada pegawai';
@@ -165,7 +160,6 @@ class PenugasanController extends Controller
     {
         $validated = $request->validate([
             'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-            'status_validasi' => 'required|in:divalidasi,revisi,disetujui',
             'catatan_validasi' => 'nullable|string',
             'penilaian' => 'nullable|numeric|min:0|max:100',
         ]);
@@ -184,11 +178,11 @@ class PenugasanController extends Controller
             }
 
             $tugas->update([
-                'status_validasi' => $validated['status_validasi'],
                 'validasi_oleh' => Auth::id(),
                 'tanggal_validasi' => now(),
                 'catatan_validasi' => $validated['catatan_validasi'],
                 'penilaian' => $validated['penilaian'] ?? null,
+                'status' => 'validasi', // Update status menjadi validasi
             ]);
 
             DB::commit();

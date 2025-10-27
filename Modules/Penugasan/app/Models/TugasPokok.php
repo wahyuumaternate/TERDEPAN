@@ -50,24 +50,18 @@ class TugasPokok extends Model
     ];
 
     protected $attributes = [
-        'status' => 'Pending',
+        'status' => 'pending',
         'progress_persen' => 0,
     ];
 
     // Status constants (sama dengan migrasi)
-    public const STATUS_PENDING = 'Pending';
-    public const STATUS_DITERIMA = 'Diterima';
-    public const STATUS_DIKERJAKAN = 'Dikerjakan';
-    public const STATUS_SELESAI = 'Selesai';
-    public const STATUS_TIDAK_SELESAI = 'Tidak_Selesai';
-    public const STATUS_DIVALIDASI = 'Divalidasi';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_DIKERJAKAN = 'dikerjakan';
+    public const STATUS_SELESAI = 'selesai';
     public const STATUSES = [
         self::STATUS_PENDING,
-        self::STATUS_DITERIMA,
         self::STATUS_DIKERJAKAN,
         self::STATUS_SELESAI,
-        self::STATUS_TIDAK_SELESAI,
-        self::STATUS_DIVALIDASI,
     ];
 
     // Relationships
@@ -119,7 +113,7 @@ class TugasPokok extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $query->whereIn('status', ['Diterima', 'Dikerjakan']);
+        return $query->whereIn('status', ['pending', 'dikerjakan']);
     }
 
     public function scopeByPegawai($query, $pegawaiId)
