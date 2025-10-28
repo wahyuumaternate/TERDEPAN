@@ -81,11 +81,11 @@
                             <div class="btn-group shadow-sm" role="group">
                                 <input type="radio" class="btn-check" name="viewMode" id="viewGrid" checked>
                                 <label class="btn btn-outline-primary px-4" for="viewGrid">
-                                    <i class="bi bi-grid-3x3-gap me-2"></i>Grid View
+                                    <i class="bi bi-grid-3x3-gap me-2"></i>Grid
                                 </label>
                                 <input type="radio" class="btn-check" name="viewMode" id="viewTable">
                                 <label class="btn btn-outline-primary px-4" for="viewTable">
-                                    <i class="bi bi-table me-2"></i>Table View
+                                    <i class="bi bi-table me-2"></i>Tabel
                                 </label>
                             </div>
                         </div>

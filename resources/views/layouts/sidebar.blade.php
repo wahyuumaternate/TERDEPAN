@@ -468,25 +468,6 @@
              </ul>
          </li><!-- End Delegasi & Workload Nav -->
 
-         <!-- Notifikasi Nav -->
-         <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#notif-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-bell"></i><span>Notifikasi</span><i class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="notif-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ url('notifikasi') }}">
-                         <i class="bi bi-circle"></i><span>Daftar Notifikasi</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('notifikasi/preferensi') }}">
-                         <i class="bi bi-circle"></i><span>Preferensi Notifikasi</span>
-                     </a>
-                 </li>
-             </ul>
-         </li><!-- End Notifikasi Nav -->
-
          <!-- Master Data -->
          <li class="nav-heading">Master Data</li>
 
