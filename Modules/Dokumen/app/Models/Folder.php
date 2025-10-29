@@ -9,9 +9,6 @@ class Folder extends Model
 {
     protected $table = 'doc_folder';
 
-    // Sesuai ERD - tidak ada timestamps updated_at
-    public $timestamps = false;
-
     protected $fillable = [
         'parent_id',
         'bidang_id',

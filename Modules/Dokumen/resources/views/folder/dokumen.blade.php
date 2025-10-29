@@ -16,92 +16,10 @@
     <section class="section">
         <div class="row">
             <div class="col-lg-12">
-                <!-- Folder Info Card -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div class="d-flex align-items-center">
-                                <div class="icon-box bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="bi bi-folder-fill text-primary" style="font-size: 2rem;"></i>
-                                </div>
-                                <div>
-                                    <h3 class="fw-bold mb-0">{{ $folder->nama }}</h3>
-                                    <p class="text-muted mb-0">
-                                        <code class="fs-6">{{ $folder->path }}</code>
-                                        @if ($folder->is_auto)
-                                            <span class="badge bg-success ms-2">
-                                                <i class="bi bi-gear-fill me-1"></i>Auto Generated
-                                            </span>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                            <div>
-                                <a href="{{ route('dokumen.folder.index') }}" class="btn btn-outline-secondary me-2">
-                                    <i class="bi bi-arrow-left me-1"></i>Kembali
-                                </a>
-                                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal"
-                                    data-bs-target="#modalUploadDokumen">
-                                    <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100 bg-info bg-opacity-10">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="icon-box bg-info text-white rounded-circle p-3 me-3">
-                                            <i class="bi bi-diagram-3"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="text-muted mb-1">Level</h6>
-                                            <h5 class="fw-bold mb-0">{{ $folder->level }}</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100 bg-success bg-opacity-10">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="icon-box bg-success text-white rounded-circle p-3 me-3">
-                                            <i class="bi bi-building"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="text-muted mb-1">Bidang</h6>
-                                            <h5 class="fw-bold mb-0">{{ $folder->bidang->nama ?? 'Tidak ada' }}</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-10">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="icon-box bg-warning text-white rounded-circle p-3 me-3">
-                                            <i class="bi bi-folder2-open"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="text-muted mb-1">Tipe Folder</h6>
-                                            <h5 class="fw-bold mb-0">{{ $folder->is_auto ? 'Otomatis' : 'Manual' }}</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card border-0 shadow-sm h-100 bg-primary bg-opacity-10">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="icon-box bg-primary text-white rounded-circle p-3 me-3">
-                                            <i class="bi bi-file-earmark-text"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="text-muted mb-1">Total Dokumen</h6>
-                                            <h5 class="fw-bold mb-0">{{ count($dokumen) }}</h5>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="mb-3">
+                    <a href="{{ route('dokumen.folder.index') }}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>Kembali
+                    </a>
                 </div>
 
                 <!-- Dokumen Section -->
@@ -122,9 +40,13 @@
                                 </h5>
                             </div>
                             <div>
-                                <!-- Filter Button -->
-                                <button type="button" class="btn btn-outline-secondary" id="toggleFilter">
-                                    <i class="bi bi-funnel-fill me-1"></i> Filter
+                                <button type="button" class="btn btn-success shadow-sm me-2" data-bs-toggle="modal"
+                                    data-bs-target="#modalTambahFolder">
+                                    <i class="bi bi-folder-plus me-2"></i>Folder Baru
+                                </button>
+                                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalUploadDokumen">
+                                    <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
                                 </button>
                             </div>
                         </div>
@@ -167,180 +89,63 @@
                         <!-- View Toggle -->
                         <div class="mb-3">
                             <div class="btn-group shadow-sm" role="group">
-                                <input type="radio" class="btn-check" name="viewMode" id="viewTable" checked>
-                                <label class="btn btn-outline-primary px-4" for="viewTable">
-                                    <i class="bi bi-table me-2"></i>Table View
-                                </label>
-                                <input type="radio" class="btn-check" name="viewMode" id="viewGrid">
+                                <input type="radio" class="btn-check" name="viewMode" id="viewGrid" checked>
                                 <label class="btn btn-outline-primary px-4" for="viewGrid">
                                     <i class="bi bi-grid-3x3-gap me-2"></i>Grid View
+                                </label>
+                                <input type="radio" class="btn-check" name="viewMode" id="viewTable">
+                                <label class="btn btn-outline-primary px-4" for="viewTable">
+                                    <i class="bi bi-table me-2"></i>Table View
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Table View -->
-                        <div id="tableView">
-                            @if (count($dokumen) > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle" id="dokumenTable">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th scope="col" width="50">#</th>
-                                                <th scope="col">Nomor</th>
-                                                <th scope="col">Dokumen</th>
-                                                <th scope="col">Tanggal</th>
-                                                <th scope="col">Status</th>
-                                                <th scope="col" width="140">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($dokumen as $index => $item)
-                                                <tr>
-                                                    <td>{{ $index + 1 }}</td>
-                                                    <td><small class="text-muted">{{ $item->nomor ?? '-' }}</small></td>
-                                                    <td>
-                                                        @php
-                                                            $fileIcon = '';
-                                                            if ($item->files && count($item->files) > 0) {
-                                                                $extension = $item->files[0]->extension ?? 'pdf';
-                                                                if ($extension == 'pdf') {
-                                                                    $fileIcon =
-                                                                        'bi bi-file-earmark-pdf-fill text-danger';
-                                                                } elseif (in_array($extension, ['doc', 'docx'])) {
-                                                                    $fileIcon =
-                                                                        'bi bi-file-earmark-word-fill text-primary';
-                                                                } elseif (in_array($extension, ['xls', 'xlsx'])) {
-                                                                    $fileIcon =
-                                                                        'bi bi-file-earmark-excel-fill text-success';
-                                                                } else {
-                                                                    $fileIcon = 'bi bi-file-earmark-text';
-                                                                }
-                                                            } else {
-                                                                $fileIcon = 'bi bi-file-earmark-text';
-                                                            }
-                                                        @endphp
-                                                        <div class="d-flex align-items-center">
-                                                            <div class="icon-box rounded-3 p-2 me-2 bg-light">
-                                                                <i class="{{ $fileIcon }}"
-                                                                    style="font-size: 1.5rem;"></i>
-                                                            </div>
-                                                            <div>
-                                                                <h6 class="mb-0">
-                                                                    <a href="#"
-                                                                        onclick="showDetail({{ $item->id }}); return false;"
-                                                                        class="text-decoration-none">
-                                                                        {{ $item->judul }}
-                                                                    </a>
-                                                                </h6>
-                                                                @if ($item->nomor_surat)
-                                                                    <small class="text-muted d-block">No. Surat:
-                                                                        {{ $item->nomor_surat }}</small>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>{{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
-                                                    </td>
-                                                    <td>
-                                                        @php
-                                                            $statusClass = 'bg-secondary';
-                                                            $statusIcon = 'bi-clock';
-                                                            if ($item->status === 'Final') {
-                                                                $statusClass = 'bg-success';
-                                                                $statusIcon = 'bi-check-circle';
-                                                            } elseif ($item->status === 'Draft') {
-                                                                $statusClass = 'bg-warning text-dark';
-                                                                $statusIcon = 'bi-pencil';
-                                                            } elseif ($item->status === 'Archived') {
-                                                                $statusClass = 'bg-secondary';
-                                                                $statusIcon = 'bi-archive';
-                                                            }
-                                                        @endphp
-                                                        <span class="badge {{ $statusClass }} rounded-pill px-3 py-2">
-                                                            <i
-                                                                class="bi {{ $statusIcon }} me-1"></i>{{ $item->status }}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group" role="group">
-                                                            <button type="button" class="btn btn-primary btn-sm"
-                                                                onclick="showDetail({{ $item->id }})" title="Detail">
-                                                                <i class="bi bi-eye"></i>
-                                                            </button>
-                                                            <a href="{{ route('dokumen.download', $item->id) }}"
-                                                                class="btn btn-success btn-sm" title="Download">
-                                                                <i class="bi bi-download"></i>
-                                                            </a>
-                                                            <button type="button" class="btn btn-warning btn-sm"
-                                                                onclick="editDokumen({{ $item->id }})"
-                                                                title="Edit">
-                                                                <i class="bi bi-pencil"></i>
-                                                            </button>
-                                                            <button type="button" class="btn btn-danger btn-sm"
-                                                                onclick="deleteDokumen({{ $item->id }})"
-                                                                title="Hapus">
-                                                                <i class="bi bi-trash"></i>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            @else
-                                <div class="text-center py-5">
-                                    <div class="empty-state">
-                                        <i class="bi bi-folder-x" style="font-size: 5rem; color: #e0e0e0;"></i>
-                                        <h4 class="mt-3">Belum Ada Dokumen</h4>
-                                        <p class="text-muted mb-4">Folder ini belum memiliki dokumen.</p>
-                                        <button type="button" class="btn btn-primary px-4 py-2" data-bs-toggle="modal"
-                                            data-bs-target="#modalUploadDokumen">
-                                            <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen Sekarang
-                                        </button>
-                                    </div>
-                                </div>
-                            @endif
+                        <!-- Subfolders Section (Grid View) -->
+                        <div id="subfoldersSection" style="display: none;">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderCount">0</span>)
+                            </h6>
+                            <div class="row g-3 mb-4" id="subfoldersGrid"></div>
+                            <hr class="my-4">
                         </div>
 
                         <!-- Grid View -->
-                        <div id="gridView" style="display: none;">
+                        <div id="gridView">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-file-earmark-text me-2"></i>Dokumen (<span
+                                    id="documentCount">{{ count($dokumen) }}</span>)
+                            </h6>
                             @if (count($dokumen) > 0)
-                                <div class="row g-3">
+                                <div class="row g-3" id="dokumenGrid">
                                     @foreach ($dokumen as $item)
                                         @php
-                                            $fileIcon = 'bi-file-earmark-text';
-                                            $fileIconColor = '#5f6368';
-                                            if ($item->files && count($item->files) > 0) {
-                                                $extension = $item->files[0]->extension ?? 'pdf';
-                                                if ($extension == 'pdf') {
-                                                    $fileIcon = 'bi-file-earmark-pdf-fill';
-                                                    $fileIconColor = '#dc3545';
-                                                } elseif (in_array($extension, ['doc', 'docx'])) {
-                                                    $fileIcon = 'bi-file-earmark-word-fill';
-                                                    $fileIconColor = '#2b579a';
-                                                } elseif (in_array($extension, ['xls', 'xlsx'])) {
-                                                    $fileIcon = 'bi-file-earmark-excel-fill';
-                                                    $fileIconColor = '#1d6f42';
-                                                } elseif (in_array($extension, ['ppt', 'pptx'])) {
-                                                    $fileIcon = 'bi-file-earmark-ppt-fill';
-                                                    $fileIconColor = '#d24726';
-                                                }
-                                            }
+                                            $currentFile =
+                                                $item->files->where('is_current', true)->first() ??
+                                                $item->files->first();
+                                            $extension = $currentFile->extension ?? 'pdf';
 
-                                            $statusClass = 'bg-secondary';
-                                            if ($item->status === 'Final') {
-                                                $statusClass = 'bg-success';
-                                            } elseif ($item->status === 'Draft') {
-                                                $statusClass = 'bg-warning text-dark';
+                                            $fileIcon = 'bi-file-earmark-text-fill';
+                                            $iconColor = '#6c757d';
+
+                                            if ($extension === 'pdf') {
+                                                $fileIcon = 'bi-file-earmark-pdf-fill';
+                                                $iconColor = '#dc3545';
+                                            } elseif (in_array($extension, ['doc', 'docx'])) {
+                                                $fileIcon = 'bi-file-earmark-word-fill';
+                                                $iconColor = '#0d6efd';
+                                            } elseif (in_array($extension, ['xls', 'xlsx'])) {
+                                                $fileIcon = 'bi-file-earmark-excel-fill';
+                                                $iconColor = '#198754';
+                                            } elseif (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
+                                                $fileIcon = 'bi-file-earmark-image-fill';
+                                                $iconColor = '#fd7e14';
                                             }
                                         @endphp
-
-                                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                                             <div class="gdrive-card" onclick="showDetail({{ $item->id }})">
                                                 <div class="gdrive-card-preview">
                                                     <i class="bi {{ $fileIcon }}"
-                                                        style="color: {{ $fileIconColor }};"></i>
+                                                        style="color: {{ $iconColor }}"></i>
                                                 </div>
                                                 <div class="gdrive-card-body">
                                                     <div class="gdrive-card-title" title="{{ $item->judul }}">
@@ -348,29 +153,27 @@
                                                     </div>
                                                     <div class="gdrive-card-meta">
                                                         <small class="text-muted">
-                                                            {{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
+                                                            {{ $currentFile ? number_format($currentFile->ukuran_kb, 0) . ' KB' : '-' }}
                                                         </small>
-                                                        <span
-                                                            class="badge {{ $statusClass }} badge-sm">{{ $item->status }}</span>
                                                     </div>
                                                 </div>
                                                 <div class="gdrive-card-actions">
-                                                    <button type="button" class="btn btn-sm btn-link text-secondary p-1"
+                                                    <button class="btn btn-sm btn-link"
                                                         onclick="event.stopPropagation(); showDetail({{ $item->id }})"
                                                         title="Detail">
                                                         <i class="bi bi-eye"></i>
                                                     </button>
-                                                    <a href="{{ route('dokumen.download', $item->id) }}"
-                                                        class="btn btn-sm btn-link text-secondary p-1"
-                                                        onclick="event.stopPropagation()" title="Download">
-                                                        <i class="bi bi-download"></i>
-                                                    </a>
-                                                    <button type="button" class="btn btn-sm btn-link text-secondary p-1"
+                                                    <button class="btn btn-sm btn-link"
                                                         onclick="event.stopPropagation(); editDokumen({{ $item->id }})"
                                                         title="Edit">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
-                                                    <button type="button" class="btn btn-sm btn-link text-danger p-1"
+                                                    <a href="{{ route('dokumen.download', $item->id) }}"
+                                                        class="btn btn-sm btn-link" onclick="event.stopPropagation()"
+                                                        title="Download">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-link text-danger"
                                                         onclick="event.stopPropagation(); deleteDokumen({{ $item->id }})"
                                                         title="Hapus">
                                                         <i class="bi bi-trash"></i>
@@ -381,22 +184,220 @@
                                     @endforeach
                                 </div>
                             @else
-                                <div class="text-center py-5">
-                                    <div class="empty-state">
-                                        <i class="bi bi-folder-x" style="font-size: 5rem; color: #e0e0e0;"></i>
-                                        <h4 class="mt-3">Belum Ada Dokumen</h4>
-                                        <p class="text-muted mb-4">Folder ini belum memiliki dokumen.</p>
-                                        <button type="button" class="btn btn-primary px-4 py-2" data-bs-toggle="modal"
-                                            data-bs-target="#modalUploadDokumen">
-                                            <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen Sekarang
-                                        </button>
-                                    </div>
+                                <div class="empty-state text-center">
+                                    <i class="bi bi-file-earmark-x empty-state-icon"></i>
+                                    <h4 class="text-muted mb-2">Belum ada dokumen</h4>
+                                    <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
+                                    <button class="btn btn-primary btn-lg px-5" data-bs-toggle="modal"
+                                        data-bs-target="#modalUploadDokumen">
+                                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
+                                    </button>
                                 </div>
                             @endif
                         </div>
+
+                        <!-- Table View -->
+                        <div id="tableView" style="display: none;">
+                            <!-- Subfolders Table -->
+                            <div id="subfoldersTableSection" style="display: none;">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderTableCount">0</span>)
+                                </h6>
+                                <table class="table datatable mb-4" id="subfoldersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama</th>
+                                            <th>Dibuat Oleh</th>
+                                            <th>Tanggal Diubah</th>
+                                            <th>Total</th>
+                                            <th width="80">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                                <hr class="my-4">
+                            </div>
+
+                            <!-- Documents Table -->
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-file-earmark-text me-2"></i>Dokumen (<span
+                                    id="documentTableCount">{{ count($dokumen) }}</span>)
+                            </h6>
+                            @if (count($dokumen) > 0)
+                                <table class="table datatable" id="dokumenTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama</th>
+                                            <th>Dibuat Oleh</th>
+                                            <th>Tanggal Diubah</th>
+                                            <th>Ukuran</th>
+                                            <th width="80">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($dokumen as $item)
+                                            @php
+                                                $currentFile =
+                                                    $item->files->where('is_current', true)->first() ??
+                                                    $item->files->first();
+                                                $extension = $currentFile->extension ?? 'pdf';
+
+                                                $fileIcon = 'bi-file-earmark-text-fill';
+                                                if ($extension === 'pdf') {
+                                                    $fileIcon = 'bi-file-earmark-pdf-fill text-danger';
+                                                } elseif (in_array($extension, ['doc', 'docx'])) {
+                                                    $fileIcon = 'bi-file-earmark-word-fill text-primary';
+                                                } elseif (in_array($extension, ['xls', 'xlsx'])) {
+                                                    $fileIcon = 'bi-file-earmark-excel-fill text-success';
+                                                } elseif (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
+                                                    $fileIcon = 'bi-file-earmark-image-fill text-warning';
+                                                }
+
+                                                $updatedDate = $item->updated_at
+                                                    ? $item->updated_at->format('d M Y')
+                                                    : '-';
+                                                $creatorName =
+                                                    $item->creator->name ??
+                                                    ($item->created_by ? 'User #' . $item->created_by : '-');
+                                                $fileSize = $currentFile
+                                                    ? number_format($currentFile->ukuran_kb, 0) . ' KB'
+                                                    : '-';
+                                            @endphp
+                                            <tr style="cursor:pointer;" onclick="showDetail({{ $item->id }})">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi {{ $fileIcon }} me-2"
+                                                            style="font-size: 20px;"></i>
+                                                        <strong>{{ $item->judul }}</strong>
+                                                    </div>
+                                                </td>
+                                                <td>{{ $creatorName }}</td>
+                                                <td>{{ $updatedDate }}</td>
+                                                <td>{{ $fileSize }}</td>
+                                                <td onclick="event.stopPropagation();">
+                                                    <button class="btn btn-sm btn-link text-secondary p-1" type="button"
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#"
+                                                                onclick="showDetail({{ $item->id }}); return false;">
+                                                                <i class="bi bi-eye me-2"></i>Lihat Detail
+                                                            </a></li>
+                                                        <li><a class="dropdown-item"
+                                                                href="{{ route('dokumen.download', $item->id) }}"
+                                                                onclick="event.stopPropagation()">
+                                                                <i class="bi bi-download me-2"></i>Unduh
+                                                            </a></li>
+                                                        <li>
+                                                            <hr class="dropdown-divider">
+                                                        </li>
+                                                        <li><a class="dropdown-item" href="#"
+                                                                onclick="editDokumen({{ $item->id }}); return false;">
+                                                                <i class="bi bi-pencil-square me-2"></i>Edit
+                                                            </a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#"
+                                                                onclick="deleteDokumen({{ $item->id }}); return false;">
+                                                                <i class="bi bi-trash me-2"></i>Hapus
+                                                            </a></li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            @else
+                                <div class="empty-state text-center">
+                                    <i class="bi bi-file-earmark-x empty-state-icon"></i>
+                                    <h4 class="text-muted mb-2">Belum ada dokumen</h4>
+                                    <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
+                                    <button class="btn btn-primary btn-lg px-5" data-bs-toggle="modal"
+                                        data-bs-target="#modalUploadDokumen">
+                                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                        @if (count($dokumen) > 0)
+                            <div class="row g-3">
+                                @foreach ($dokumen as $item)
+                                    @php
+                                        $fileIcon = 'bi-file-earmark-text';
+                                        $fileIconColor = '#5f6368';
+                                        if ($item->files && count($item->files) > 0) {
+                                            $extension = $item->files[0]->extension ?? 'pdf';
+                                            if ($extension == 'pdf') {
+                                                $fileIcon = 'bi-file-earmark-pdf-fill';
+                                                $fileIconColor = '#dc3545';
+                                            } elseif (in_array($extension, ['doc', 'docx'])) {
+                                                $fileIcon = 'bi-file-earmark-word-fill';
+                                                $fileIconColor = '#2b579a';
+                                            } elseif (in_array($extension, ['xls', 'xlsx'])) {
+                                                $fileIcon = 'bi-file-earmark-excel-fill';
+                                                $fileIconColor = '#1d6f42';
+                                            } elseif (in_array($extension, ['ppt', 'pptx'])) {
+                                                $fileIcon = 'bi-file-earmark-ppt-fill';
+                                                $fileIconColor = '#d24726';
+                                            }
+                                        }
+
+                                        $statusClass = 'bg-secondary';
+                                        if ($item->status === 'Final') {
+                                            $statusClass = 'bg-success';
+                                        } elseif ($item->status === 'Draft') {
+                                            $statusClass = 'bg-warning text-dark';
+                                        }
+                                    @endphp
+
+                                    <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                                        <div class="gdrive-card" onclick="showDetail({{ $item->id }})">
+                                            <div class="gdrive-card-preview">
+                                                <i class="bi {{ $fileIcon }}"
+                                                    style="color: {{ $fileIconColor }};"></i>
+                                            </div>
+                                            <div class="gdrive-card-body">
+                                                <div class="gdrive-card-title" title="{{ $item->judul }}">
+                                                    {{ $item->judul }}
+                                                </div>
+                                                <div class="gdrive-card-meta">
+                                                    <small class="text-muted">
+                                                        {{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
+                                                    </small>
+                                                    <span
+                                                        class="badge {{ $statusClass }} badge-sm">{{ $item->status }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="gdrive-card-actions">
+                                                <button type="button" class="btn btn-sm btn-link text-secondary p-1"
+                                                    onclick="event.stopPropagation(); showDetail({{ $item->id }})"
+                                                    title="Detail">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <a href="{{ route('dokumen.download', $item->id) }}"
+                                                    class="btn btn-sm btn-link text-secondary p-1"
+                                                    onclick="event.stopPropagation()" title="Download">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-link text-secondary p-1"
+                                                    onclick="event.stopPropagation(); editDokumen({{ $item->id }})"
+                                                    title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-link text-danger p-1"
+                                                    onclick="event.stopPropagation(); deleteDokumen({{ $item->id }})"
+                                                    title="Hapus">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </section>
 
@@ -669,8 +670,173 @@
         </div>
     </div>
 
+    <!-- Modal Tambah Subfolder -->
+    <div class="modal fade" id="modalTambahFolder" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 bg-success text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-folder-plus me-2"></i>Folder Baru
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="formTambahFolder">
+                        @csrf
+                        <input type="hidden" name="parent_id" value="{{ $folder->id }}">
+
+                        <div class="mb-3">
+                            <label for="nama_folder" class="form-label fw-semibold">
+                                <i class="bi bi-folder me-2"></i>Nama<span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="nama_folder" name="nama"
+                                placeholder="Contoh: Laporan 2025" required maxlength="100">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Batal
+                    </button>
+                    <button type="button" class="btn btn-success px-4" id="btnSaveFolder">
+                        <i class="bi bi-check-circle me-1"></i>Buat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+@endsection
+
+@push('styles')
     <style>
-        /* Google Drive Style Cards */
+        /* Google Drive Style Folder Cards */
+        .gdrive-folder-card {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: visible;
+            position: relative;
+        }
+
+        .gdrive-folder-card:hover {
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .3), 0 2px 6px 2px rgba(60, 64, 67, .15);
+            border-color: transparent;
+        }
+
+        .gdrive-folder-content {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+        }
+
+        .gdrive-folder-icon {
+            flex-shrink: 0;
+        }
+
+        .gdrive-folder-icon i {
+            font-size: 24px;
+            color: #5f6368;
+        }
+
+        .gdrive-folder-card:hover .gdrive-folder-icon i {
+            color: #1a73e8;
+        }
+
+        .gdrive-folder-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .gdrive-folder-title {
+            font-size: 14px;
+            color: #202124;
+            font-weight: 400;
+            line-height: 20px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 2px;
+        }
+
+        .gdrive-folder-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .gdrive-folder-meta small,
+        .gdrive-folder-meta span {
+            font-size: 12px;
+            color: #5f6368;
+        }
+
+        .gdrive-folder-meta .text-muted {
+            color: #5f6368 !important;
+        }
+
+        .gdrive-folder-menu {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .gdrive-folder-card:hover .gdrive-folder-menu {
+            opacity: 1;
+        }
+
+        .gdrive-folder-menu .btn-link {
+            color: #5f6368;
+            text-decoration: none;
+            padding: 4px;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gdrive-folder-menu .btn-link:hover {
+            background-color: #f1f3f4;
+            color: #202124;
+        }
+
+        /* Dropdown menu styling */
+        .gdrive-folder-menu .dropdown-menu {
+            border: 1px solid #dadce0;
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .3), 0 2px 6px 2px rgba(60, 64, 67, .15);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 160px;
+        }
+
+        .gdrive-folder-menu .dropdown-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #202124;
+        }
+
+        .gdrive-folder-menu .dropdown-item:hover {
+            background-color: #f1f3f4;
+        }
+
+        .gdrive-folder-menu .dropdown-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .gdrive-folder-menu .dropdown-divider {
+            margin: 8px 0;
+            border-color: #e8eaed;
+        }
+
+        /* Google Drive Style Document Cards */
         .gdrive-card {
             background: white;
             border: 1px solid #e8eaed;
@@ -731,11 +897,6 @@
             color: #5f6368;
         }
 
-        .gdrive-card-meta .badge-sm {
-            font-size: 10px;
-            padding: 2px 6px;
-        }
-
         .gdrive-card-actions {
             padding: 8px 12px;
             border-top: 1px solid #e8eaed;
@@ -764,140 +925,25 @@
             color: #202124;
         }
 
-        /* Card Styles (old - for backward compatibility) */
-        .dokumen-card {
-            position: relative;
-            overflow: hidden;
-            border-radius: 16px !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid #f0f0f0 !important;
+        /* Empty State */
+        .empty-state {
+            padding: 4rem 2rem;
         }
 
-        .dokumen-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
-            border-color: #4154f1 !important;
-        }
-
-        /* Document icon wrapper */
-        .document-icon-wrapper {
-            width: 90px;
-            height: 90px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            transition: all 0.3s ease;
-        }
-
-        .dokumen-card:hover .document-icon-wrapper {
-            transform: scale(1.1);
-        }
-
-        /* Status Badges */
-        .badge {
-            font-weight: 600;
-            font-size: 0.75rem;
-        }
-
-        .badge.rounded-pill {
-            padding: 0.5rem 0.8rem;
+        .empty-state-icon {
+            font-size: 6rem;
+            color: #e0e0e0;
+            margin-bottom: 2rem;
         }
 
         /* Table Styles */
-        #dokumenTable {
-            vertical-align: middle;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            border-radius: 8px;
-        }
-
-        #dokumenTable thead th {
+        .datatable-table th {
             background-color: #f8f9fa;
             font-weight: 600;
             color: #495057;
-            padding: 15px;
-        }
-
-        #dokumenTable tbody td {
-            padding: 15px;
-            vertical-align: middle;
-        }
-
-        /* Icon Box */
-        .icon-box {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .icon-box.rounded-circle {
-            width: 48px;
-            height: 48px;
-        }
-
-        /* Metadata Styles */
-        .metadata-row {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px !important;
-            border: 1px solid #eee;
-            transition: all 0.2s ease;
-        }
-
-        .metadata-row:hover {
-            background-color: #f0f0f0;
-        }
-
-        .metadata-table {
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-        }
-
-        .metadata-table th {
-            background-color: #f1f3f5;
-        }
-
-        /* Empty State */
-        .empty-state {
-            padding: 3rem 2rem;
-        }
-
-        /* Detail view styles */
-        .detail-header {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-        }
-
-        .detail-file-preview {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            border: 1px solid #e9ecef;
-        }
-
-        /* Form styles */
-        .form-label {
-            margin-bottom: 0.5rem;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-
-        .form-control-lg,
-        .form-select-lg {
-            padding: 0.75rem 1rem;
-            font-size: 1.1rem;
         }
     </style>
-@endsection
+@endpush
 
 @push('scripts')
     <script>
@@ -906,8 +952,8 @@
         $(document).ready(function() {
             console.log('Document ready');
 
-            // Initialize metadata handling
-            initMetadataHandling();
+            // Load subfolders
+            loadSubfolders();
 
             // Auto-fill judul from filename
             $('#file').on('change', function() {
@@ -993,6 +1039,92 @@
                 $('#editProgress').hide();
                 $('#editProgress .progress-bar').css('width', '0%');
                 $('#editProgressText').text('Mempersiapkan update...');
+            });
+
+            // Reset folder form when modal is closed
+            $('#modalTambahFolder').on('hidden.bs.modal', function() {
+                $('#formTambahFolder')[0].reset();
+            });
+
+            // Save Folder
+            $('#btnSaveFolder').click(function() {
+                console.log('Button clicked');
+                let form = $('#formTambahFolder')[0];
+
+                // Basic form validation
+                if (!form.checkValidity()) {
+                    console.log('Form validation failed');
+                    form.reportValidity();
+                    return;
+                }
+
+                let formData = {
+                    _token: '{{ csrf_token() }}',
+                    parent_id: {{ $folder->id }},
+                    nama: $('#nama_folder').val()
+                };
+
+                console.log('Form data:', formData);
+
+                $.ajax({
+                    url: '{{ route('dokumen.folder.store') }}',
+                    type: 'POST',
+                    data: formData,
+                    beforeSend: function() {
+                        console.log('AJAX starting...');
+                        $('#btnSaveFolder').prop('disabled', true).html(
+                            '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...'
+                        );
+                    },
+                    success: function(response) {
+                        console.log('AJAX success:', response);
+                        $('#modalTambahFolder').modal('hide');
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message || 'Subfolder berhasil dibuat',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Reload to show new subfolder
+                            window.location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        console.log('AJAX error:', xhr.status, xhr.responseJSON);
+                        $('#btnSaveFolder').prop('disabled', false).html(
+                            '<i class="bi bi-check-circle me-1"></i>Buat'
+                        );
+
+                        let errorMessage = 'Terjadi kesalahan';
+
+                        if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                            let errors = xhr.responseJSON.errors;
+                            errorMessage = '<ul class="text-start">';
+                            Object.keys(errors).forEach(key => {
+                                errors[key].forEach(error => {
+                                    errorMessage += `<li>${error}</li>`;
+                                });
+                            });
+                            errorMessage += '</ul>';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            html: errorMessage,
+                            confirmButtonColor: '#0d6efd'
+                        });
+                    },
+                    complete: function() {
+                        $('#btnSaveFolder').prop('disabled', false).html(
+                            '<i class="bi bi-check-circle me-1"></i>Buat'
+                        );
+                    }
+                });
             });
 
             // Upload Document
@@ -1607,6 +1739,176 @@
                     });
                 }
             });
+        }
+
+        // ============================================
+        // SUBFOLDER FUNCTIONS
+        // ============================================
+
+        function loadSubfolders() {
+            const folderId = {{ $folder->id }};
+
+            $.ajax({
+                url: `/dokumen/folder/${folderId}/children`,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Subfolders loaded:', response);
+
+                    if (response && response.length > 0) {
+                        renderSubfoldersGrid(response);
+                        renderSubfoldersTable(response);
+                        $('#subfolderCount').text(response.length);
+                        $('#subfolderTableCount').text(response.length);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading subfolders:', error);
+                }
+            });
+        }
+
+        function renderSubfoldersGrid(folders) {
+            if (!folders || folders.length === 0) {
+                $('#subfoldersSection').hide();
+                return;
+            }
+
+            $('#subfoldersSection').show();
+            let html = '';
+
+            folders.forEach(folder => {
+                const subfolderCount = 0; // Could be calculated if needed
+
+                html += `
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="gdrive-folder-card" onclick="navigateToFolder(${folder.id})">
+                        <div class="gdrive-folder-content">
+                            <div class="gdrive-folder-icon">
+                                <i class="bi bi-folder-fill"></i>
+                            </div>
+                            <div class="gdrive-folder-info">
+                                <div class="gdrive-folder-title" title="${folder.nama}">
+                                    ${folder.nama}
+                                </div>
+                                <div class="gdrive-folder-meta">
+                                    <small class="text-muted">${folder.total_files || 0} file${(folder.total_files || 0) !== 1 ? 's' : ''}</small>
+                                </div>
+                            </div>
+                            <div class="gdrive-folder-menu" onclick="event.stopPropagation();">
+                                <button class="btn btn-sm btn-link p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#" onclick="navigateToFolder(${folder.id}); return false;">
+                                        <i class="bi bi-folder2-open me-2"></i>Buka Folder
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${folder.id}); return false;">
+                                        <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+
+            $('#subfoldersGrid').html(html);
+        }
+
+        function renderSubfoldersTable(folders) {
+            if (!folders || folders.length === 0) {
+                $('#subfoldersTableSection').hide();
+                return;
+            }
+
+            $('#subfoldersTableSection').show();
+            let tbody = '';
+
+            folders.forEach(folder => {
+                const updatedDate = folder.updated_at ? formatDateOnly(folder.updated_at) : '-';
+                const creatorName = folder.creator ? folder.creator.name : (folder.created_by ? 'User #' + folder
+                    .created_by : '-');
+
+                tbody += `
+                <tr style="cursor:pointer;" onclick="navigateToFolder(${folder.id})">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
+                            <strong>${folder.nama}</strong>
+                        </div>
+                    </td>
+                    <td>${creatorName}</td>
+                    <td>${updatedDate}</td>
+                    <td>
+                        <div style="line-height: 1.4;">
+                            <div>${folder.total_files || 0} file${(folder.total_files || 0) !== 1 ? 's' : ''}</div>
+                        </div>
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="navigateToFolder(${folder.id}); return false;">
+                                <i class="bi bi-folder2-open me-2"></i>Buka Folder
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${folder.id}); return false;">
+                                <i class="bi bi-link-45deg me-2"></i>Salin Link
+                            </a></li>
+                        </ul>
+                    </td>
+                </tr>
+                `;
+            });
+
+            $('#subfoldersTable tbody').html(tbody);
+        }
+
+        function navigateToFolder(folderId) {
+            window.location.href = `/dokumen/folder/${folderId}/dokumen`;
+        }
+
+        function copyFolderLink(id) {
+            const link = `${window.location.origin}/dokumen/folder/${id}/dokumen`;
+
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(link).then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Link folder berhasil disalin',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Link folder berhasil disalin',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        }
+
+        function formatDateOnly(dateString) {
+            if (!dateString) return '-';
+            let date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
         }
 
         // ============================================

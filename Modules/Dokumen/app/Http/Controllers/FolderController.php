@@ -70,17 +70,12 @@ class FolderController extends Controller
             'parent_id' => 'nullable|exists:doc_folder,id',
             'bidang_id' => 'nullable|exists:master_bidang,id',
             'nama' => 'required|string|max:100',
-            'path' => 'required|string|unique:doc_folder,path',
-            'level' => 'nullable|integer|min:0',
             'is_auto' => 'nullable|boolean'
         ], [
             'parent_id.exists' => 'Parent folder tidak ditemukan',
             'bidang_id.exists' => 'Bidang tidak ditemukan',
             'nama.required' => 'Nama folder wajib diisi',
-            'nama.max' => 'Nama folder maksimal 100 karakter',
-            'path.required' => 'Path folder wajib diisi',
-            'path.unique' => 'Path folder sudah digunakan',
-            'level.min' => 'Level tidak boleh negatif'
+            'nama.max' => 'Nama folder maksimal 100 karakter'
         ]);
 
         if ($validator->fails()) {
@@ -93,23 +88,55 @@ class FolderController extends Controller
         try {
             DB::beginTransaction();
 
-            $data = $request->all();
+            // Auto-generate path from nama
+            $slugName = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->nama)));
 
-            // Set created_by
-            $data['created_by'] = Auth::id();
+            // Remove multiple dashes and trim
+            $slugName = preg_replace('/-+/', '-', $slugName);
+            $slugName = trim($slugName, '-');
 
-            // Convert is_auto to boolean
-            $data['is_auto'] = $request->has('is_auto') ? (bool) $request->is_auto : false;
-
-            // Auto-calculate level if not provided
-            if (!isset($data['level']) && $request->parent_id) {
+            // Get parent folder if exists
+            $parent = null;
+            if ($request->parent_id) {
                 $parent = Folder::find($request->parent_id);
-                $data['level'] = $parent ? $parent->level + 1 : 0;
-            } elseif (!isset($data['level'])) {
-                $data['level'] = 0;
+                if (!$parent) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Parent folder tidak ditemukan'
+                    ], 404);
+                }
             }
 
-            $folder = Folder::create($data);
+            // Build path
+            if ($parent) {
+                $basePath = $parent->path . '/' . $slugName;
+                $bidangId = $parent->bidang_id;
+                $level = $parent->level + 1;
+            } else {
+                $basePath = '/' . $slugName;
+                $bidangId = $request->bidang_id;
+                $level = 0;
+            }
+
+            // Check if path already exists, if so add number suffix
+            $finalPath = $basePath;
+            $counter = 1;
+            while (Folder::where('path', $finalPath)->exists()) {
+                $finalPath = $basePath . '-' . $counter;
+                $counter++;
+            }
+
+            // Build data array - explicitly define each field
+            $folder = Folder::create([
+                'parent_id' => $request->parent_id,
+                'bidang_id' => $bidangId,
+                'nama' => $request->nama,
+                'path' => $finalPath,
+                'level' => $level,
+                'is_auto' => $request->has('is_auto') ? (bool) $request->is_auto : false,
+                'total_files' => 0,
+                'created_by' => Auth::id()
+            ]);
 
             DB::commit();
 
@@ -123,6 +150,12 @@ class FolderController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            Log::error('Error creating folder', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
 
             return response()->json([
                 'success' => false,
