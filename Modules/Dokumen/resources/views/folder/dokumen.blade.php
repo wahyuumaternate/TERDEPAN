@@ -170,25 +170,36 @@
                                                             <i class="bi bi-three-dots-vertical"></i>
                                                         </button>
                                                         <ul class="dropdown-menu dropdown-menu-end">
-                                                            <li><a class="dropdown-item" href="#"
-                                                                    onclick="showDetail({{ $item->id }}); return false;">
-                                                                    <i class="bi bi-eye me-2"></i>Lihat Detail
-                                                                </a></li>
                                                             <li><a class="dropdown-item"
                                                                     href="{{ route('dokumen.download', $item->id) }}"
                                                                     onclick="event.stopPropagation()">
                                                                     <i class="bi bi-download me-2"></i>Unduh
                                                                 </a></li>
+                                                            <li><a class="dropdown-item" href="#"
+                                                                    onclick="editDokumen({{ $item->id }}); return false;">
+                                                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                                </a></li>
                                                             <li>
                                                                 <hr class="dropdown-divider">
                                                             </li>
                                                             <li><a class="dropdown-item" href="#"
-                                                                    onclick="editDokumen({{ $item->id }}); return false;">
-                                                                    <i class="bi bi-pencil-square me-2"></i>Edit
+                                                                    onclick="alert('Fitur salin link dalam pengembangan'); return false;">
+                                                                    <i class="bi bi-link-45deg me-2"></i>Salin Link
                                                                 </a></li>
+                                                            <li><a class="dropdown-item" href="#"
+                                                                    onclick="alert('Fitur atur dalam pengembangan'); return false;">
+                                                                    <i class="bi bi-gear me-2"></i>Atur
+                                                                </a></li>
+                                                            <li><a class="dropdown-item" href="#"
+                                                                    onclick="showDetail({{ $item->id }}); return false;">
+                                                                    <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                                                                </a></li>
+                                                            <li>
+                                                                <hr class="dropdown-divider">
+                                                            </li>
                                                             <li><a class="dropdown-item text-danger" href="#"
                                                                     onclick="deleteDokumen({{ $item->id }}); return false;">
-                                                                    <i class="bi bi-trash me-2"></i>Hapus
+                                                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                                                 </a></li>
                                                         </ul>
                                                     </div>
@@ -646,7 +657,7 @@
             border-top: 1px solid #e8eaed;
             display: flex;
             gap: 4px;
-            opacity: 0;
+            opacity: 1;
             transition: opacity 0.2s ease;
             position: relative;
             z-index: 10;
@@ -1090,10 +1101,24 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="#" onclick="navigateToFolder(${folder.id}); return false;">
-                                    <i class="bi bi-folder2-open me-2"></i>Buka Folder
+                                    <i class="bi bi-download me-2"></i>Unduh
                                 </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="alert('Fitur ganti nama dalam pengembangan'); return false;">
+                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${folder.id}); return false;">
                                     <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="alert('Fitur dalam pengembangan'); return false;">
+                                    <i class="bi bi-gear me-2"></i>Atur
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="alert('Fitur dalam pengembangan'); return false;">
+                                    <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="alert('Fitur hapus folder dalam pengembangan'); return false;">
+                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                 </a></li>
                             </ul>
                         </td>
@@ -1144,18 +1169,25 @@
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" onclick="showDetail(${doc.id}); return false;">
-                                    <i class="bi bi-eye me-2"></i>Lihat Detail
-                                </a></li>
                                 <li><a class="dropdown-item" href="/dokumen/${doc.id}/download" onclick="event.stopPropagation()">
                                     <i class="bi bi-download me-2"></i>Unduh
                                 </a></li>
-                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" onclick="editDokumen(${doc.id}); return false;">
-                                    <i class="bi bi-pencil-square me-2"></i>Edit
+                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                                 </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="alert('Fitur salin link dalam pengembangan'); return false;">
+                                    <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="alert('Fitur atur dalam pengembangan'); return false;">
+                                    <i class="bi bi-gear me-2"></i>Atur
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="showDetail(${doc.id}); return false;">
+                                    <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="deleteDokumen(${doc.id}); return false;">
-                                    <i class="bi bi-trash me-2"></i>Hapus
+                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                 </a></li>
                             </ul>
                         </td>
@@ -1662,10 +1694,24 @@
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="#" onclick="navigateToFolder(${folder.id}); return false;">
-                                        <i class="bi bi-folder2-open me-2"></i>Buka Folder
+                                        <i class="bi bi-download me-2"></i>Unduh
                                     </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="alert('Fitur ganti nama dalam pengembangan'); return false;">
+                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${folder.id}); return false;">
                                         <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="alert('Fitur dalam pengembangan'); return false;">
+                                        <i class="bi bi-gear me-2"></i>Atur
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="alert('Fitur dalam pengembangan'); return false;">
+                                        <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="alert('Fitur hapus folder dalam pengembangan'); return false;">
+                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                     </a></li>
                                 </ul>
                             </div>
