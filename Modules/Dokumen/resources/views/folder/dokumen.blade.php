@@ -44,10 +44,15 @@
                                     data-bs-target="#modalTambahFolder">
                                     <i class="bi bi-folder-plus me-2"></i>Folder Baru
                                 </button>
-                                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal"
-                                    data-bs-target="#modalUploadDokumen">
-                                    <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
-                                </button>
+                                <form id="formUploadDokumen" style="display: inline-block;">
+                                    @csrf
+                                    <input type="hidden" name="folder_id" value="{{ $folder->id }}">
+                                    <input type="file" id="fileUpload" name="file" style="display: none;"
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                                    <button type="button" class="btn btn-primary shadow-sm" id="btnTriggerUpload">
+                                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
+                                    </button>
+                                </form>
                             </div>
                         </div>
 
@@ -100,17 +105,18 @@
                             </div>
                         </div>
 
-                        <!-- Subfolders Section (Grid View) -->
-                        <div id="subfoldersSection" style="display: none;">
-                            <h6 class="text-muted mb-3">
-                                <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderCount">0</span>)
-                            </h6>
-                            <div class="row g-3 mb-4" id="subfoldersGrid"></div>
-                            <hr class="my-4">
-                        </div>
-
                         <!-- Grid View -->
                         <div id="gridView">
+                            <!-- Subfolders Section -->
+                            <div id="subfoldersSection" style="display: none;">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderCount">0</span>)
+                                </h6>
+                                <div class="row g-3" id="subfoldersGrid"></div>
+                                <hr class="my-4">
+                            </div>
+
+                            <!-- Documents Section -->
                             <h6 class="text-muted mb-3">
                                 <i class="bi bi-file-earmark-text me-2"></i>Dokumen (<span
                                     id="documentCount">{{ count($dokumen) }}</span>)
@@ -158,26 +164,34 @@
                                                     </div>
                                                 </div>
                                                 <div class="gdrive-card-actions">
-                                                    <button class="btn btn-sm btn-link"
-                                                        onclick="event.stopPropagation(); showDetail({{ $item->id }})"
-                                                        title="Detail">
-                                                        <i class="bi bi-eye"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-link"
-                                                        onclick="event.stopPropagation(); editDokumen({{ $item->id }})"
-                                                        title="Edit">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <a href="{{ route('dokumen.download', $item->id) }}"
-                                                        class="btn btn-sm btn-link" onclick="event.stopPropagation()"
-                                                        title="Download">
-                                                        <i class="bi bi-download"></i>
-                                                    </a>
-                                                    <button class="btn btn-sm btn-link text-danger"
-                                                        onclick="event.stopPropagation(); deleteDokumen({{ $item->id }})"
-                                                        title="Hapus">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
+                                                    <div class="gdrive-folder-menu" onclick="event.stopPropagation();">
+                                                        <button class="btn btn-link" type="button"
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <i class="bi bi-three-dots-vertical"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu dropdown-menu-end">
+                                                            <li><a class="dropdown-item" href="#"
+                                                                    onclick="showDetail({{ $item->id }}); return false;">
+                                                                    <i class="bi bi-eye me-2"></i>Lihat Detail
+                                                                </a></li>
+                                                            <li><a class="dropdown-item"
+                                                                    href="{{ route('dokumen.download', $item->id) }}"
+                                                                    onclick="event.stopPropagation()">
+                                                                    <i class="bi bi-download me-2"></i>Unduh
+                                                                </a></li>
+                                                            <li>
+                                                                <hr class="dropdown-divider">
+                                                            </li>
+                                                            <li><a class="dropdown-item" href="#"
+                                                                    onclick="editDokumen({{ $item->id }}); return false;">
+                                                                    <i class="bi bi-pencil-square me-2"></i>Edit
+                                                                </a></li>
+                                                            <li><a class="dropdown-item text-danger" href="#"
+                                                                    onclick="deleteDokumen({{ $item->id }}); return false;">
+                                                                    <i class="bi bi-trash me-2"></i>Hapus
+                                                                </a></li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -188,8 +202,7 @@
                                     <i class="bi bi-file-earmark-x empty-state-icon"></i>
                                     <h4 class="text-muted mb-2">Belum ada dokumen</h4>
                                     <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
-                                    <button class="btn btn-primary btn-lg px-5" data-bs-toggle="modal"
-                                        data-bs-target="#modalUploadDokumen">
+                                    <button class="btn btn-primary btn-lg px-5" id="btnTriggerUpload">
                                         <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
                                     </button>
                                 </div>
@@ -198,311 +211,44 @@
 
                         <!-- Table View -->
                         <div id="tableView" style="display: none;">
-                            <!-- Subfolders Table -->
-                            <div id="subfoldersTableSection" style="display: none;">
-                                <h6 class="text-muted mb-3">
-                                    <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderTableCount">0</span>)
-                                </h6>
-                                <table class="table datatable mb-4" id="subfoldersTable">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama</th>
-                                            <th>Dibuat Oleh</th>
-                                            <th>Tanggal Diubah</th>
-                                            <th>Total</th>
-                                            <th width="80">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                                <hr class="my-4">
-                            </div>
-
-                            <!-- Documents Table -->
                             <h6 class="text-muted mb-3">
-                                <i class="bi bi-file-earmark-text me-2"></i>Dokumen (<span
-                                    id="documentTableCount">{{ count($dokumen) }}</span>)
+                                <i class="bi bi-folder-fill me-2"></i>Folder & Dokumen
                             </h6>
-                            @if (count($dokumen) > 0)
-                                <table class="table datatable" id="dokumenTable">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama</th>
-                                            <th>Dibuat Oleh</th>
-                                            <th>Tanggal Diubah</th>
-                                            <th>Ukuran</th>
-                                            <th width="80">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($dokumen as $item)
-                                            @php
-                                                $currentFile =
-                                                    $item->files->where('is_current', true)->first() ??
-                                                    $item->files->first();
-                                                $extension = $currentFile->extension ?? 'pdf';
-
-                                                $fileIcon = 'bi-file-earmark-text-fill';
-                                                if ($extension === 'pdf') {
-                                                    $fileIcon = 'bi-file-earmark-pdf-fill text-danger';
-                                                } elseif (in_array($extension, ['doc', 'docx'])) {
-                                                    $fileIcon = 'bi-file-earmark-word-fill text-primary';
-                                                } elseif (in_array($extension, ['xls', 'xlsx'])) {
-                                                    $fileIcon = 'bi-file-earmark-excel-fill text-success';
-                                                } elseif (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
-                                                    $fileIcon = 'bi-file-earmark-image-fill text-warning';
-                                                }
-
-                                                $updatedDate = $item->updated_at
-                                                    ? $item->updated_at->format('d M Y')
-                                                    : '-';
-                                                $creatorName =
-                                                    $item->creator->name ??
-                                                    ($item->created_by ? 'User #' . $item->created_by : '-');
-                                                $fileSize = $currentFile
-                                                    ? number_format($currentFile->ukuran_kb, 0) . ' KB'
-                                                    : '-';
-                                            @endphp
-                                            <tr style="cursor:pointer;" onclick="showDetail({{ $item->id }})">
-                                                <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="bi {{ $fileIcon }} me-2"
-                                                            style="font-size: 20px;"></i>
-                                                        <strong>{{ $item->judul }}</strong>
-                                                    </div>
-                                                </td>
-                                                <td>{{ $creatorName }}</td>
-                                                <td>{{ $updatedDate }}</td>
-                                                <td>{{ $fileSize }}</td>
-                                                <td onclick="event.stopPropagation();">
-                                                    <button class="btn btn-sm btn-link text-secondary p-1" type="button"
-                                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-three-dots-vertical"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li><a class="dropdown-item" href="#"
-                                                                onclick="showDetail({{ $item->id }}); return false;">
-                                                                <i class="bi bi-eye me-2"></i>Lihat Detail
-                                                            </a></li>
-                                                        <li><a class="dropdown-item"
-                                                                href="{{ route('dokumen.download', $item->id) }}"
-                                                                onclick="event.stopPropagation()">
-                                                                <i class="bi bi-download me-2"></i>Unduh
-                                                            </a></li>
-                                                        <li>
-                                                            <hr class="dropdown-divider">
-                                                        </li>
-                                                        <li><a class="dropdown-item" href="#"
-                                                                onclick="editDokumen({{ $item->id }}); return false;">
-                                                                <i class="bi bi-pencil-square me-2"></i>Edit
-                                                            </a></li>
-                                                        <li><a class="dropdown-item text-danger" href="#"
-                                                                onclick="deleteDokumen({{ $item->id }}); return false;">
-                                                                <i class="bi bi-trash me-2"></i>Hapus
-                                                            </a></li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            @else
-                                <div class="empty-state text-center">
-                                    <i class="bi bi-file-earmark-x empty-state-icon"></i>
-                                    <h4 class="text-muted mb-2">Belum ada dokumen</h4>
-                                    <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
-                                    <button class="btn btn-primary btn-lg px-5" data-bs-toggle="modal"
-                                        data-bs-target="#modalUploadDokumen">
-                                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
-                                    </button>
-                                </div>
-                            @endif
+                            <table class="table" id="combinedTable">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Dibuat Oleh</th>
+                                        <th>Tanggal Diubah</th>
+                                        <th>Ukuran/Total</th>
+                                        <th width="80">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="combinedTableBody">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
                         </div>
-                        @if (count($dokumen) > 0)
-                            <div class="row g-3">
-                                @foreach ($dokumen as $item)
-                                    @php
-                                        $fileIcon = 'bi-file-earmark-text';
-                                        $fileIconColor = '#5f6368';
-                                        if ($item->files && count($item->files) > 0) {
-                                            $extension = $item->files[0]->extension ?? 'pdf';
-                                            if ($extension == 'pdf') {
-                                                $fileIcon = 'bi-file-earmark-pdf-fill';
-                                                $fileIconColor = '#dc3545';
-                                            } elseif (in_array($extension, ['doc', 'docx'])) {
-                                                $fileIcon = 'bi-file-earmark-word-fill';
-                                                $fileIconColor = '#2b579a';
-                                            } elseif (in_array($extension, ['xls', 'xlsx'])) {
-                                                $fileIcon = 'bi-file-earmark-excel-fill';
-                                                $fileIconColor = '#1d6f42';
-                                            } elseif (in_array($extension, ['ppt', 'pptx'])) {
-                                                $fileIcon = 'bi-file-earmark-ppt-fill';
-                                                $fileIconColor = '#d24726';
-                                            }
-                                        }
-
-                                        $statusClass = 'bg-secondary';
-                                        if ($item->status === 'Final') {
-                                            $statusClass = 'bg-success';
-                                        } elseif ($item->status === 'Draft') {
-                                            $statusClass = 'bg-warning text-dark';
-                                        }
-                                    @endphp
-
-                                    <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                                        <div class="gdrive-card" onclick="showDetail({{ $item->id }})">
-                                            <div class="gdrive-card-preview">
-                                                <i class="bi {{ $fileIcon }}"
-                                                    style="color: {{ $fileIconColor }};"></i>
-                                            </div>
-                                            <div class="gdrive-card-body">
-                                                <div class="gdrive-card-title" title="{{ $item->judul }}">
-                                                    {{ $item->judul }}
-                                                </div>
-                                                <div class="gdrive-card-meta">
-                                                    <small class="text-muted">
-                                                        {{ \Carbon\Carbon::parse($item->tanggal_dokumen)->format('d M Y') }}
-                                                    </small>
-                                                    <span
-                                                        class="badge {{ $statusClass }} badge-sm">{{ $item->status }}</span>
-                                                </div>
-                                            </div>
-                                            <div class="gdrive-card-actions">
-                                                <button type="button" class="btn btn-sm btn-link text-secondary p-1"
-                                                    onclick="event.stopPropagation(); showDetail({{ $item->id }})"
-                                                    title="Detail">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                                <a href="{{ route('dokumen.download', $item->id) }}"
-                                                    class="btn btn-sm btn-link text-secondary p-1"
-                                                    onclick="event.stopPropagation()" title="Download">
-                                                    <i class="bi bi-download"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-link text-secondary p-1"
-                                                    onclick="event.stopPropagation(); editDokumen({{ $item->id }})"
-                                                    title="Edit">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-link text-danger p-1"
-                                                    onclick="event.stopPropagation(); deleteDokumen({{ $item->id }})"
-                                                    title="Hapus">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
         </div>
-        </div>
     </section>
 
-    <!-- Modal Upload -->
-    <div class="modal fade" id="modalUploadDokumen" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen Baru
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <form id="formUploadDokumen" enctype="multipart/form-data">
-                        @csrf
-                        <input type="hidden" name="folder_id" value="{{ $folder->id }}">
-
-                        <div class="mb-4">
-                            <div class="alert alert-info d-flex">
-                                <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-                                <div>
-                                    <strong>Info:</strong> Dokumen akan disimpan di folder
-                                    <strong>{{ $folder->nama }}</strong>
-                                    <span class="d-block small">{{ $folder->path }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- File Upload - Main Focus -->
-                        <div class="mb-4">
-                            <label for="file" class="form-label fw-semibold fs-5">
-                                <i class="bi bi-cloud-upload me-2"></i>Pilih File <span class="text-danger">*</span>
-                            </label>
-                            <input type="file" class="form-control form-control-lg" id="file" name="file"
-                                required>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Semua format file didukung (Max: 50MB)
-                            </div>
-                        </div>
-
-                        <!-- Judul - Auto filled from filename -->
-                        <div class="mb-3">
-                            <label for="judul" class="form-label fw-semibold">
-                                Nama Dokumen <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control form-control-lg" id="judul" name="judul"
-                                required placeholder="Otomatis dari nama file">
-                            <div class="form-text">Nama akan otomatis diisi dari nama file, Anda bisa mengubahnya</div>
-                        </div>
-
-                        <!-- Deskripsi - Optional & Collapsible -->
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="showDesc">
-                                <label class="form-check-label" for="showDesc">
-                                    Tambahkan deskripsi (opsional)
-                                </label>
-                            </div>
-                            <div id="descContainer" style="display: none;" class="mt-2">
-                                <textarea class="form-control" id="deskripsi" name="deskripsi" rows="2"
-                                    placeholder="Tambahkan deskripsi singkat"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Status - Simple -->
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Status</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="status" id="statusFinal"
-                                        value="Final" checked>
-                                    <label class="form-check-label" for="statusFinal">
-                                        <i class="bi bi-check-circle text-success me-1"></i>Final
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="status" id="statusDraft"
-                                        value="Draft">
-                                    <label class="form-check-label" for="statusDraft">
-                                        <i class="bi bi-pencil text-warning me-1"></i>Draft
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Upload Progress -->
-                        <div id="uploadProgress" class="mt-3" style="display: none;">
-                            <label class="form-label fw-semibold">Proses Upload</label>
-                            <div class="progress" style="height: 25px;">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                                    style="width: 0%"></div>
-                            </div>
-                            <p class="text-center mt-2 mb-0" id="uploadProgressText">Mempersiapkan upload...</p>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle me-1"></i>Batal
-                    </button>
-                    <button type="button" class="btn btn-primary px-4" id="btnUploadDokumen">
-                        <i class="bi bi-cloud-upload me-1"></i>Upload Dokumen
-                    </button>
+    <!-- Upload Progress Modal -->
+    <div class="modal fade" id="modalUploadProgress" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-cloud-upload text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="mb-3">Mengupload Dokumen</h5>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar"
+                            style="width: 0%" id="uploadProgressBar"></div>
+                    </div>
+                    <p class="text-muted mb-0" id="uploadProgressText">Mempersiapkan upload...</p>
                 </div>
             </div>
         </div>
@@ -705,8 +451,6 @@
             </div>
         </div>
     </div>
-
-
 @endsection
 
 @push('styles')
@@ -904,23 +648,33 @@
             gap: 4px;
             opacity: 0;
             transition: opacity 0.2s ease;
+            position: relative;
+            z-index: 10;
         }
 
         .gdrive-card:hover .gdrive-card-actions {
             opacity: 1;
         }
 
-        .gdrive-card-actions .btn {
-            padding: 4px 8px;
-            font-size: 14px;
+        .gdrive-card-actions .gdrive-folder-menu {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
         }
 
-        .gdrive-card-actions .btn-link {
-            text-decoration: none;
+        .gdrive-card-actions .gdrive-folder-menu .btn-link {
             color: #5f6368;
+            text-decoration: none;
+            padding: 4px;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .gdrive-card-actions .btn-link:hover {
+        .gdrive-card-actions .gdrive-folder-menu .btn-link:hover {
             background-color: #f1f3f4;
             color: #202124;
         }
@@ -948,6 +702,8 @@
 @push('scripts')
     <script>
         let dataTable = null;
+        let subfolders = [];
+        let documents = @json($dokumen);
 
         $(document).ready(function() {
             console.log('Document ready');
@@ -955,33 +711,32 @@
             // Load subfolders
             loadSubfolders();
 
-            // Auto-fill judul from filename
-            $('#file').on('change', function() {
+            // Trigger file upload when button clicked
+            $('#btnTriggerUpload').click(function() {
+                $('#fileUpload').click();
+            });
+
+            // Handle file selection
+            $('#fileUpload').on('change', function() {
                 let file = this.files[0];
                 if (file) {
-                    // Get filename without extension
-                    let filename = file.name;
-                    let nameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
-
-                    // Set to judul field if empty
-                    if (!$('#judul').val()) {
-                        $('#judul').val(nameWithoutExt);
+                    // Validate file size (50MB max)
+                    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+                    if (file.size > maxSize) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'File Terlalu Besar',
+                            text: 'Ukuran file maksimal 50MB',
+                            confirmButtonColor: '#0d6efd'
+                        });
+                        $(this).val('');
+                        return;
                     }
+
+                    // Start upload immediately
+                    uploadDocument();
                 }
             });
-
-            // Toggle description
-            $('#showDesc').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#descContainer').slideDown();
-                } else {
-                    $('#descContainer').slideUp();
-                    $('#deskripsi').val('');
-                }
-            });
-
-            // Initialize DataTable
-            initializeDataTable();
 
             // Toggle filter section
             $('#toggleFilter').click(function() {
@@ -1009,28 +764,8 @@
                     $('#tableView').show();
                     $('#gridView').hide();
 
-                    setTimeout(function() {
-                        if (!dataTable) {
-                            initializeDataTable();
-                        }
-                    }, 100);
+                    populateCombinedTable();
                 }
-            });
-
-            // Modal setup
-            $('#modalUploadDokumen').on('shown.bs.modal', function() {
-                // Focus on file input
-                $('#file').focus();
-            });
-
-            // Reset form when modal is closed
-            $('#modalUploadDokumen').on('hidden.bs.modal', function() {
-                $('#formUploadDokumen')[0].reset();
-                $('#showDesc').prop('checked', false);
-                $('#descContainer').hide();
-                $('#uploadProgress').hide();
-                $('#uploadProgress .progress-bar').css('width', '0%');
-                $('#uploadProgressText').text('Mempersiapkan upload...');
             });
 
             // Reset edit form when modal is closed
@@ -1126,231 +861,350 @@
                     }
                 });
             });
+        });
 
-            // Upload Document
-            $('#btnUploadDokumen').click(function() {
-                let form = $('#formUploadDokumen')[0];
+        // ============================================
+        // UPLOAD FUNCTION
+        // ============================================
 
-                // Basic form validation
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
-                }
+        function uploadDocument() {
+            let form = $('#formUploadDokumen')[0];
+            let formData = new FormData(form);
 
-                let formData = new FormData(form);
+            // Show progress modal
+            $('#modalUploadProgress').modal('show');
 
-                $.ajax({
-                    url: '{{ route('dokumen.store') }}',
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    beforeSend: function() {
-                        $('#uploadProgress').show();
-                        $('#uploadProgressText').text('Memulai upload...');
-                        $('#btnUploadDokumen').prop('disabled', true).html(
-                            '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...'
-                        );
-                    },
-                    xhr: function() {
-                        let xhr = new window.XMLHttpRequest();
-                        xhr.upload.addEventListener("progress", function(evt) {
-                            if (evt.lengthComputable) {
-                                let percentComplete = (evt.loaded / evt.total) * 100;
-                                $('#uploadProgress .progress-bar').css('width',
-                                    percentComplete + '%');
-                                $('#uploadProgressText').text(
-                                    `Upload ${Math.round(percentComplete)}% selesai`
-                                );
+            $.ajax({
+                url: '{{ route('dokumen.store') }}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function() {
+                    let xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener("progress", function(evt) {
+                        if (evt.lengthComputable) {
+                            let percentComplete = (evt.loaded / evt.total) * 100;
+                            $('#uploadProgressBar').css('width', percentComplete + '%');
+                            $('#uploadProgressText').text(
+                                `Mengupload ${Math.round(percentComplete)}% selesai`
+                            );
 
-                                if (percentComplete >= 100) {
-                                    $('#uploadProgressText').text(
-                                        'Memproses dokumen...');
-                                }
-                            }
-                        }, false);
-                        return xhr;
-                    },
-                    success: function(response) {
-                        $('#modalUploadDokumen').modal('hide');
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil!',
-                            text: response.message || 'Dokumen berhasil diupload',
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            // Reload page to show new document
-                            window.location.reload();
-                        });
-                    },
-                    error: function(xhr) {
-                        $('#uploadProgress').hide();
-                        $('#btnUploadDokumen').prop('disabled', false).html(
-                            '<i class="bi bi-cloud-upload me-1"></i>Upload Dokumen'
-                        );
-
-                        let errorMessage = 'Terjadi kesalahan saat upload dokumen';
-
-                        if (xhr.responseJSON) {
-                            if (xhr.responseJSON.message) {
-                                errorMessage = xhr.responseJSON.message;
-                            }
-                            if (xhr.responseJSON.errors) {
-                                let errors = xhr.responseJSON.errors;
-                                errorMessage += '<br><ul style="text-align: left;">';
-                                Object.keys(errors).forEach(key => {
-                                    errors[key].forEach(error => {
-                                        errorMessage += `<li>${error}</li>`;
-                                    });
-                                });
-                                errorMessage += '</ul>';
+                            if (percentComplete >= 100) {
+                                $('#uploadProgressText').text('Memproses dokumen...');
                             }
                         }
+                    }, false);
+                    return xhr;
+                },
+                success: function(response) {
+                    $('#modalUploadProgress').modal('hide');
 
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal!',
-                            html: errorMessage
-                        });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message || 'Dokumen berhasil diupload',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Reset form and reload
+                        $('#formUploadDokumen')[0].reset();
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    $('#modalUploadProgress').modal('hide');
+
+                    let errorMessage = 'Terjadi kesalahan saat upload dokumen';
+
+                    if (xhr.responseJSON) {
+                        if (xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        if (xhr.responseJSON.errors) {
+                            let errors = xhr.responseJSON.errors;
+                            errorMessage += '<br><ul style="text-align: left;">';
+                            Object.keys(errors).forEach(key => {
+                                errors[key].forEach(error => {
+                                    errorMessage += `<li>${error}</li>`;
+                                });
+                            });
+                            errorMessage += '</ul>';
+                        }
                     }
-                });
-            });
 
-            // Update Document
-            $('#btnUpdateDokumen').click(function() {
-                let form = $('#formEditDokumen')[0];
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        html: errorMessage
+                    });
 
-                // Basic form validation
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return;
+                    // Reset file input
+                    $('#fileUpload').val('');
                 }
+            });
+        }
 
-                let dokumenId = $('#edit_dokumen_id').val();
-                let formData = new FormData(form);
+        // ============================================
+        // DATATABLE INITIALIZATION
+        $('#btnUpdateDokumen').click(function() {
+            let form = $('#formEditDokumen')[0];
 
-                $.ajax({
-                    url: `/dokumen/${dokumenId}`,
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    beforeSend: function() {
-                        $('#editProgress').show();
-                        $('#editProgressText').text('Memulai update...');
-                        $('#btnUpdateDokumen').prop('disabled', true).html(
-                            '<span class="spinner-border spinner-border-sm me-2"></span>Updating...'
-                        );
-                    },
-                    xhr: function() {
-                        let xhr = new window.XMLHttpRequest();
-                        xhr.upload.addEventListener("progress", function(evt) {
-                            if (evt.lengthComputable) {
-                                let percentComplete = (evt.loaded / evt.total) * 100;
-                                $('#editProgress .progress-bar').css('width',
-                                    percentComplete + '%');
+            // Basic form validation
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            let dokumenId = $('#edit_dokumen_id').val();
+            let formData = new FormData(form);
+
+            $.ajax({
+                url: `/dokumen/${dokumenId}`,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function() {
+                    $('#editProgress').show();
+                    $('#editProgressText').text('Memulai update...');
+                    $('#btnUpdateDokumen').prop('disabled', true).html(
+                        '<span class="spinner-border spinner-border-sm me-2"></span>Updating...'
+                    );
+                },
+                xhr: function() {
+                    let xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener("progress", function(evt) {
+                        if (evt.lengthComputable) {
+                            let percentComplete = (evt.loaded / evt.total) * 100;
+                            $('#editProgress .progress-bar').css('width',
+                                percentComplete + '%');
+                            $('#editProgressText').text(
+                                `Upload ${Math.round(percentComplete)}% selesai`
+                            );
+
+                            if (percentComplete >= 100) {
                                 $('#editProgressText').text(
-                                    `Upload ${Math.round(percentComplete)}% selesai`
-                                );
-
-                                if (percentComplete >= 100) {
-                                    $('#editProgressText').text(
-                                        'Memproses update dokumen...');
-                                }
-                            }
-                        }, false);
-                        return xhr;
-                    },
-                    success: function(response) {
-                        $('#modalEditDokumen').modal('hide');
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil!',
-                            text: response.message || 'Dokumen berhasil diupdate',
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            // Reload page to show updated document
-                            window.location.reload();
-                        });
-                    },
-                    error: function(xhr) {
-                        $('#editProgress').hide();
-                        $('#btnUpdateDokumen').prop('disabled', false).html(
-                            '<i class="bi bi-save me-1"></i>Update Dokumen'
-                        );
-
-                        let errorMessage = 'Terjadi kesalahan saat update dokumen';
-
-                        if (xhr.responseJSON) {
-                            if (xhr.responseJSON.message) {
-                                errorMessage = xhr.responseJSON.message;
-                            }
-                            if (xhr.responseJSON.errors) {
-                                let errors = xhr.responseJSON.errors;
-                                errorMessage += '<br><ul style="text-align: left;">';
-                                Object.keys(errors).forEach(key => {
-                                    errors[key].forEach(error => {
-                                        errorMessage += `<li>${error}</li>`;
-                                    });
-                                });
-                                errorMessage += '</ul>';
+                                    'Memproses update dokumen...');
                             }
                         }
+                    }, false);
+                    return xhr;
+                },
+                success: function(response) {
+                    $('#modalEditDokumen').modal('hide');
 
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal!',
-                            html: errorMessage
-                        });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message || 'Dokumen berhasil diupdate',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Reload page to show updated document
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    $('#editProgress').hide();
+                    $('#btnUpdateDokumen').prop('disabled', false).html(
+                        '<i class="bi bi-save me-1"></i>Update Dokumen'
+                    );
+
+                    let errorMessage = 'Terjadi kesalahan saat update dokumen';
+
+                    if (xhr.responseJSON) {
+                        if (xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        if (xhr.responseJSON.errors) {
+                            let errors = xhr.responseJSON.errors;
+                            errorMessage += '<br><ul style="text-align: left;">';
+                            Object.keys(errors).forEach(key => {
+                                errors[key].forEach(error => {
+                                    errorMessage += `<li>${error}</li>`;
+                                });
+                            });
+                            errorMessage += '</ul>';
+                        }
                     }
-                });
-            });
 
-            // Set up download button in detail modal
-            $('#btnDownloadDokumen').click(function() {
-                let id = $(this).attr('data-id');
-                if (id) {
-                    window.location.href = `/dokumen/${id}/download`;
-                }
-            });
-
-            // Set up edit from detail button
-            $('#btnEditFromDetail').click(function() {
-                let id = $(this).attr('data-id');
-                if (id) {
-                    $('#modalDetailDokumen').modal('hide');
-                    editDokumen(id);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        html: errorMessage
+                    });
                 }
             });
         });
 
+        // Set up download button in detail modal
+        $('#btnDownloadDokumen').click(function() {
+            let id = $(this).attr('data-id');
+            if (id) {
+                window.location.href = `/dokumen/${id}/download`;
+            }
+        });
+
+        // Set up edit from detail button
+        $('#btnEditFromDetail').click(function() {
+            let id = $(this).attr('data-id');
+            if (id) {
+                $('#modalDetailDokumen').modal('hide');
+                editDokumen(id);
+            }
+        });
+
         // ============================================
-        // DATATABLE INITIALIZATION
+        // COMBINED TABLE POPULATION
         // ============================================
 
-        function initializeDataTable() {
+        function prepareTableData() {
+            console.log('Preparing table data...', 'Subfolders:', subfolders.length, 'Documents:', documents.length);
+            let tbody = '';
+
+            try {
+                // Add folders first
+                subfolders.forEach(folder => {
+                    const updatedDate = folder.updated_at ? formatDateOnly(folder.updated_at) : '-';
+                    const creatorName = folder.creator ? folder.creator.nama : (folder.created_by ? 'User #' +
+                        folder.created_by : '-');
+
+                    tbody += `
+                    <tr style="cursor:pointer;" onclick="navigateToFolder(${folder.id})">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
+                                <strong>${folder.nama}</strong>
+                            </div>
+                        </td>
+                        <td>${creatorName}</td>
+                        <td>${updatedDate}</td>
+                        <td>
+                            <small class="text-muted">${folder.total_files || 0} file${(folder.total_files || 0) !== 1 ? 's' : ''}</small>
+                        </td>
+                        <td onclick="event.stopPropagation();">
+                            <button class="btn btn-sm btn-link text-secondary p-1" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" onclick="navigateToFolder(${folder.id}); return false;">
+                                    <i class="bi bi-folder2-open me-2"></i>Buka Folder
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${folder.id}); return false;">
+                                    <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                </a></li>
+                            </ul>
+                        </td>
+                    </tr>
+                    `;
+                });
+
+                // Add documents
+                documents.forEach(doc => {
+                    const currentFile = doc.files && doc.files.length > 0 ? (doc.files.find(f => f.is_current) ||
+                        doc.files[0]) : null;
+                    const extension = currentFile ? currentFile.extension : 'pdf';
+
+                    let fileIcon = 'bi-file-earmark-text-fill';
+                    if (extension === 'pdf') {
+                        fileIcon = 'bi-file-earmark-pdf-fill text-danger';
+                    } else if (['doc', 'docx'].includes(extension)) {
+                        fileIcon = 'bi-file-earmark-word-fill text-primary';
+                    } else if (['xls', 'xlsx'].includes(extension)) {
+                        fileIcon = 'bi-file-earmark-excel-fill text-success';
+                    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+                        fileIcon = 'bi-file-earmark-image-fill text-warning';
+                    }
+
+                    const updatedDate = doc.updated_at ? new Date(doc.updated_at).toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    }) : '-';
+                    const creatorName = doc.uploader ? doc.uploader.nama : '-';
+                    const fileSize = currentFile ? `${Number(currentFile.size_kb).toLocaleString('id-ID')} KB` :
+                        '-';
+
+                    tbody += `
+                    <tr style="cursor:pointer;" onclick="showDetail(${doc.id})">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi ${fileIcon} me-2" style="font-size: 20px;"></i>
+                                <strong>${doc.judul}</strong>
+                            </div>
+                        </td>
+                        <td>${creatorName}</td>
+                        <td>${updatedDate}</td>
+                        <td>${fileSize}</td>
+                        <td onclick="event.stopPropagation();">
+                            <button class="btn btn-sm btn-link text-secondary p-1" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" onclick="showDetail(${doc.id}); return false;">
+                                    <i class="bi bi-eye me-2"></i>Lihat Detail
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dokumen/${doc.id}/download" onclick="event.stopPropagation()">
+                                    <i class="bi bi-download me-2"></i>Unduh
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="editDokumen(${doc.id}); return false;">
+                                    <i class="bi bi-pencil-square me-2"></i>Edit
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteDokumen(${doc.id}); return false;">
+                                    <i class="bi bi-trash me-2"></i>Hapus
+                                </a></li>
+                            </ul>
+                        </td>
+                    </tr>
+                    `;
+                });
+
+                $('#combinedTableBody').html(tbody);
+                console.log('Table data prepared successfully. Total rows:', subfolders.length + documents.length);
+            } catch (error) {
+                console.error('Error preparing table data:', error);
+            }
+        }
+
+        function populateCombinedTable() {
+            console.log('Populating combined table...');
+
+            // Destroy existing DataTable if any
             if (dataTable) {
+                console.log('Destroying existing DataTable');
                 dataTable.destroy();
                 dataTable = null;
             }
 
-            if ($('#dokumenTable').length) {
-                dataTable = new simpleDatatables.DataTable("#dokumenTable", {
-                    searchable: true,
-                    fixedHeight: false,
-                    perPage: 10,
-                    labels: {
-                        placeholder: "Cari dokumen...",
-                        perPage: "Data per halaman",
-                        noRows: "Tidak ada data",
-                        info: "Menampilkan {start} sampai {end} dari {rows} data",
-                    }
-                });
-            }
+            // Generate tbody HTML (call prepareTableData to ensure fresh data)
+            prepareTableData();
+
+            // Initialize DataTable after a small delay to ensure DOM is ready
+            setTimeout(function() {
+                const rowCount = $('#combinedTableBody tr').length;
+                console.log('Table body has', rowCount, 'rows');
+
+                if ($('#combinedTable').length && rowCount > 0) {
+                    dataTable = new simpleDatatables.DataTable("#combinedTable", {
+                        searchable: true,
+                        fixedHeight: false,
+                        perPage: 10,
+                        labels: {
+                            placeholder: "Cari folder atau dokumen...",
+                            perPage: "Data per halaman",
+                            noRows: "Tidak ada data",
+                            info: "Menampilkan {start} sampai {end} dari {rows} data",
+                        }
+                    });
+                    console.log('DataTable initialized successfully with', rowCount, 'rows');
+                } else {
+                    console.warn('Cannot initialize DataTable: no rows found');
+                }
+            }, 150);
         }
 
         // ============================================
@@ -1528,15 +1382,16 @@
                                 <div class="card-body">
                                     <div class="detail-file-preview">
                                         <div class="me-3">
-                                            <i class="bi bi-file-earmark-${fileIconClass}" style="font-size: 3rem;"></i>
+                                            <i class="bi bi-file-earmark-` + fileIconClass + `" style="font-size: 3rem;"></i>
                                         </div>
                                         <div>
-                                            <h6 class="mb-1">${currentFile.nama_file}</h6>
+                                            <h6 class="mb-1">` + currentFile.nama_file + `</h6>
                                             <p class="mb-0 text-muted">
-                                                <span class="badge bg-info text-dark me-2">${extension.toUpperCase()}</span>
-                                                Ukuran: ${formatFileSize(currentFile.size_kb)} | 
-                                                Versi: ${currentFile.version} | 
-                                                Diupload: ${formatDateTime(currentFile.created_at)}
+                                                <span class="badge bg-info text-dark me-2">` + extension
+                            .toUpperCase() + `</span>
+                                                Ukuran: ` + formatFileSize(currentFile.size_kb) + ` | 
+                                                Versi: ` + currentFile.version + ` | 
+                                                Diupload: ` + formatDateTime(currentFile.created_at) + `
                                             </p>
                                         </div>
                                     </div>
@@ -1755,15 +1610,21 @@
                 success: function(response) {
                     console.log('Subfolders loaded:', response);
 
-                    if (response && response.length > 0) {
-                        renderSubfoldersGrid(response);
-                        renderSubfoldersTable(response);
-                        $('#subfolderCount').text(response.length);
-                        $('#subfolderTableCount').text(response.length);
+                    subfolders = response && Array.isArray(response) ? response : [];
+
+                    if (subfolders.length > 0) {
+                        renderSubfoldersGrid(subfolders);
+                        $('#subfolderCount').text(subfolders.length);
+                    } else {
+                        $('#subfoldersSection').hide();
                     }
+
+                    // Data is ready, prepareTableData is called by populateCombinedTable when needed
+                    console.log('Subfolders ready:', subfolders.length, 'folders');
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading subfolders:', error);
+                    subfolders = [];
                 }
             });
         }
@@ -1815,55 +1676,6 @@
             });
 
             $('#subfoldersGrid').html(html);
-        }
-
-        function renderSubfoldersTable(folders) {
-            if (!folders || folders.length === 0) {
-                $('#subfoldersTableSection').hide();
-                return;
-            }
-
-            $('#subfoldersTableSection').show();
-            let tbody = '';
-
-            folders.forEach(folder => {
-                const updatedDate = folder.updated_at ? formatDateOnly(folder.updated_at) : '-';
-                const creatorName = folder.creator ? folder.creator.name : (folder.created_by ? 'User #' + folder
-                    .created_by : '-');
-
-                tbody += `
-                <tr style="cursor:pointer;" onclick="navigateToFolder(${folder.id})">
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
-                            <strong>${folder.nama}</strong>
-                        </div>
-                    </td>
-                    <td>${creatorName}</td>
-                    <td>${updatedDate}</td>
-                    <td>
-                        <div style="line-height: 1.4;">
-                            <div>${folder.total_files || 0} file${(folder.total_files || 0) !== 1 ? 's' : ''}</div>
-                        </div>
-                    </td>
-                    <td onclick="event.stopPropagation();">
-                        <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" onclick="navigateToFolder(${folder.id}); return false;">
-                                <i class="bi bi-folder2-open me-2"></i>Buka Folder
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${folder.id}); return false;">
-                                <i class="bi bi-link-45deg me-2"></i>Salin Link
-                            </a></li>
-                        </ul>
-                    </td>
-                </tr>
-                `;
-            });
-
-            $('#subfoldersTable tbody').html(tbody);
         }
 
         function navigateToFolder(folderId) {

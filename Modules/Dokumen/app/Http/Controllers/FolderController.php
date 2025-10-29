@@ -45,7 +45,7 @@ class FolderController extends Controller
     {
         try {
             $folder = Folder::with('bidang')->findOrFail($id);
-            $dokumen = Dokumen::with(['jenis', 'uploader', 'files'])
+            $dokumen = Dokumen::with(['uploader', 'files'])
                 ->where('folder_id', $id)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -55,8 +55,12 @@ class FolderController extends Controller
                 'dokumen' => $dokumen
             ]);
         } catch (\Exception $e) {
-            Log::error('Error loading folder documents: ' . $e->getMessage());
-            return redirect()->route('dokumen.folder.index')->with('error', 'Gagal memuat dokumen folder');
+            Log::error('Error loading folder documents: ' . $e->getMessage(), [
+                'folder_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->route('dokumen.folder.index')->with('error', 'Gagal memuat dokumen folder: ' . $e->getMessage());
         }
     }
     public function create()
@@ -400,6 +404,26 @@ class FolderController extends Controller
         } catch (\Exception $e) {
             Log::error('Error getting folder files: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
+     * Get bidang list for dropdown
+     */
+    public function getBidang()
+    {
+        try {
+            $bidang = DB::table('master_bidang')
+                ->select('id', 'nama', 'kode')
+                ->orderBy('nama', 'asc')
+                ->get();
+
+            return response()->json($bidang);
+        } catch (\Exception $e) {
+            Log::error('Error fetching bidang: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Gagal memuat data bidang'
+            ], 500);
         }
     }
 }
