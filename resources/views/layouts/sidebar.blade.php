@@ -361,11 +361,6 @@
                          <i class="bi bi-circle"></i><span>Tugas Saya</span>
                      </a>
                  </li>
-                 <li>
-                     <a href="{{ url('penugasan/tugas-harian') }}">
-                         <i class="bi bi-circle"></i><span>Progress & Validasi</span>
-                     </a>
-                 </li>
                  {{-- <li>
                      <a href="{{ url('penugasan/tugas-harian') }}">
                          <i class="bi bi-circle"></i><span>Penilaian</span>
@@ -416,26 +411,9 @@
 
          <!-- Penilaian Nav -->
          <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#penilaian-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-award"></i><span>Penilaian</span><i class="bi bi-chevron-down ms-auto"></i>
+             <a class="nav-link collapsed" href="{{ url('penilaian/laporan') }}">
+                 <i class="bi bi-award"></i><span>Penilaian Kinerja</span>
              </a>
-             <ul id="penilaian-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ url('penilaian/bulanan') }}">
-                         <i class="bi bi-circle"></i><span>Nilai Bulanan</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('penilaian/tahunan') }}">
-                         <i class="bi bi-circle"></i><span>Nilai Tahunan</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('penilaian/laporan') }}">
-                         <i class="bi bi-circle"></i><span>Laporan Penilaian</span>
-                     </a>
-                 </li>
-             </ul>
          </li><!-- End Penilaian Nav -->
 
          <!-- Delegasi & Workload Nav -->

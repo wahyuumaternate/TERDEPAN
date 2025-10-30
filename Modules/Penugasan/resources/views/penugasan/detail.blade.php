@@ -456,6 +456,7 @@
                                         <table class="table table-hover table-striped" id="tugasHarianTable">
                                             <thead class="table-light">
                                                 <tr>
+                                                    <th class="text-center" width="30"></th>
                                                     <th class="text-center" width="50">#</th>
                                                     <th width="250">Nama Tugas</th>
                                                     <th width="200">Tugas Pokok</th>
@@ -466,9 +467,19 @@
                                             </thead>
                                             <tbody>
                                                 @forelse($tugasHarian as $index => $tugas)
-                                                    <tr>
+                                                    <tr class="tugas-row" data-tugas-id="{{ $tugas->id }}">
                                                         <td class="text-center align-middle">
-                                                            {{ ($tugasHarian->currentPage() - 1) * $tugasHarian->perPage() + $index + 1 }}
+                                                            @if ($tugas->status === 'revisi' || ($tugas->historyRevisi && $tugas->historyRevisi->count() > 0))
+                                                                <button class="btn btn-sm btn-link p-0"
+                                                                    onclick="toggleRevisionHistory({{ $tugas->id }})"
+                                                                    data-bs-toggle="tooltip" title="Lihat History Revisi">
+                                                                    <i class="bi bi-chevron-right"
+                                                                        id="chevron-{{ $tugas->id }}"></i>
+                                                                </button>
+                                                            @endif
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            {{ $index + 1 }}
                                                         </td>
                                                         <td class="align-middle">
                                                             <div>
@@ -533,7 +544,7 @@
                                                                         </a>
                                                                     </li>
 
-                                                                    <!-- Kerjakan (jika status pending) atau Upload Bukti (jika status dikerjakan) -->
+                                                                    <!-- Kerjakan (jika status pending) atau Upload Bukti (jika status dikerjakan/revisi) -->
                                                                     @if ($tugas->status === 'pending')
                                                                         <li>
                                                                             <a href="javascript:void(0)"
@@ -547,11 +558,21 @@
                                                                     @elseif($tugas->status === 'dikerjakan')
                                                                         <li>
                                                                             <a href="javascript:void(0)"
-                                                                                onclick="uploadBukti({{ $tugas->id }})"
+                                                                                onclick="uploadBukti({{ $tugas->id }}, 'tugas_harian')"
                                                                                 class="dropdown-item">
                                                                                 <i
                                                                                     class="bi bi-cloud-upload text-primary me-2"></i>
                                                                                 Upload Bukti
+                                                                            </a>
+                                                                        </li>
+                                                                    @elseif($tugas->status === 'revisi')
+                                                                        <li>
+                                                                            <a href="javascript:void(0)"
+                                                                                onclick="uploadBukti({{ $tugas->id }}, 'tugas_harian')"
+                                                                                class="dropdown-item">
+                                                                                <i
+                                                                                    class="bi bi-arrow-repeat text-warning me-2"></i>
+                                                                                Upload Ulang Bukti
                                                                             </a>
                                                                         </li>
                                                                     @endif
@@ -584,9 +605,28 @@
                                                             </div>
                                                         </td>
                                                     </tr>
+
+                                                    <!-- History Revisi Row (hidden by default) -->
+                                                    <tr class="revision-history-row" id="history-{{ $tugas->id }}"
+                                                        style="display: none;">
+                                                        <td colspan="7" class="p-2 bg-light border-top">
+                                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                                <i class="bi bi-clock-history text-warning"></i>
+                                                                <strong class="small">History Revisi</strong>
+                                                            </div>
+                                                            <div id="revision-content-{{ $tugas->id }}">
+                                                                <div class="text-center py-2">
+                                                                    <div class="spinner-border spinner-border-sm"
+                                                                        role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="6" class="text-center py-5">
+                                                        <td colspan="7" class="text-center py-5">
                                                             <i class="bi bi-inbox"
                                                                 style="font-size: 3rem; color: #ccc;"></i>
                                                             <p class="text-muted mt-2">Belum ada tugas harian</p>
@@ -599,7 +639,7 @@
 
                                     <!-- Pagination -->
                                     <div class="d-flex justify-content-center mt-4">
-                                        {{ $tugasHarian->withQueryString()->links() }}
+                                        {{-- Pagination removed for simple collection --}}
                                     </div>
                                 </div>
 
@@ -630,6 +670,26 @@
                                                         </div>
                                                     </div>
                                                     <div class="card-body">
+                                                        <!-- Catatan Revisi Alert -->
+                                                        @if ($tugas->status === 'revisi')
+                                                            <div class="alert alert-warning alert-dismissible fade show mb-3"
+                                                                role="alert">
+                                                                <h6 class="alert-heading mb-2">
+                                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                                    Perlu Revisi
+                                                                </h6>
+                                                                <p class="mb-1 small"><strong>Catatan:</strong>
+                                                                    {{ $tugas->catatan_validasi ?? 'Tidak ada catatan' }}
+                                                                </p>
+                                                                @if ($tugas->validasi_oleh)
+                                                                    <small class="text-muted">
+                                                                        <i class="bi bi-person me-1"></i>
+                                                                        {{ $tugas->validasiOleh->nama ?? 'Unknown' }}
+                                                                    </small>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+
                                                         @if ($tugas->tugasPokok)
                                                             <p class="card-text small d-flex align-items-center mb-2">
                                                                 <i class="bi bi-link-45deg text-primary me-2"></i>
@@ -687,6 +747,13 @@
                                                     </div>
                                                     <div class="card-footer bg-transparent">
                                                         <div class="btn-group btn-group-sm w-100">
+                                                            @if ($tugas->status === 'revisi')
+                                                                <button
+                                                                    onclick="uploadBukti({{ $tugas->id }}, 'tugas_harian')"
+                                                                    class="btn btn-warning" title="Upload Ulang">
+                                                                    <i class="bi bi-arrow-repeat me-1"></i> Upload Ulang
+                                                                </button>
+                                                            @endif
                                                             <button onclick="editTugasHarian({{ $tugas->id }})"
                                                                 class="btn btn-outline-warning" title="Edit">
                                                                 <i class="bi bi-pencil-square"></i>
@@ -710,7 +777,7 @@
 
                                     <!-- Pagination for Grid View -->
                                     <div class="d-flex justify-content-center mt-4">
-                                        {{ $tugasHarian->withQueryString()->links() }}
+                                        {{-- Pagination removed for simple collection --}}
                                     </div>
                                 </div>
                             </div>
@@ -1071,7 +1138,9 @@
             </div>
         </div>
     </div>
+@endsection
 
+@push('styles')
     <style>
         /* Tab Styles */
         .nav-tabs-bordered {
@@ -1205,7 +1274,7 @@
             }
         }
     </style>
-@endsection
+@endpush
 
 @push('scripts')
     <script>
@@ -1777,57 +1846,145 @@
                 html: `
                     <div class="mb-3">
                         <label class="form-label">Status Validasi</label>
-                        <select class="form-select" id="status_validasi_input">
-                            <option value="divalidasi">Divalidasi</option>
+                        <select class="form-select" id="status_validasi_input" onchange="toggleValidationFields()">
+                            <option value="">Pilih Status</option>
+                            <option value="diterima">Diterima (Selesai)</option>
                             <option value="revisi">Perlu Revisi</option>
-                            <option value="disetujui">Disetujui</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Catatan Validasi (opsional)</label>
-                        <textarea class="form-control" id="catatan_validasi_input" rows="3" placeholder="Tulis catatan..."></textarea>
+                    
+                    <!-- Fields untuk status diterima -->
+                    <div id="fields_diterima" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Penilaian (0-100) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="penilaian_input" min="0" max="100" placeholder="Masukkan nilai">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Update Progress Tugas Pokok</label>
+                            <select class="form-select" id="progress_update_type_input" onchange="toggleProgressValue()">
+                                <option value="otomatis">Otomatis (berdasarkan target)</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div id="manual_progress" style="display: none;" class="mb-3">
+                            <label class="form-label">Nilai Progress Manual</label>
+                            <input type="number" class="form-control" id="progress_value_input" min="0" placeholder="Masukkan nilai progress">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Catatan (opsional)</label>
+                            <textarea class="form-control" id="catatan_validasi_input" rows="2" placeholder="Catatan tambahan..."></textarea>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Penilaian (0-100)</label>
-                        <input type="number" class="form-control" id="penilaian_input" min="0" max="100" placeholder="Masukkan nilai">
+                    
+                    <!-- Fields untuk status revisi -->
+                    <div id="fields_revisi" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Alasan Revisi <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="catatan_revisi_input" rows="3" placeholder="Jelaskan alasan perlu revisi..."></textarea>
+                        </div>
                     </div>
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Simpan Validasi',
                 cancelButtonText: 'Batal',
+                width: '500px',
+                didOpen: () => {
+                    // Add event listeners after modal opens
+                    window.toggleValidationFields = function() {
+                        const status = document.getElementById('status_validasi_input').value;
+                        document.getElementById('fields_diterima').style.display = status === 'diterima' ?
+                            'block' : 'none';
+                        document.getElementById('fields_revisi').style.display = status === 'revisi' ?
+                            'block' : 'none';
+                    };
+
+                    window.toggleProgressValue = function() {
+                        const type = document.getElementById('progress_update_type_input').value;
+                        document.getElementById('manual_progress').style.display = type === 'manual' ?
+                            'block' : 'none';
+                    };
+                },
                 preConfirm: () => {
                     const statusValidasi = document.getElementById('status_validasi_input').value;
-                    const catatanValidasi = document.getElementById('catatan_validasi_input').value;
-                    const penilaian = document.getElementById('penilaian_input').value;
 
                     if (!statusValidasi) {
                         Swal.showValidationMessage('Status validasi harus dipilih');
                         return false;
                     }
 
+                    if (statusValidasi === 'diterima') {
+                        const penilaian = document.getElementById('penilaian_input').value;
+                        const progressUpdateType = document.getElementById('progress_update_type_input').value;
+                        const progressValue = document.getElementById('progress_value_input').value;
+                        const catatan = document.getElementById('catatan_validasi_input').value;
+
+                        if (!penilaian || penilaian < 0 || penilaian > 100) {
+                            Swal.showValidationMessage('Penilaian harus diisi dengan nilai 0-100');
+                            return false;
+                        }
+
+                        if (progressUpdateType === 'manual' && !progressValue) {
+                            Swal.showValidationMessage('Nilai progress manual harus diisi');
+                            return false;
+                        }
+
+                        return {
+                            status_validasi: statusValidasi,
+                            penilaian: penilaian,
+                            progress_update_type: progressUpdateType,
+                            progress_value: progressValue,
+                            catatan_validasi: catatan
+                        };
+                    } else if (statusValidasi === 'revisi') {
+                        const catatanRevisi = document.getElementById('catatan_revisi_input').value;
+
+                        if (!catatanRevisi.trim()) {
+                            Swal.showValidationMessage('Alasan revisi harus diisi');
+                            return false;
+                        }
+
+                        return {
+                            status_validasi: statusValidasi,
+                            catatan_revisi: catatanRevisi
+                        };
+                    }
+
                     return {
-                        statusValidasi,
-                        catatanValidasi,
-                        penilaian
+                        status_validasi: statusValidasi
                     };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Prepare base data
+                    let requestData = {
+                        _token: '{{ csrf_token() }}',
+                        jenis_tugas: jenisTugas,
+                        status_validasi: result.value.status_validasi
+                    };
+
+                    // Add fields based on status
+                    if (result.value.status_validasi === 'diterima') {
+                        requestData.penilaian = result.value.penilaian;
+                        requestData.progress_update_type = result.value.progress_update_type;
+                        if (result.value.progress_value) {
+                            requestData.progress_value = result.value.progress_value;
+                        }
+                        if (result.value.catatan_validasi) {
+                            requestData.catatan_validasi = result.value.catatan_validasi;
+                        }
+                    } else if (result.value.status_validasi === 'revisi') {
+                        requestData.catatan_revisi = result.value.catatan_revisi;
+                    }
+
                     $.ajax({
-                        url: "{{ route('penugasan.validasi-tugas', '') }}/" + tugasId,
+                        url: `/penugasan/validasi-tugas/${tugasId}`,
                         type: 'POST',
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            jenis_tugas: jenisTugas,
-                            status_validasi: result.value.statusValidasi,
-                            catatan_validasi: result.value.catatanValidasi,
-                            penilaian: result.value.penilaian
-                        },
+                        data: requestData,
                         success: function(response) {
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Berhasil!',
-                                text: 'Validasi berhasil disimpan',
+                                text: response.message || 'Validasi berhasil disimpan',
                                 timer: 2000,
                                 showConfirmButton: false
                             }).then(() => {
@@ -1838,12 +1995,15 @@
                             let errorMessage = 'Terjadi kesalahan saat validasi';
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                                const errors = xhr.responseJSON.errors;
+                                errorMessage = Object.values(errors).flat().join('<br>');
                             }
 
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal!',
-                                text: errorMessage
+                                html: errorMessage
                             });
                         }
                     });
@@ -1851,21 +2011,101 @@
             });
         }
 
+        // Function to toggle revision history
+        function toggleRevisionHistory(tugasId) {
+            const historyRow = document.getElementById(`history-${tugasId}`);
+            const chevron = document.getElementById(`chevron-${tugasId}`);
+
+            if (historyRow.style.display === 'none') {
+                // Show history
+                historyRow.style.display = 'table-row';
+                chevron.classList.remove('bi-chevron-right');
+                chevron.classList.add('bi-chevron-down');
+
+                // Load history via AJAX if not loaded yet
+                if (!historyRow.getAttribute('data-loaded')) {
+                    loadRevisionHistory(tugasId);
+                    historyRow.setAttribute('data-loaded', 'true');
+                }
+            } else {
+                // Hide history
+                historyRow.style.display = 'none';
+                chevron.classList.remove('bi-chevron-down');
+                chevron.classList.add('bi-chevron-right');
+            }
+        }
+
+        // Function to load revision history via AJAX
+        function loadRevisionHistory(tugasId) {
+            $.ajax({
+                url: `/penugasan/tugas-harian/${tugasId}/history`,
+                type: 'GET',
+                success: function(response) {
+                    let historyHtml = '';
+
+                    if (response.history && response.history.length > 0) {
+                        historyHtml = '<div class="small">';
+                        response.history.forEach(function(item, index) {
+                            const tanggal = new Date(item.tanggal_revisi).toLocaleDateString('id-ID', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            });
+
+                            historyHtml += `
+                                <div class="border-start border-danger border-2 ps-2 mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="text-danger">Revisi ke-${item.revisi_ke}</strong>
+                                        <small class="text-muted">${tanggal}</small>
+                                    </div>
+                                    <div class="text-muted mb-1">${item.catatan_revisi}</div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person"></i> ${item.direvisi_oleh ? item.direvisi_oleh.nama : 'Unknown'}
+                                        </small>
+                                        ${item.dokumen_lama ? `
+                                                <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
+                                                    <i class="bi bi-download"></i> File Lama
+                                                </a>
+                                            ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        historyHtml += '</div>';
+                    } else {
+                        historyHtml =
+                            '<div class="text-center text-muted py-2 small">Belum ada history revisi</div>';
+                    }
+
+                    document.getElementById(`revision-content-${tugasId}`).innerHTML = historyHtml;
+                },
+                error: function() {
+                    document.getElementById(`revision-content-${tugasId}`).innerHTML =
+                        '<div class="text-center text-muted py-2 small">Gagal memuat history</div>';
+                }
+            });
+        }
+
+        // Function to view detail
+        function viewDetail(id) {
+            // Implement detail view functionality
+            alert('Detail view for task ID: ' + id);
+        }
+
         // Function to start working on a task (change status from pending to dikerjakan)
         function kerjakanTugas(tugasId) {
             Swal.fire({
                 title: 'Mulai Mengerjakan Tugas?',
-                text: 'Apakah Anda yakin ingin mulai mengerjakan tugas ini? Status akan diubah menjadi "Dikerjakan"',
+                text: 'Status tugas akan berubah menjadi "Dikerjakan"',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'Ya, Kerjakan!',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#0dcaf0',
-                cancelButtonColor: '#6c757d'
+                confirmButtonText: 'Ya, Mulai',
+                cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: "{{ url('penugasan/tugas-harian') }}/" + tugasId + "/update-status",
+                        url: `/penugasan/tugas-harian/${tugasId}/update-status`,
                         type: 'POST',
                         data: {
                             _token: '{{ csrf_token() }}',
@@ -1876,7 +2116,6 @@
                                 title: 'Memproses...',
                                 text: 'Sedang mengubah status tugas',
                                 allowOutsideClick: false,
-                                allowEscapeKey: false,
                                 didOpen: () => {
                                     Swal.showLoading();
                                 }
@@ -1886,83 +2125,7 @@
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Berhasil!',
-                                text: 'Status tugas berhasil diubah menjadi "Dikerjakan". Anda sekarang dapat mengupload bukti pengerjaan.',
-                                confirmButtonText: 'OK',
-                                timer: 3000
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        },
-                        error: function(xhr) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: xhr.responseJSON?.message ||
-                                    'Terjadi kesalahan saat mengubah status tugas',
-                                confirmButtonText: 'OK'
-                            });
-                        }
-                    });
-                }
-            });
-        }
-
-        // Function to upload bukti
-        function uploadBukti(tugasId) {
-            Swal.fire({
-                title: 'Upload Bukti Pengerjaan',
-                html: `
-                    <div class="mb-3">
-                        <label class="form-label">File Bukti</label>
-                        <input type="file" class="form-control" id="file_bukti_input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-                        <small class="text-muted">Format: PDF, JPG, PNG, DOC, DOCX (Max: 5MB)</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Keterangan</label>
-                        <textarea class="form-control" id="keterangan_bukti_input" rows="3" placeholder="Jelaskan bukti yang diupload..."></textarea>
-                    </div>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Upload',
-                cancelButtonText: 'Batal',
-                preConfirm: () => {
-                    const file = document.getElementById('file_bukti_input').files[0];
-                    const keterangan = document.getElementById('keterangan_bukti_input').value;
-
-                    if (!file) {
-                        Swal.showValidationMessage('File bukti harus dipilih');
-                        return false;
-                    }
-
-                    if (file.size > 5 * 1024 * 1024) {
-                        Swal.showValidationMessage('Ukuran file maksimal 5MB');
-                        return false;
-                    }
-
-                    return {
-                        file,
-                        keterangan
-                    };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const formData = new FormData();
-                    formData.append('_token', '{{ csrf_token() }}');
-                    formData.append('tugas_id', tugasId);
-                    formData.append('file_bukti', result.value.file);
-                    formData.append('keterangan', result.value.keterangan);
-
-                    $.ajax({
-                        url: "{{ url('penugasan/upload-bukti') }}",
-                        type: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        success: function(response) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Berhasil!',
-                                text: 'Bukti berhasil diupload',
+                                text: 'Status tugas berhasil diubah menjadi "Dikerjakan"',
                                 timer: 2000,
                                 showConfirmButton: false
                             }).then(() => {
@@ -1970,7 +2133,7 @@
                             });
                         },
                         error: function(xhr) {
-                            let errorMessage = 'Terjadi kesalahan saat upload';
+                            let errorMessage = 'Terjadi kesalahan saat mengubah status tugas';
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 errorMessage = xhr.responseJSON.message;
                             }
@@ -1979,6 +2142,108 @@
                                 icon: 'error',
                                 title: 'Gagal!',
                                 text: errorMessage
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Function to upload bukti
+        function uploadBukti(tugasId, jenisTugas) {
+            Swal.fire({
+                title: 'Upload Bukti Pengerjaan',
+                html: `
+                    <div class="mb-3">
+                        <label class="form-label">File Bukti <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="file_bukti_input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" multiple>
+                        <small class="form-text text-muted">Format: PDF, DOC, DOCX, JPG, JPEG, PNG, XLSX, XLS (Max 10MB per file)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Keterangan</label>
+                        <textarea class="form-control" id="keterangan_bukti_input" rows="3" placeholder="Jelaskan detail pengerjaan..."></textarea>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Upload Bukti',
+                cancelButtonText: 'Batal',
+                width: '500px',
+                preConfirm: () => {
+                    const fileInput = document.getElementById('file_bukti_input');
+                    const keterangan = document.getElementById('keterangan_bukti_input').value;
+
+                    if (!fileInput.files.length) {
+                        Swal.showValidationMessage('File bukti harus dipilih');
+                        return false;
+                    }
+
+                    // Validate file size (max 10MB per file)
+                    for (let file of fileInput.files) {
+                        if (file.size > 10 * 1024 * 1024) {
+                            Swal.showValidationMessage(
+                                `File ${file.name} terlalu besar. Maksimal 10MB per file.`);
+                            return false;
+                        }
+                    }
+
+                    return {
+                        files: fileInput.files,
+                        keterangan: keterangan
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData();
+                    formData.append('_token', '{{ csrf_token() }}');
+                    formData.append('tugas_id', tugasId);
+                    formData.append('jenis_tugas', jenisTugas);
+                    formData.append('keterangan', result.value.keterangan);
+
+                    // Add all selected files
+                    for (let file of result.value.files) {
+                        formData.append('files[]', file);
+                    }
+
+                    $.ajax({
+                        url: '{{ route('penugasan.upload-bukti') }}',
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        beforeSend: function() {
+                            Swal.fire({
+                                title: 'Uploading...',
+                                text: 'Sedang mengupload file bukti',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: response.message || 'Bukti berhasil diupload',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Terjadi kesalahan saat upload bukti';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                                const errors = xhr.responseJSON.errors;
+                                errorMessage = Object.values(errors).flat().join('<br>');
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                html: errorMessage
                             });
                         }
                     });

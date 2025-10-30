@@ -55,6 +55,83 @@ class TugasHarianController extends Controller
     }
 
     /**
+     * Show the detail page for a specific task
+     */
+    public function detail($id)
+    {
+        try {
+            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::with([
+                'tugasPokok.bidang',
+                'pegawai.bidang',
+                'pegawai.jabatan',
+                'pemberiTugas',
+                'dokumen.file',
+                'historyRevisi.direvisiOleh',
+                'historyRevisi.dokumenLama'
+            ])->findOrFail($id);
+
+            $pegawai = $tugasHarian->pegawai;
+            $tahun = date('Y');
+
+            // Get stats for this pegawai
+            $totalTugasPokok = \Modules\Penugasan\Models\TugasPokok::where('pegawai_id', $pegawai->id)->count();
+            $totalTugasHarian = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $pegawai->id)->count();
+            $tugasSelesai = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $pegawai->id)
+                ->where('status', 'selesai')->count();
+            $tugasBerjalan = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $pegawai->id)
+                ->whereIn('status', ['dikerjakan', 'revisi'])->count();
+
+            // Get tugas harian list for this pegawai
+            $tugasHarianList = \Modules\Penugasan\Models\TugasHarian::with([
+                'tugasPokok',
+                'pemberiTugas',
+                'dokumen.file',
+                'validasiOleh'
+            ])->where('pegawai_id', $pegawai->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Get tugas pokok for dropdown in forms
+            $tugasPokok = \Modules\Penugasan\Models\TugasPokok::where('pegawai_id', $pegawai->id)->get();
+
+            // Get available years for filter
+            $tahuns = \Modules\Penugasan\Models\TugasHarian::selectRaw('EXTRACT(YEAR FROM created_at) as year')
+                ->where('pegawai_id', $pegawai->id)
+                ->distinct()
+                ->orderBy('year', 'desc')
+                ->pluck('year')
+                ->toArray();
+
+            if (empty($tahuns)) {
+                $tahuns = [date('Y')];
+            }
+
+            // Get related data
+            $masterPegawai = \App\Models\MasterPegawai::where('status', 'aktif')->get();
+            $masterJabatan = \App\Models\MasterJabatan::all();
+            $masterBidang = \App\Models\MasterBidang::all();
+
+            return view('penugasan::detail', compact(
+                'tugasHarian',
+                'pegawai',
+                'tahun',
+                'totalTugasPokok',
+                'totalTugasHarian',
+                'tugasSelesai',
+                'tugasBerjalan',
+                'tugasHarianList',
+                'tugasPokok',
+                'tahuns',
+                'masterPegawai',
+                'masterJabatan',
+                'masterBidang'
+            ));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Tugas harian tidak ditemukan');
+        }
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit($id)
@@ -191,5 +268,56 @@ class TugasHarianController extends Controller
             'success' => true,
             'message' => 'Progress tugas berhasil diperbarui'
         ]);
+    }
+
+    /**
+     * Get revision history for tugas harian
+     */
+    public function getHistory($id)
+    {
+        try {
+            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+
+            // Get history revisi jika model ada
+            $history = [];
+            if (class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
+                $history = \Modules\Penugasan\Models\HistoriRevisi::with(['direvisiOleh', 'dokumenLama'])
+                    ->where('tugas_harian_id', $id)
+                    ->orderBy('revisi_ke', 'desc')
+                    ->get()
+                    ->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'revisi_ke' => $item->revisi_ke,
+                            'tanggal_revisi' => $item->tanggal_revisi,
+                            'catatan_revisi' => $item->catatan_revisi,
+                            'direvisi_oleh' => $item->direvisiOleh ? [
+                                'id' => $item->direvisiOleh->id,
+                                'nama' => $item->direvisiOleh->nama
+                            ] : null,
+                            'dokumen_lama' => $item->dokumenLama ? [
+                                'id' => $item->dokumenLama->id,
+                                'judul' => $item->dokumenLama->judul
+                            ] : null
+                        ];
+                    });
+            }
+
+            return response()->json([
+                'success' => true,
+                'history' => $history,
+                'tugas' => [
+                    'id' => $tugasHarian->id,
+                    'nama_tugas' => $tugasHarian->nama_tugas,
+                    'status' => $tugasHarian->status
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat history revisi: ' . $e->getMessage(),
+                'history' => []
+            ], 500);
+        }
     }
 }

@@ -18,15 +18,16 @@ class FotoBukti extends Model
      */
     protected $fillable = [
         'progress_id',
-        'nama_file',
-        'path_file',
+        'file_path',
+        'file_name',
+        'file_size_kb',
         'mime_type',
-        'file_size',
-        'keterangan',
+        'urutan',
     ];
 
     protected $casts = [
-        'file_size' => 'integer',
+        'file_size_kb' => 'integer',
+        'urutan' => 'integer',
     ];
 
     // Relationships

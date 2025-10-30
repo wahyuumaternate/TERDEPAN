@@ -98,6 +98,11 @@ class TugasHarian extends Model
         return $this->hasOne(Delegasi::class, 'tugas_harian_id');
     }
 
+    public function historyRevisi(): HasMany
+    {
+        return $this->hasMany(HistoriRevisi::class, 'tugas_harian_id');
+    }
+
     // Scopes
     public function scopeActive($query)
     {

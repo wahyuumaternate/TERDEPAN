@@ -19,6 +19,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // PENUGASAN GENERAL ROUTES
     // ============================================
     Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
+    Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
     Route::post('/validasi-tugas/{id}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
     Route::post('/catatan-monitoring', [PenugasanController::class, 'catatanMonitoring'])->name('catatan-monitoring');
     Route::get('/dashboard-monitoring', [PenugasanController::class, 'dashboardMonitoring'])->name('dashboard-monitoring');
@@ -38,7 +39,9 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // ============================================
     Route::prefix('tugas-harian')->name('tugas-harian.')->group(function () {
         Route::get('/', [TugasHarianController::class, 'index'])->name('index');
+        Route::get('/{id}/detail', [TugasHarianController::class, 'detail'])->name('detail');
         Route::get('/{id}/edit', [TugasHarianController::class, 'edit'])->name('edit');
+        Route::get('/{id}/history', [TugasHarianController::class, 'getHistory'])->name('history');
         Route::put('/{id}', [TugasHarianController::class, 'update'])->name('update');
         Route::delete('/{id}', [TugasHarianController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/update-status', [TugasHarianController::class, 'updateStatus'])->name('update-status');

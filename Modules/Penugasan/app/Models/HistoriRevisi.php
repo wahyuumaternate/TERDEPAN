@@ -10,37 +10,29 @@ class HistoriRevisi extends Model
 {
     use HasFactory;
 
-    protected $table = 'knj_histori_revisi';
+    protected $table = 'histori_revisi';
 
     protected $fillable = [
-        'tugas_id',
-        'tugas_type',
-        'revisi_oleh',
+        'tugas_harian_id',
+        'tugas_tambahan_id',
+        'revisi_ke',
         'tanggal_revisi',
-        'field_diubah',
-        'nilai_lama',
-        'nilai_baru',
-        'catatan_revisi'
+        'catatan_revisi',
+        'direvisi_oleh',
+        'dokumen_lama_id'
     ];
 
     protected $casts = [
         'tanggal_revisi' => 'datetime',
+        'revisi_ke' => 'integer',
     ];
 
     /**
      * Relasi ke pembuat revisi
      */
-    public function pembuat()
+    public function direvisiOleh()
     {
-        return $this->belongsTo(MasterPegawai::class, 'revisi_oleh');
-    }
-
-    /**
-     * Relasi ke tugas pokok
-     */
-    public function tugasPokok()
-    {
-        return $this->belongsTo(TugasPokok::class, 'tugas_id')->where('tugas_type', 'tugas_pokok');
+        return $this->belongsTo(MasterPegawai::class, 'direvisi_oleh');
     }
 
     /**
@@ -48,7 +40,7 @@ class HistoriRevisi extends Model
      */
     public function tugasHarian()
     {
-        return $this->belongsTo(TugasHarian::class, 'tugas_id')->where('tugas_type', 'tugas_harian');
+        return $this->belongsTo(TugasHarian::class, 'tugas_harian_id');
     }
 
     /**
@@ -56,6 +48,14 @@ class HistoriRevisi extends Model
      */
     public function tugasTambahan()
     {
-        return $this->belongsTo(TugasTambahan::class, 'tugas_id')->where('tugas_type', 'tugas_tambahan');
+        return $this->belongsTo(TugasTambahan::class, 'tugas_tambahan_id');
+    }
+
+    /**
+     * Relasi ke dokumen lama
+     */
+    public function dokumenLama()
+    {
+        return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_lama_id');
     }
 }
