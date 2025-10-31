@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
             MasterPegawaiSeeder::class,
             RolePermissionSeeder::class,
             // PegawaiWithAtasanSeeder::class,
-            PegawaiSeeder::class,
+            // PegawaiSeeder::class,
+            TestPegawaiSeeder::class,
         ]);
         // User::factory(10)->create();
 

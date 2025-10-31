@@ -11,11 +11,19 @@ class MasterJabatanSeeder extends Seeder
     {
         MasterJabatan::insert([
             [
+                'kode' => 'ADMIN',
+                'nama' => 'Admin Utama',
+                'level' => 1,
+                'is_struktural' => false,
+                'bebas_nilai_kinerja' => true,
+                'is_active' => true,
+            ],
+            [
                 'kode' => 'KABAN',
                 'nama' => 'Kepala Bappeda',
                 'level' => 1,
                 'is_struktural' => true,
-                'bebas_nilai_kinerja' => false,
+                'bebas_nilai_kinerja' => true,
                 'is_active' => true,
             ],
             [
@@ -51,10 +59,10 @@ class MasterJabatanSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'kode' => 'PEL',
+                'kode' => 'PELAKSANA',
                 'nama' => 'Pelaksana',
                 'level' => 5,
-                'is_struktural' => false,
+                'is_struktural' => true,
                 'bebas_nilai_kinerja' => false,
                 'is_active' => true,
             ],

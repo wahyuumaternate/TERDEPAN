@@ -30,9 +30,15 @@ return new class extends Migration
             $table->id();
             $table->string('kode', 20)->unique()->comment('Kode unik: PLAN, EVAL, DATA, SEKRET');
             $table->string('nama', 100)->comment('Nama lengkap bidang untuk display');
-            $table->text('deskripsi')->nullable()->comment('Deskripsi tugas dan fungsi bidang');
             $table->string('warna', 7)->nullable()->comment('Hex color untuk UI');
-            $table->boolean('is_active')->default(true)->comment('TRUE=aktif, FALSE=tidak bisa assign pegawai baru');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('master_sub', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('bidang_id')->constrained('master_bidang');
+            $table->string('nama', 100)->comment('Nama lengkap bidang untuk display');
             $table->timestamps();
             $table->softDeletes();
         });
@@ -45,6 +51,7 @@ return new class extends Migration
             $table->string('nama', 100)->comment('Nama lengkap tanpa gelar');
             $table->foreignId('jabatan_id')->constrained('master_jabatan');
             $table->foreignId('bidang_id')->constrained('master_bidang');
+            $table->foreignId('sub_bidang_id')->nullable()->constrained('master_sub');
             $table->string('email')->unique()->comment('Email unik untuk notifikasi');
             $table->string('password')->comment('Hashed password bcrypt/argon2');
             $table->string('no_telepon', 20)->nullable()->comment('Nomor telepon untuk SMS/WhatsApp');
