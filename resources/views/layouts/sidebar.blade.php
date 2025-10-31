@@ -293,7 +293,7 @@
                          <i class="bi bi-circle"></i><span>Semua Dokumen</span>
                      </a>
                  </li>
-                 
+
                  {{-- <li>
                      <a href="{{ url('dokumen/log') }}" class="{{ request()->is('dokumen/log') ? 'active' : '' }}">
                          <i class="bi bi-circle"></i><span>Log Aktivitas Dokumen</span>
@@ -361,16 +361,16 @@
                          <i class="bi bi-circle"></i><span>Tugas Saya</span>
                      </a>
                  </li>
-                 {{-- <li>
-                     <a href="{{ url('penugasan/tugas-harian') }}">
-                         <i class="bi bi-circle"></i><span>Penilaian</span>
+                 <li>
+                     <a href="{{ url('delegasi') }}">
+                         <i class="bi bi-circle"></i><span>Delegasi Tugas</span>
                      </a>
-                 </li> --}}
-                 {{-- <li>
-                     <a href="{{ url('penugasan/mandiri') }}">
-                         <i class="bi bi-circle"></i><span>Penugasan Mandiri</span>
+                 </li>
+                 <li class="nav-item">
+                     <a href="{{ url('penilaian/laporan') }}">
+                         <i class="bi bi-circle"></i><span>Penilaian Kinerja</span>
                      </a>
-                 </li> --}}
+                 </li><!-- End Penilaian Nav -->
              </ul>
          </li><!-- End Penugasan Nav -->
 
@@ -409,7 +409,7 @@
              </ul>
          </li><!-- End Progress & Validasi Nav --> --}}
 
-         <!-- Penilaian Nav -->
+         {{-- <!-- Penilaian Nav -->
          <li class="nav-item">
              <a class="nav-link collapsed" href="{{ url('penilaian/laporan') }}">
                  <i class="bi bi-award"></i><span>Penilaian Kinerja</span>
@@ -444,7 +444,7 @@
                      </a>
                  </li>
              </ul>
-         </li><!-- End Delegasi & Workload Nav -->
+         </li><!-- End Delegasi & Workload Nav --> --}}
 
          <!-- Master Data -->
          <li class="nav-heading">Master Data</li>
