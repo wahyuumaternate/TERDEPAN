@@ -1,0 +1,11 @@
+{
+    "name": "TerminalData",
+    "alias": "terminaldata",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\TerminalData\\Providers\\TerminalDataServiceProvider"
+    ],
+    "files": []
+}
