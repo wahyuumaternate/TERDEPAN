@@ -4,53 +4,46 @@ namespace Modules\TerminalData\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\TerminalData\Models\TdFolder;
 
 class TerminalDataController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         return view('terminaldata::index');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function folderIndex(Request $request)
     {
-        return view('terminaldata::create');
+        // Jika request AJAX, return JSON
+        if ($request->wantsJson() || $request->ajax()) {
+            $folders = TdFolder::with(['parent', 'bidang', 'creator'])
+                ->orderBy('level')
+                ->orderBy('name')
+                ->get();
+
+            // Debug: Log bidang data
+            // Log::info('Folders with bidang:', $folders->toArray());
+
+            return response()->json($folders);
+        }
+
+        // Jika bukan AJAX, return view
+        $folders = TdFolder::with(['parent', 'bidang', 'creator'])
+            ->whereNull('parent_id')
+            ->orderBy('name')
+            ->get();
+
+        return view('terminaldata::folder.index', compact('folders'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
+    public function evidenIndex()
     {
-        return view('terminaldata::show');
+        //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
+    public function sampahIndex()
     {
-        return view('terminaldata::edit');
+        //
     }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
 }

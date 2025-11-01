@@ -21,26 +21,26 @@ class MasterBidangSeeder extends Seeder
                 'nama' => 'Sekretariat',
                 'warna' => '#64B5F6',
             ],
-            // [
-            //     'kode' => 'EKONOMI',
-            //     'nama' => 'Bidang Ekonomi dan Perdagangan',
-            //     'warna' => '#81C784',
-            // ],
-            // [
-            //     'kode' => 'IPW',
-            //     'nama' => 'Bidang Infrastruktur dan Pembangunan Wilayah',
-            //     'warna' => '#FFB74D',
-            // ],
-            // [
-            //     'kode' => 'SOSBUD',
-            //     'nama' => 'Bidang Pemerintahan dan Sosial Budaya',
-            //     'warna' => '#E57373',
-            // ],
-            // [
-            //     'kode' => 'PERAN',
-            //     'nama' => 'Bidang Pengendalian, Evaluasi dan Pelaporan',
-            //     'warna' => '#BA68C8',
-            // ],
+            [
+                'kode' => 'EKONOMI',
+                'nama' => 'Bidang Ekonomi dan Perdagangan',
+                'warna' => '#81C784',
+            ],
+            [
+                'kode' => 'IPW',
+                'nama' => 'Bidang Infrastruktur dan Pembangunan Wilayah',
+                'warna' => '#FFB74D',
+            ],
+            [
+                'kode' => 'SOSBUD',
+                'nama' => 'Bidang Pemerintahan dan Sosial Budaya',
+                'warna' => '#E57373',
+            ],
+            [
+                'kode' => 'PERAN',
+                'nama' => 'Bidang Pengendalian, Evaluasi dan Pelaporan',
+                'warna' => '#BA68C8',
+            ],
         ]);
 
         MasterSubBidang::insert([
