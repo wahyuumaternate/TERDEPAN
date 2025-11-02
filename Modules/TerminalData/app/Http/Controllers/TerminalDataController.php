@@ -138,6 +138,24 @@ class TerminalDataController extends Controller
 
     public function sampahIndex()
     {
-        //
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = request()->user();
+
+            // Get trashed folders and files
+            $trashedFolders = \Modules\TerminalData\Models\TdFolder::onlyTrashed()
+                ->with(['creator', 'bidang', 'parent'])
+                ->orderBy('deleted_at', 'desc')
+                ->get();
+
+            $trashedFiles = \Modules\TerminalData\Models\TdFile::onlyTrashed()
+                ->with(['creator', 'folder'])
+                ->orderBy('deleted_at', 'desc')
+                ->get();
+
+            return view('terminaldata::sampah.index', compact('trashedFolders', 'trashedFiles'));
+        } catch (\Exception $e) {
+            abort(500, 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
 }

@@ -5,7 +5,7 @@
 
         <div class="row">
             <div class="col-lg-12">
-                <div class="card shadow-sm border-0" style="position: relative; min-height: 400px;">
+                <div class="card shadow-sm border-0" style="position: relative; min-height: 600px;">
                     <div class="card-body p-4">
                         {{-- <!-- Header -->
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -48,10 +48,7 @@
                                 <thead>
                                     <tr>
                                         <th>Nama</th>
-                                        <th>Dibuat Oleh</th>
-                                        <th>Tanggal Diubah</th>
-                                        <th>Total</th>
-                                        <th width="80">Aksi</th>
+                                        <th width="120">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -768,30 +765,12 @@
 
             let tbody = '';
             level1Folders.forEach((item, index) => {
-                // Hitung subfolder
-                const subfolderCount = folders.filter(f => f.parent_id === item.id).length;
-
-                // Format tanggal (hanya tanggal, tanpa waktu)
-                const updatedDate = item.updated_at ? formatDateOnly(item.updated_at) : '-';
-
-                // Nama pembuat
-                const creatorName = item.creator ? item.creator.name : (item.created_by ? 'User #' + item
-                    .created_by : '-');
-
                 tbody += `
-                <tr style="cursor:pointer;" onclick="navigateToFolderFiles(${item.id})">
+                <tr style="cursor:pointer;" onclick="navigateToFolderFiles('${item.id}')">
                     <td>
                         <div class="d-flex align-items-center">
                             <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
                             <strong>${item.name}</strong>
-                        </div>
-                    </td>
-                    <td>${creatorName ?? '-'}</td>
-                    <td>${updatedDate}</td>
-                    <td>
-                        <div style="line-height: 1.4;">
-                            <div>${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</div>
-                            <div>${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</div>
                         </div>
                     </td>
                     <td onclick="event.stopPropagation();">
@@ -799,24 +778,24 @@
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles(${item.id}) return false">
+                            <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles('${item.id}'); return false;">
                                 <i class="bi bi-download me-2"></i>Unduh
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="showEditModal('${item.id}'); return false;">
                                 <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${item.id}'); return false;">
                                 <i class="bi bi-link-45deg me-2"></i>Salin Link
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="showEditModal('${item.id}'); return false;">
                                 <i class="bi bi-gear me-2"></i>Atur
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showDetail(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="showDetail('${item.id}'); return false;">
                                 <i class="bi bi-info-circle me-2"></i>Informasi Folder
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder(${item.id}); return false;">
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${item.id}'); return false;">
                                 <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                             </a></li>
                         </ul>

@@ -171,7 +171,7 @@ class TdFolderController extends Controller
         try {
             /** @var \App\Models\MasterPegawai $user */
             $user = $request->user();
-            
+
             $folder = $this->folderService->updateFolder($folder, $request->validated(), $user);
 
             return response()->json([
@@ -294,5 +294,51 @@ class TdFolderController extends Controller
                 'level' => $folder->level,
             ]
         ]);
+    }
+
+    /**
+     * Restore folder from trash
+     */
+    public function restore($folderId): JsonResponse
+    {
+        try {
+            $folder = TdFolder::onlyTrashed()->findOrFail($folderId);
+
+            // Restore folder
+            $folder->restore();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Folder berhasil dipulihkan'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memulihkan folder: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Permanently delete folder
+     */
+    public function forceDelete($folderId): JsonResponse
+    {
+        try {
+            $folder = TdFolder::onlyTrashed()->findOrFail($folderId);
+
+            // Permanently delete folder
+            $folder->forceDelete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Folder berhasil dihapus permanen'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus folder permanen: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

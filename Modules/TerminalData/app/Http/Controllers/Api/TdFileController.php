@@ -230,4 +230,118 @@ class TdFileController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Restore file from trash
+     */
+    public function restore($fileId): JsonResponse
+    {
+        try {
+            $file = TdFile::onlyTrashed()->findOrFail($fileId);
+
+            // Restore file
+            $file->restore();
+
+            // Update folder stats
+            if ($file->folder) {
+                $file->folder->updateStats();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'File berhasil dipulihkan'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memulihkan file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Permanently delete file
+     */
+    public function forceDelete($fileId): JsonResponse
+    {
+        try {
+            $file = TdFile::onlyTrashed()->findOrFail($fileId);
+
+            // Delete physical file from storage
+            if (Storage::exists($file->storage_path)) {
+                Storage::delete($file->storage_path);
+            }
+
+            // Delete thumbnail if exists
+            if ($file->thumbnail_path && Storage::exists($file->thumbnail_path)) {
+                Storage::delete($file->thumbnail_path);
+            }
+
+            // Permanently delete from database
+            $file->forceDelete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'File berhasil dihapus permanen'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus file permanen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Empty trash - delete multiple items permanently
+     */
+    public function emptyTrash(Request $request): JsonResponse
+    {
+        try {
+            $items = $request->input('items', []);
+            $deletedFiles = 0;
+            $deletedFolders = 0;
+
+            foreach ($items as $item) {
+                if ($item['type'] === 'file') {
+                    $file = TdFile::onlyTrashed()->find($item['id']);
+                    if ($file) {
+                        // Delete physical file
+                        if (Storage::exists($file->storage_path)) {
+                            Storage::delete($file->storage_path);
+                        }
+                        if ($file->thumbnail_path && Storage::exists($file->thumbnail_path)) {
+                            Storage::delete($file->thumbnail_path);
+                        }
+                        $file->forceDelete();
+                        $deletedFiles++;
+                    }
+                } elseif ($item['type'] === 'folder') {
+                    $folder = \Modules\TerminalData\Models\TdFolder::onlyTrashed()->find($item['id']);
+                    if ($folder) {
+                        $folder->forceDelete();
+                        $deletedFolders++;
+                    }
+                }
+            }
+
+            $message = [];
+            if ($deletedFiles > 0) {
+                $message[] = "$deletedFiles file";
+            }
+            if ($deletedFolders > 0) {
+                $message[] = "$deletedFolders folder";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => implode(' dan ', $message) . ' berhasil dihapus permanen'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengosongkan sampah: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

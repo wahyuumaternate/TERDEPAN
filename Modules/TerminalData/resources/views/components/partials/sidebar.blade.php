@@ -14,7 +14,7 @@
          
          <!-- Home Nav -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }}" href="{{ url('/terminal-data') }}">
+             <a class="nav-link {{ Request::is('terminal-data') ? '' : 'collapsed' }}" href="{{ url('/terminal-data') }}">
                  <i class="bi bi-house"></i>
                  <span>Beranda</span>
              </a>
@@ -25,22 +25,22 @@
 
          <!-- Management File / Arsip Dokumen -->
          @php
-             $dokumenActive = request()->is('folders*');
+             $dokumenActive = request()->is('terminal-data/folders*') || request()->is('terminal-data/folder*');
          @endphp
 
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/terminal-data/folders') ? 'active' : 'collapsed' }}" href="{{ route('terminaldata.folders.index') }}">
+             <a class="nav-link {{ $dokumenActive ? '' : 'collapsed' }}" href="{{ route('terminaldata.folders.index') }}">
                  <i class="bi bi-folder2-open"></i><span>Penyimpanan</span>
              </a>
          </li>
          <li class="nav-item">
-             <a class="nav-link {{ $dokumenActive ? '' : 'collapsed' }}" href="#">
+             <a class="nav-link collapsed" href="#">
                  <i class="bi bi-files"></i><span>Eviden Kinerja</span>
              </a>
          </li>
 
          <li class="nav-item">
-             <a class="nav-link collapsed" href="#">
+             <a class="nav-link {{ Request::is('terminal-data/sampah*') ? '' : 'collapsed' }}" href="{{ route('terminaldata.sampah.index') }}">
                  <i class="bi bi-trash"></i>
                  <span>Sampah</span>
              </a>
