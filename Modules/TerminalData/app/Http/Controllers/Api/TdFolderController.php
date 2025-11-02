@@ -250,7 +250,7 @@ class TdFolderController extends Controller
         ]);
 
         try {
-            $this->folderService->move($folder, $request->parent_id);
+            $this->folderService->moveFolder($folder, $request->parent_id, $request->user());
 
             return response()->json([
                 'success' => true,

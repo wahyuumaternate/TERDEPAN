@@ -337,48 +337,34 @@
                                                 $iconColor = '#ffc107';
                                             }
                                         @endphp
-                                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                                            <div class="gdrive-card" onclick="showFileDetail({{ $item->id }})">
-                                                <div class="gdrive-card-preview">
-                                                    <i class="bi {{ $fileIcon }}"
-                                                        style="color: {{ $iconColor }}; font-size: 4rem;"></i>
-                                                </div>
-                                                <div class="gdrive-card-body">
-                                                    <div class="gdrive-card-title" title="{{ $fileName }}">
+                                        <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                            <div class="file-card" onclick="showFileDetail({{ $item->id }})">
+                                                {{-- Header with file name and action button --}}
+                                                <div class="file-card-header">
+                                                    <div class="file-card-title" title="{{ $fileName }}">
                                                         {{ $fileName }}
                                                     </div>
-                                                    <div class="gdrive-card-meta">
-                                                        <small class="text-muted">
-                                                            {{ $fileSize }}
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                                <div class="gdrive-card-actions">
-                                                    <div class="gdrive-folder-menu" onclick="event.stopPropagation();">
-                                                        <button class="btn btn-link" type="button"
+                                                    <div class="file-card-menu" onclick="event.stopPropagation();">
+                                                        <button class="btn btn-sm btn-link p-0" type="button"
                                                             data-bs-toggle="dropdown" aria-expanded="false">
                                                             <i class="bi bi-three-dots-vertical"></i>
                                                         </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end">
+                                                        <ul class="dropdown-menu dropdown-menu-end shadow">
                                                             <li><a class="dropdown-item"
                                                                     href="{{ route('terminaldata.filesData.download', $item->id) }}"
                                                                     onclick="event.stopPropagation()">
                                                                     <i class="bi bi-download me-2"></i>Unduh
                                                                 </a></li>
                                                             <li><a class="dropdown-item" href="#"
-                                                                    onclick="editFile({{ $item->id }}); return false;">
+                                                                    onclick="editFile({{ $item->id }}, '{{ addslashes($fileName) }}'); return false;">
                                                                     <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                                                                 </a></li>
                                                             <li>
                                                                 <hr class="dropdown-divider">
                                                             </li>
                                                             <li><a class="dropdown-item" href="#"
-                                                                    onclick="alert('Fitur salin link dalam pengembangan'); return false;">
-                                                                    <i class="bi bi-link-45deg me-2"></i>Salin Link
-                                                                </a></li>
-                                                            <li><a class="dropdown-item" href="#"
                                                                     onclick="showFileDetail({{ $item->id }}); return false;">
-                                                                    <i class="bi bi-info-circle me-2"></i>Informasi File
+                                                                    <i class="bi bi-info-circle me-2"></i>Info File
                                                                 </a></li>
                                                             <li>
                                                                 <hr class="dropdown-divider">
@@ -389,6 +375,27 @@
                                                                 </a></li>
                                                         </ul>
                                                     </div>
+                                                </div>
+
+                                                <div class="file-card-preview">
+                                                    @if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']))
+                                                        {{-- Show actual image thumbnail --}}
+                                                        <img src="{{ asset('storage/' . $item->storage_path) }}"
+                                                            alt="{{ $fileName }}" class="file-thumbnail-img"
+                                                            onerror="this.style.display='none'; this.parentElement.querySelector('.file-icon-fallback').style.display='flex';">
+                                                        <div class="file-icon-fallback file-icon-preview"
+                                                            data-type="image" style="display: none;">
+                                                            <i class="bi bi-image"></i>
+                                                            <div class="file-extension">{{ strtoupper($extension) }}</div>
+                                                        </div>
+                                                    @else
+                                                        {{-- Show file icon for documents --}}
+                                                        <div class="file-icon-preview"
+                                                            data-type="{{ strtolower($extension) }}">
+                                                            <i class="bi {{ $fileIcon }}"></i>
+                                                            <div class="file-extension">{{ strtoupper($extension) }}</div>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>
@@ -1008,6 +1015,158 @@
         .gdrive-card-actions .gdrive-folder-menu .btn-link:hover {
             background-color: #f1f3f4;
             color: #202124;
+        }
+
+        /* New File Card Styles with Thumbnail Support */
+        .file-card {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .file-card:hover {
+            box-shadow: 0 1px 3px 0 rgba(60, 64, 67, .3), 0 4px 8px 3px rgba(60, 64, 67, .15);
+            border-color: transparent;
+        }
+
+        /* File card header with name and action button */
+        .file-card-header {
+            background: white;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e8eaed;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-height: 48px;
+        }
+
+        .file-card-header .file-card-title {
+            font-size: 13px;
+            color: #202124;
+            font-weight: 500;
+            line-height: 18px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            margin: 0;
+        }
+
+        .file-card-header .file-card-menu {
+            position: static;
+            opacity: 1;
+            flex-shrink: 0;
+        }
+
+        .file-card-header .file-card-menu .btn {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: #5f6368;
+            box-shadow: none;
+        }
+
+        .file-card-header .file-card-menu .btn:hover {
+            background: #f1f3f4;
+            color: #202124;
+            box-shadow: none;
+            border-radius: 50%;
+        }
+
+        .file-card-preview {
+            background: #f8f9fa;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-thumbnail-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .file-icon-preview {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+        }
+
+        .file-icon-preview i {
+            font-size: 64px;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .file-extension {
+            background: rgba(255, 255, 255, 0.9);
+            color: #202124;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Different gradient colors for file types */
+        .file-icon-preview[data-type="pdf"] {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .file-icon-preview[data-type="doc"],
+        .file-icon-preview[data-type="docx"] {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .file-icon-preview[data-type="xls"],
+        .file-icon-preview[data-type="xlsx"] {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .file-icon-preview[data-type="ppt"],
+        .file-icon-preview[data-type="pptx"] {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .file-icon-preview[data-type="image"],
+        .file-icon-preview[data-type="jpg"],
+        .file-icon-preview[data-type="jpeg"],
+        .file-icon-preview[data-type="png"],
+        .file-icon-preview[data-type="gif"],
+        .file-icon-preview[data-type="bmp"],
+        .file-icon-preview[data-type="webp"] {
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+        }
+
+        /* File card footer with file size */
+        .file-card-footer {
+            background: white;
+            padding: 8px 12px;
+            border-top: 1px solid #e8eaed;
+            font-size: 12px;
+            color: #5f6368;
         }
 
         /* Empty State */

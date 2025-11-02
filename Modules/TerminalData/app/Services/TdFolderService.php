@@ -156,6 +156,32 @@ class TdFolderService
     }
 
     /**
+     * Move folder
+     */
+    public function moveFolder(TdFolder $folder, ?TdFolder $newParent, $user): TdFolder
+    {
+        // Check authorization for source folder
+        if (!Gate::forUser($user)->allows('update', $folder)) {
+            throw new AuthorizationException('Anda tidak memiliki izin untuk memindahkan folder ini.');
+        }
+
+        // Check authorization for new parent folder
+        if ($newParent && !Gate::forUser($user)->allows('update', $newParent)) {
+            throw new AuthorizationException('Anda tidak memiliki izin untuk menempatkan folder di dalam folder tujuan.');
+        }
+
+        // Update parent_id
+        $folder->parent_id = $newParent ? $newParent->id : null;
+        $folder->updated_by = $user->id;
+        $folder->save();
+
+        // Fire event
+        event(new FolderAccessed($user, 'move_folder', $folder));
+
+        return $folder;
+    }
+
+    /**
      * Get folders by bidang
      */
     public function getFoldersByBidang(int $bidangId, $user, int $level = null): Collection
