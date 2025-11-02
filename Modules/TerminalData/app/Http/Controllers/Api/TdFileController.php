@@ -118,6 +118,38 @@ class TdFileController extends Controller
     }
 
     /**
+     * Update file name
+     */
+    public function update(Request $request, $fileId): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        try {
+            $file = TdFile::findOrFail($fileId);
+
+            // Update file name
+            $file->name = $request->name;
+            $file->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Nama file berhasil diubah',
+                'data' => [
+                    'id' => $file->id,
+                    'name' => $file->name,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah nama file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Delete file (soft delete - move to trash)
      */
     public function destroy($fileId): JsonResponse

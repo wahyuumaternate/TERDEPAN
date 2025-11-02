@@ -77,8 +77,9 @@
                                                 <li>
                                                     <hr class="dropdown-divider">
                                                 </li>
-                                                <li><a class="dropdown-item" href="#"><i
-                                                            class="bi bi-pencil me-2"></i>Ganti Nama</a></li>
+                                                <li><a class="dropdown-item" href="#"
+                                                        onclick="renameFolder('{{ $crumb->id }}', '{{ addslashes($crumb->name) }}'); return false;">
+                                                        <i class="bi bi-pencil me-2"></i>Ganti Nama</a></li>
                                                 <li><a class="dropdown-item" href="#"><i
                                                             class="bi bi-share me-2"></i>Bagikan</a></li>
                                                 <li><a class="dropdown-item" href="#"><i
@@ -106,7 +107,8 @@
                                             {{ $crumb->name }}
                                         </button>
                                         <ul class="dropdown-menu" aria-labelledby="currentFolderDropdown">
-                                            <li><span class="dropdown-item-text"><strong>{{ $crumb->name }}</strong></span>
+                                            <li><span
+                                                    class="dropdown-item-text"><strong>{{ $crumb->name }}</strong></span>
                                             </li>
                                             <li>
                                                 <hr class="dropdown-divider">
@@ -444,6 +446,88 @@
                             style="width: 0%" id="uploadProgressBar"></div>
                     </div>
                     <p class="text-muted mb-0" id="uploadProgressText">Mempersiapkan upload...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Rename Folder -->
+    <div class="modal fade" id="modalRenameFolder" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama Folder
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="formRenameFolder">
+                        @csrf
+                        <input type="hidden" id="rename_folder_id">
+
+                        <div class="mb-3">
+                            <label for="folder_new_name" class="form-label fw-semibold">
+                                Nama Folder Baru <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="folder_new_name"
+                                name="name" placeholder="Masukkan nama folder baru" required>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Nama folder harus unik dalam folder yang sama
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle me-1"></i>Batal
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Simpan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Rename File -->
+    <div class="modal fade" id="modalRenameFile" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama File
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="formRenameFile">
+                        @csrf
+                        <input type="hidden" id="rename_file_id">
+
+                        <div class="mb-3">
+                            <label for="file_new_name" class="form-label fw-semibold">
+                                Nama File Baru <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="file_new_name" name="name"
+                                placeholder="Masukkan nama file baru" required>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Ekstensi file akan tetap sama
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle me-1"></i>Batal
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Simpan
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1279,6 +1363,130 @@
                 $('#searchDokumen').val('');
             });
 
+            // Handle Rename Folder Form Submit
+            $('#formRenameFolder').submit(function(e) {
+                e.preventDefault();
+
+                const folderId = $('#rename_folder_id').val();
+                const newName = $('#folder_new_name').val().trim();
+
+                if (!newName) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Nama Tidak Boleh Kosong',
+                        text: 'Silakan masukkan nama folder yang baru',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                    return;
+                }
+
+                // Show loading
+                Swal.fire({
+                    title: 'Memproses...',
+                    text: 'Mengubah nama folder',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                $.ajax({
+                    url: `{{ url('terminal-data/api/folders') }}/${folderId}`,
+                    type: 'POST',
+                    data: {
+                        _method: 'PUT',
+                        _token: '{{ csrf_token() }}',
+                        name: newName
+                    },
+                    success: function(response) {
+                        $('#modalRenameFolder').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message || 'Nama folder berhasil diubah',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        let message = 'Gagal mengubah nama folder';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: message
+                        });
+                    }
+                });
+            });
+
+            // Handle Rename File Form Submit
+            $('#formRenameFile').submit(function(e) {
+                e.preventDefault();
+
+                const fileId = $('#rename_file_id').val();
+                const newName = $('#file_new_name').val().trim();
+
+                if (!newName) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Nama Tidak Boleh Kosong',
+                        text: 'Silakan masukkan nama file yang baru',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                    return;
+                }
+
+                // Show loading
+                Swal.fire({
+                    title: 'Memproses...',
+                    text: 'Mengubah nama file',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                $.ajax({
+                    url: `{{ url('terminal-data/api/files') }}/${fileId}`,
+                    type: 'POST',
+                    data: {
+                        _method: 'PUT',
+                        _token: '{{ csrf_token() }}',
+                        name: newName
+                    },
+                    success: function(response) {
+                        $('#modalRenameFile').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message || 'Nama file berhasil diubah',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        let message = 'Gagal mengubah nama file';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: message
+                        });
+                    }
+                });
+            });
+
             // View mode toggle
             $('input[name="viewMode"]').change(function() {
                 let viewMode = $(this).attr('id');
@@ -1789,7 +1997,7 @@
                                 <li><a class="dropdown-item" href="#" onclick="navigateToFolder('${folder.id}'); return false;">
                                     <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                 </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="alert('Fitur ganti nama dalam pengembangan'); return false;">
+                                <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
                                     <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -1878,7 +2086,7 @@
                                     <i class="bi bi-download me-2"></i>Unduh
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" onclick="editFile('${doc.id}'); return false;">
-                                    <i class="bi bi-pencil-square me-2"></i>Edit
+                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="deleteFile('${doc.id}', '${fileName}'); return false;">
@@ -2405,7 +2613,7 @@
                                     <li><a class="dropdown-item" href="#" onclick="navigateToFolder('${folder.id}'); return false;">
                                         <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                     </a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="alert('Fitur ganti nama dalam pengembangan'); return false;">
+                                    <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
                                         <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
@@ -2435,7 +2643,7 @@
         }
 
         function copyFolderLink(id) {
-            const link = `${window.location.origin}{{ route('terminaldata.folder.detail', ':id') }}`.replace(':id', id);
+            const link = `{{ route('terminaldata.folder.detail', ':id') }}`.replace(':id', id);
 
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(link).then(() => {
@@ -2591,13 +2799,51 @@
             });
         }
 
-        function editFile(id) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Edit File',
-                text: 'Fitur edit nama file dalam pengembangan',
-                confirmButtonColor: '#0d6efd'
-            });
+        function editFile(id, fileName = '') {
+            // Get file data
+            const file = documents.find(doc => doc.id == id);
+
+            if (!file) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'File tidak ditemukan',
+                    text: 'Data file tidak dapat ditemukan'
+                });
+                return;
+            }
+
+            // Set file ID and current name
+            $('#rename_file_id').val(id);
+
+            // Get name without extension
+            let currentName = file.name || file.original_name || fileName;
+            if (file.extension && currentName.endsWith('.' + file.extension)) {
+                currentName = currentName.substring(0, currentName.lastIndexOf('.'));
+            }
+
+            $('#file_new_name').val(currentName);
+
+            // Show modal
+            $('#modalRenameFile').modal('show');
+
+            // Focus on input
+            setTimeout(() => {
+                $('#file_new_name').focus().select();
+            }, 500);
+        }
+
+        function renameFolder(folderId, folderName) {
+            // Set folder ID and current name
+            $('#rename_folder_id').val(folderId);
+            $('#folder_new_name').val(folderName);
+
+            // Show modal
+            $('#modalRenameFolder').modal('show');
+
+            // Focus on input
+            setTimeout(() => {
+                $('#folder_new_name').focus().select();
+            }, 500);
         }
 
         function deleteFile(id, fileName = '') {

@@ -169,7 +169,10 @@ class TdFolderController extends Controller
     public function update(UpdateTdFolderRequest $request, TdFolder $folder): JsonResponse
     {
         try {
-            $folder = $this->folderService->update($folder, $request->validated());
+            /** @var \App\Models\MasterPegawai $user */
+            $user = $request->user();
+            
+            $folder = $this->folderService->updateFolder($folder, $request->validated(), $user);
 
             return response()->json([
                 'success' => true,
