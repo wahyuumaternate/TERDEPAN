@@ -121,6 +121,53 @@
                                 <h6 class="text-muted mb-3">
                                     <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderCount">0</span>)
                                 </h6>
+                                <!-- Skeleton Loading for Subfolders -->
+                                <div class="row g-3 mb-3" id="subfoldersSkeleton">
+                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                        <div class="skeleton-folder-card">
+                                            <div class="skeleton-folder-content">
+                                                <div class="skeleton skeleton-folder-icon"></div>
+                                                <div class="skeleton-folder-info">
+                                                    <div class="skeleton skeleton-title"></div>
+                                                    <div class="skeleton skeleton-text"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                        <div class="skeleton-folder-card">
+                                            <div class="skeleton-folder-content">
+                                                <div class="skeleton skeleton-folder-icon"></div>
+                                                <div class="skeleton-folder-info">
+                                                    <div class="skeleton skeleton-title"></div>
+                                                    <div class="skeleton skeleton-text"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                        <div class="skeleton-folder-card">
+                                            <div class="skeleton-folder-content">
+                                                <div class="skeleton skeleton-folder-icon"></div>
+                                                <div class="skeleton-folder-info">
+                                                    <div class="skeleton skeleton-title"></div>
+                                                    <div class="skeleton skeleton-text"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                        <div class="skeleton-folder-card">
+                                            <div class="skeleton-folder-content">
+                                                <div class="skeleton skeleton-folder-icon"></div>
+                                                <div class="skeleton-folder-info">
+                                                    <div class="skeleton skeleton-title"></div>
+                                                    <div class="skeleton skeleton-text"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="row g-3" id="subfoldersGrid"></div>
                                 <hr class="my-4">
                             </div>
@@ -715,6 +762,112 @@
             background-color: #f8f9fa;
             font-weight: 600;
             color: #495057;
+        }
+
+        /* Skeleton Loading Styles */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-card {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .skeleton-preview {
+            height: 140px;
+            background: #f1f3f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #e8eaed;
+        }
+
+        .skeleton-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(90deg, #e0e0e0 25%, #d0d0d0 50%, #e0e0e0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 8px;
+        }
+
+        .skeleton-body {
+            padding: 12px;
+        }
+
+        .skeleton-title {
+            height: 16px;
+            width: 70%;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-text {
+            height: 12px;
+            width: 40%;
+        }
+
+        .skeleton-folder-card {
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            padding: 16px;
+            height: 100%;
+        }
+
+        .skeleton-folder-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .skeleton-folder-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        .skeleton-folder-info {
+            flex: 1;
+        }
+
+        .skeleton-table-row {
+            height: 53px;
+            border-bottom: 1px solid #e8eaed;
+        }
+
+        .skeleton-table-cell {
+            padding: 12px;
+            vertical-align: middle;
+        }
+
+        .skeleton-table-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .skeleton-table-text {
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
         }
     </style>
 @endpush
@@ -1640,6 +1793,11 @@
         function loadSubfolders() {
             const folderId = '{{ $folder->id }}';
 
+            // Show skeleton and section
+            $('#subfoldersSection').show();
+            $('#subfoldersSkeleton').show();
+            $('#subfoldersGrid').hide();
+
             $.ajax({
                 url: `{{ route('terminaldata.foldersData.children', ':folderId') }}`.replace(':folderId',
                     folderId),
@@ -1648,11 +1806,15 @@
                 success: function(response) {
                     console.log('Subfolders loaded:', response);
 
+                    // Hide skeleton
+                    $('#subfoldersSkeleton').hide();
+
                     subfolders = response && Array.isArray(response) ? response : [];
 
                     if (subfolders.length > 0) {
                         renderSubfoldersGrid(subfolders);
                         $('#subfolderCount').text(subfolders.length);
+                        $('#subfoldersGrid').show();
                     } else {
                         console.log('No subfolders found, hiding section');
                         $('#subfoldersSection').hide();
@@ -1663,6 +1825,9 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading subfolders:', error, xhr);
+
+                    // Hide skeleton on error
+                    $('#subfoldersSkeleton').hide();
                     subfolders = [];
                     $('#subfoldersSection').hide();
                 }
