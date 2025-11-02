@@ -70,6 +70,67 @@ class TerminalDataController extends Controller
         }
     }
 
+    public function folderDetail($folderId)
+    {
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = request()->user();
+
+            // Get folder by ID using service
+            $folder = $this->folderService->getFolderById($folderId, $user);
+
+            if (!$folder) {
+                abort(404, 'Folder tidak ditemukan');
+            }
+
+            // Get subfolders and files
+            $subfolders = $folder->subfolders()->with(['creator', 'bidang'])->get();
+            $files = $folder->files()->with(['creator'])->get();
+
+            return view('terminaldata::folder.detail', compact('folder', 'subfolders', 'files'));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            abort(403, $e->getMessage());
+        } catch (\Exception $e) {
+            abort(500, 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get children folders of a folder (AJAX)
+     */
+    public function getFolderChildren($folderId)
+    {
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = request()->user();
+
+            // Get folder by ID using service
+            $folder = $this->folderService->getFolderById($folderId, $user);
+
+            if (!$folder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Folder tidak ditemukan'
+                ], 404);
+            }
+
+            // Get subfolders
+            $subfolders = $folder->subfolders()->with(['creator', 'bidang'])->get();
+
+            return response()->json(TdFolderResource::collection($subfolders));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function evidenIndex()
     {
         //

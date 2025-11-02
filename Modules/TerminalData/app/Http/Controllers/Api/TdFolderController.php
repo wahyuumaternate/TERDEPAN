@@ -86,14 +86,73 @@ class TdFolderController extends Controller
     /**
      * Display the specified folder
      */
-    public function show(TdFolder $folder): JsonResponse
+    public function show($folderId): JsonResponse
     {
-        $folder->load(['creator', 'bidang', 'subfolders', 'files', 'tags']);
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = request()->user();
 
-        return response()->json([
-            'success' => true,
-            'data' => new TdFolderResource($folder)
-        ]);
+            // Get folder by ID using service
+            $folder = $this->folderService->getFolderById($folderId, $user);
+
+            if (!$folder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Folder tidak ditemukan'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => new TdFolderResource($folder)
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get children folders of a folder
+     */
+    public function children($folderId): JsonResponse
+    {
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = request()->user();
+
+            // Get folder by ID using service
+            $folder = $this->folderService->getFolderById($folderId, $user);
+
+            if (!$folder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Folder tidak ditemukan'
+                ], 404);
+            }
+
+            // Get subfolders
+            $subfolders = $folder->subfolders()->with(['creator', 'bidang'])->get();
+
+            return response()->json(TdFolderResource::collection($subfolders));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
