@@ -426,39 +426,25 @@
 
         function loadBidang() {
             $.ajax({
-                url: '/master/bidang',
+                url: '{{ route('master.bidang.index') }}',
                 type: 'GET',
                 dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
                 success: function(response) {
                     console.log('Bidang loaded:', response); // Debug
                     allBidang = Array.isArray(response) ? response : [];
                     let options = '<option value="">Pilih Bidang (Opsional)</option>';
                     allBidang.forEach(function(item) {
-                        options += `<option value="${item.id}">${item.nama}</option>`;
+                        options += `<option value="${item.id}">${item.name}</option>`;
                     });
                     $('#bidang_id').html(options);
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading bidang:', error);
-                    // Fallback: coba endpoint alternatif
-                    $.ajax({
-                        url: '/dokumen/folder/bidang',
-                        type: 'GET',
-                        dataType: 'json',
-                        success: function(response) {
-                            console.log('Bidang loaded (alternative):', response);
-                            allBidang = Array.isArray(response) ? response : [];
-                            let options = '<option value="">Pilih Bidang (Opsional)</option>';
-                            allBidang.forEach(function(item) {
-                                options +=
-                                    `<option value="${item.id}">${item.nama}</option>`;
-                            });
-                            $('#bidang_id').html(options);
-                        },
-                        error: function() {
-                            console.error('Failed to load bidang from both endpoints');
-                        }
-                    });
+                    showError('Gagal memuat data bidang: ' + error);
                 }
             });
         }
@@ -474,7 +460,14 @@
                 },
                 success: function(response) {
                     console.log('Folders loaded:', response); // Debug
-                    allFolders = Array.isArray(response) ? response : [];
+
+                    // Handle both response formats
+                    if (response.success && response.data) {
+                        allFolders = Array.isArray(response.data) ? response.data : [];
+                    } else {
+                        allFolders = Array.isArray(response) ? response : [];
+                    }
+
                     updateStats(allFolders);
                     updateParentOptions(allFolders);
 
@@ -552,7 +545,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div onclick="navigateToFolderFiles(${item.id})" style="cursor:pointer; flex-grow: 1;">
                         <i class="bi bi-folder-fill text-warning me-2"></i>
-                        <strong>${item.nama}</strong>
+                        <strong>${item.name}</strong>
                         <small class="text-muted ms-2">${item.path}</small>
                         ${item.is_auto ? '<span class="badge badge-auto ms-2"><i class="bi bi-gear-fill me-1"></i>Auto</span>' : ''}
                     </div>
@@ -629,8 +622,8 @@
                             <i class="bi bi-folder-fill"></i>
                         </div>
                         <div class="gdrive-folder-info">
-                            <div class="gdrive-folder-title" title="${item.nama}">
-                                ${item.nama}
+                            <div class="gdrive-folder-title" title="${item.name}">
+                                ${item.name}
                             </div>
                             <div class="gdrive-folder-meta">
                                 <small class="text-muted">${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</small>
@@ -699,7 +692,7 @@
                     <td>
                         <div class="d-flex align-items-center">
                             <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
-                            <strong>${item.nama}</strong>
+                            <strong>${item.name}</strong>
                         </div>
                     </td>
                     <td>${creatorName ?? '-'}</td>

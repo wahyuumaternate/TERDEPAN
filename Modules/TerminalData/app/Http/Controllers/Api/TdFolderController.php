@@ -13,44 +13,55 @@ use Modules\TerminalData\Services\TdFolderService;
 
 class TdFolderController extends Controller
 {
-    protected $folderService;
-    
-    public function __construct(TdFolderService $folderService)
-    {
-        $this->folderService = $folderService;
-        
+    public function __construct(
+        protected TdFolderService $folderService
+    ) {
         $this->middleware('auth:sanctum');
-        $this->middleware('can:view,folder')->only(['show']);
-        $this->middleware('can:update,folder')->only(['update']);
-        $this->middleware('can:delete,folder')->only(['destroy']);
     }
-    
     /**
      * Display a listing of folders
      */
     public function index(Request $request): JsonResponse
     {
-        $folders = TdFolder::query()
-            ->with(['creator', 'bidang', 'tags'])
-            ->when($request->parent_id, fn($q) => $q->where('parent_id', $request->parent_id))
-            ->when($request->bidang_id, fn($q) => $q->where('bidang_id', $request->bidang_id))
-            ->when($request->search, fn($q) => $q->search($request->search))
-            ->when($request->starred, fn($q) => $q->starred())
-            ->when($request->is_root, fn($q) => $q->roots())
-            ->orderBy($request->sort_by ?? 'name', $request->sort_order ?? 'asc')
-            ->paginate($request->per_page ?? 15);
-        
-        return response()->json([
-            'success' => true,
-            'data' => TdFolderResource::collection($folders),
-            'meta' => [
-                'total' => $folders->total(),
-                'per_page' => $folders->perPage(),
-                'current_page' => $folders->currentPage(),
-            ]
-        ]);
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = $request->user();
+
+            // Build filters from request
+            $filters = [
+                'level' => $request->input('level', 0), // Default to level 0 (bidang)
+                'bidang_id' => $request->input('bidang_id'),
+                'search' => $request->input('search'),
+                'is_starred' => $request->input('starred'),
+                'is_public' => $request->input('is_public'),
+                'sort_by' => $request->input('sort_by', 'name'),
+                'sort_order' => $request->input('sort_order', 'asc'),
+            ];
+
+            // Remove null values
+            $filters = array_filter($filters, fn($value) => $value !== null);
+
+            // Get folders from service
+            $folders = $this->folderService->getRootFolders($user);
+
+            return response()->json([
+                'success' => true,
+                'data' => TdFolderResource::collection($folders),
+                'message' => 'Data folder berhasil dimuat'
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
     }
-    
+
     /**
      * Store a newly created folder
      */
@@ -58,7 +69,7 @@ class TdFolderController extends Controller
     {
         try {
             $folder = $this->folderService->create($request->validated());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dibuat',
@@ -71,20 +82,20 @@ class TdFolderController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Display the specified folder
      */
     public function show(TdFolder $folder): JsonResponse
     {
         $folder->load(['creator', 'bidang', 'subfolders', 'files', 'tags']);
-        
+
         return response()->json([
             'success' => true,
             'data' => new TdFolderResource($folder)
         ]);
     }
-    
+
     /**
      * Update the specified folder
      */
@@ -92,7 +103,7 @@ class TdFolderController extends Controller
     {
         try {
             $folder = $this->folderService->update($folder, $request->validated());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil diupdate',
@@ -105,7 +116,7 @@ class TdFolderController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Remove the specified folder
      */
@@ -113,7 +124,7 @@ class TdFolderController extends Controller
     {
         try {
             $this->folderService->delete($folder);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dihapus'
@@ -125,20 +136,20 @@ class TdFolderController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Get folder breadcrumb
      */
     public function breadcrumb(TdFolder $folder): JsonResponse
     {
         $breadcrumb = $folder->getBreadcrumb();
-        
+
         return response()->json([
             'success' => true,
             'data' => TdFolderResource::collection($breadcrumb)
         ]);
     }
-    
+
     /**
      * Move folder to another parent
      */
@@ -147,10 +158,10 @@ class TdFolderController extends Controller
         $request->validate([
             'parent_id' => 'nullable|uuid|exists:td_folders,id'
         ]);
-        
+
         try {
             $this->folderService->move($folder, $request->parent_id);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dipindahkan',
@@ -163,21 +174,21 @@ class TdFolderController extends Controller
             ], 400);
         }
     }
-    
+
     /**
      * Toggle star status
      */
     public function toggleStar(TdFolder $folder): JsonResponse
     {
         $folder->update(['is_starred' => !$folder->is_starred]);
-        
+
         return response()->json([
             'success' => true,
             'message' => $folder->is_starred ? 'Folder ditandai' : 'Tanda dihapus',
             'data' => new TdFolderResource($folder)
         ]);
     }
-    
+
     /**
      * Get folder statistics
      */

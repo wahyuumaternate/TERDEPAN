@@ -3,38 +3,71 @@
 namespace Modules\TerminalData\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Modules\TerminalData\Models\TdFolder;
+use Modules\TerminalData\Http\Requests\GetFoldersRequest;
+use Modules\TerminalData\Http\Resources\TdFolderResource;
+use Modules\TerminalData\Services\TdFolderService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 
 class TerminalDataController extends Controller
 {
-    public function index()
+    public function __construct(
+        protected TdFolderService $folderService
+    ) {}
+
+    /**
+     * Display dashboard / landing page
+     */
+    public function index(): View
     {
         return view('terminaldata::index');
     }
 
-    public function folderIndex(Request $request)
+    /**
+     * Display folders page with level 1 (bidang) folders
+     */
+    public function folderIndex(GetFoldersRequest $request): View|JsonResponse
     {
-        // Jika request AJAX, return JSON
-        if ($request->wantsJson() || $request->ajax()) {
-            $folders = TdFolder::with(['parent', 'bidang', 'creator'])
-                ->orderBy('level')
-                ->orderBy('name')
-                ->get();
+        try {
+            /** @var \App\Models\MasterPegawai $user */
+            $user = $request->user();
 
-            // Debug: Log bidang data
-            // Log::info('Folders with bidang:', $folders->toArray());
+            // Get validated filters
+            $filters = $request->validated();
 
-            return response()->json($folders);
+            // For folder index page, we want root folders (level 0 = bidang folders)
+            $folders = $this->folderService->getRootFolders($user);
+
+            // If AJAX request, return JSON
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => TdFolderResource::collection($folders)->toArray($request),
+                    'message' => 'Data folder berhasil dimuat'
+                ]);
+            }
+
+            // Return view with folders
+            return view('terminaldata::folder.index', compact('folders'));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], 403);
+            }
+
+            abort(403, $e->getMessage());
+        } catch (\Exception $e) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                ], 500);
+            }
+
+            abort(500, 'Terjadi kesalahan: ' . $e->getMessage());
         }
-
-        // Jika bukan AJAX, return view
-        $folders = TdFolder::with(['parent', 'bidang', 'creator'])
-            ->whereNull('parent_id')
-            ->orderBy('name')
-            ->get();
-
-        return view('terminaldata::folder.index', compact('folders'));
     }
 
     public function evidenIndex()

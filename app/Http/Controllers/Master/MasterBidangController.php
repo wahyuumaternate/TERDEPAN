@@ -8,12 +8,24 @@ use Illuminate\Http\Request;
 
 class MasterBidangController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
             $data = MasterBidang::all();
+
+            // If AJAX request, return JSON
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json($data);
+            }
+
             return view('master-data.index-bidang', compact('data'));
         } catch (\Exception $e) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ], 500);
+            }
             return redirect()->back()->with('error', $e->getMessage());
         }
     }

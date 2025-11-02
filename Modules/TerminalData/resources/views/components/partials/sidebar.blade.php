@@ -25,11 +25,11 @@
 
          <!-- Management File / Arsip Dokumen -->
          @php
-             $dokumenActive = request()->is('dokumen*');
+             $dokumenActive = request()->is('folders*');
          @endphp
 
          <li class="nav-item">
-             <a class="nav-link {{ $dokumenActive ? '' : 'collapsed' }}" href="{{ route('terminaldata.folders.index') }}">
+             <a class="nav-link {{ Request::is('/terminal-data/folders') ? 'active' : 'collapsed' }}" href="{{ route('terminaldata.folders.index') }}">
                  <i class="bi bi-folder2-open"></i><span>Penyimpanan</span>
              </a>
          </li>
