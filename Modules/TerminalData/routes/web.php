@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // API Routes for folders
         Route::get('/api/folders', [TdFolderController::class, 'index'])->name('foldersData.index');
+        Route::post('/api/folders', [TdFolderController::class, 'store'])->name('foldersData.store');
         Route::get('/api/folders/{folder}', [TdFolderController::class, 'show'])->name('foldersData.show');
         Route::get('/api/folders/{folder}/children', [TdFolderController::class, 'children'])->name('foldersData.children');
         Route::delete('/api/folders/{folder}', [TdFolderController::class, 'destroy'])->name('foldersData.destroy');

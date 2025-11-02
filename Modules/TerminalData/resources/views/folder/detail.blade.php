@@ -969,13 +969,13 @@
                 let formData = {
                     _token: '{{ csrf_token() }}',
                     parent_id: '{{ $folder->id }}',
-                    nama: $('#nama_folder').val()
+                    name: $('#nama_folder').val()
                 };
 
                 console.log('Form data:', formData);
 
                 $.ajax({
-                    url: '{{ route('dokumen.folder.store') }}',
+                    url: '{{ route('terminaldata.foldersData.store') }}',
                     type: 'POST',
                     data: formData,
                     beforeSend: function() {

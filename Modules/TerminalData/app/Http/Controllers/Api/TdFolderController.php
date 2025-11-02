@@ -68,13 +68,21 @@ class TdFolderController extends Controller
     public function store(StoreTdFolderRequest $request): JsonResponse
     {
         try {
-            $folder = $this->folderService->create($request->validated());
+            /** @var \App\Models\MasterPegawai $user */
+            $user = $request->user();
+
+            $folder = $this->folderService->createFolder($request->validated(), $user);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dibuat',
                 'data' => new TdFolderResource($folder)
             ], 201);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
