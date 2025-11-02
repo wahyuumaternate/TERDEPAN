@@ -1123,7 +1123,7 @@
                                     <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="alert('Fitur hapus folder dalam pengembangan'); return false;">
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
                                     <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                 </a></li>
                             </ul>
@@ -1641,7 +1641,8 @@
             const folderId = '{{ $folder->id }}';
 
             $.ajax({
-                url: `{{ route('terminaldata.foldersData.children', ':folderId') }}`.replace(':folderId', folderId),
+                url: `{{ route('terminaldata.foldersData.children', ':folderId') }}`.replace(':folderId',
+                    folderId),
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -1714,7 +1715,7 @@
                                         <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="alert('Fitur hapus folder dalam pengembangan'); return false;">
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
                                         <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                     </a></li>
                                 </ul>
@@ -1808,9 +1809,73 @@
             }
         }
 
+        // ============================================
+        // FOLDER DELETE FUNCTION
+        // ============================================
+
+        function deleteFolder(folderId, folderName) {
+            Swal.fire({
+                title: 'Hapus Folder?',
+                html: `Apakah Anda yakin ingin memindahkan folder <strong>"${folderName}"</strong> ke sampah?<br><small class="text-muted">Folder harus kosong (tidak ada subfolder dan dokumen)</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Menghapus...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Make AJAX request to delete folder
+                    $.ajax({
+                        url: `{{ route('terminaldata.foldersData.destroy', ':folderId') }}`.replace(
+                            ':folderId', folderId),
+                        type: 'POST',
+                        data: {
+                            _method: 'DELETE',
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: response.message || 'Folder berhasil dihapus',
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                // Reload subfolders or redirect to parent
+                                location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            let message = 'Gagal menghapus folder';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                message = xhr.responseJSON.message;
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: message
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
         // Initialize detail elements for already rendered items
         window.showDetail = showDetail;
         window.editDokumen = editDokumen;
         window.deleteDokumen = deleteDokumen;
+        window.deleteFolder = deleteFolder;
     </script>
 @endpush

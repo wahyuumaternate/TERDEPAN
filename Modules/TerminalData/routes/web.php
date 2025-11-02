@@ -14,6 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/api/folders', [TdFolderController::class, 'index'])->name('foldersData.index');
         Route::get('/api/folders/{folder}', [TdFolderController::class, 'show'])->name('foldersData.show');
         Route::get('/api/folders/{folder}/children', [TdFolderController::class, 'children'])->name('foldersData.children');
+        Route::delete('/api/folders/{folder}', [TdFolderController::class, 'destroy'])->name('foldersData.destroy');
     });
     // Route::resource('terminal-data', TerminalDataController::class)->names('terminaldata');
 });

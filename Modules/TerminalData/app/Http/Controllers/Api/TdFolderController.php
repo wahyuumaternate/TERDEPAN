@@ -179,14 +179,34 @@ class TdFolderController extends Controller
     /**
      * Remove the specified folder
      */
-    public function destroy(TdFolder $folder): JsonResponse
+    public function destroy(TdFolder $folder, Request $request): JsonResponse
     {
         try {
-            $this->folderService->delete($folder);
+            /** @var \App\Models\MasterPegawai $user */
+            $user = $request->user();
+
+            // Check if folder has subfolders
+            if ($folder->subfolders()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder'
+                ], 400);
+            }
+
+            // Check if folder has files
+            if ($folder->files()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menghapus folder yang masih memiliki file'
+                ], 400);
+            }
+
+            // Delete folder via service
+            $this->folderService->deleteFolder($folder, $user);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dihapus'
+                'message' => 'Folder berhasil dipindahkan ke sampah'
             ]);
         } catch (\Exception $e) {
             return response()->json([
