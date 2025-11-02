@@ -25,7 +25,15 @@ class TdFileController extends Controller
     {
         $request->validate([
             'folder_id' => 'required|uuid|exists:td_folders,id',
-            'file' => 'required|file|max:51200', // 50MB max
+            'file' => [
+                'required',
+                'file',
+                'max:51200', // 50MB max
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,bmp,svg,webp'
+            ],
+        ], [
+            'file.mimes' => 'File harus berupa dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll)',
+            'file.max' => 'Ukuran file maksimal 50MB',
         ]);
 
         try {
@@ -110,27 +118,29 @@ class TdFileController extends Controller
     }
 
     /**
-     * Delete file (soft delete)
+     * Delete file (soft delete - move to trash)
      */
     public function destroy($fileId): JsonResponse
     {
         try {
             $file = TdFile::findOrFail($fileId);
 
-            // Soft delete
+            // Soft delete (move to trash)
             $file->delete();
 
             // Update folder stats
-            $file->folder->updateStats();
+            if ($file->folder) {
+                $file->folder->updateStats();
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'File berhasil dihapus'
+                'message' => 'File berhasil dipindahkan ke sampah'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus file: ' . $e->getMessage()
+                'message' => 'Gagal memindahkan file ke sampah: ' . $e->getMessage()
             ], 500);
         }
     }

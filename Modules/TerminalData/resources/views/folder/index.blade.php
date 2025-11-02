@@ -1,10 +1,6 @@
 @extends('terminaldata::components.layouts.master')
 
 @section('main')
-    <div class="pagetitle">
-        <h1>Selamat Datang di Terminal Data BAPPEDA</h1>
-    </div>
-
     <section class="section">
 
         <div class="row">

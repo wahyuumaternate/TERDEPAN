@@ -1,52 +1,155 @@
 @extends('terminaldata::components.layouts.master')
 
+@php
+    // Helper function to format file size
+    function formatBytes($bytes, $precision = 2)
+    {
+        if ($bytes == 0) {
+            return '0 Bytes';
+        }
+
+        $k = 1024;
+        $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes) / log($k));
+
+        return round($bytes / pow($k, $i), $precision) . ' ' . $sizes[$i];
+    }
+@endphp
+
 @section('main')
-    <div class="pagetitle">
+    <div class="pagetitle mb-3">
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('terminaldata.index') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('terminaldata.folders.index') }}">Folders</a></li>
-                @if (isset($folder))
-                    @foreach ($folder->getBreadcrumb() as $crumb)
-                        @if ($loop->last)
-                            <li class="breadcrumb-item active">{{ $crumb->name }}</li>
+            <div class="d-flex align-items-center">
+                <!-- Breadcrumb Navigation -->
+                <div class="d-flex align-items-center flex-wrap" style="gap: 8px; font-size: 1.1rem;">
+                    @if (isset($folder))
+                        @php
+                            $breadcrumbs = $folder->getBreadcrumb();
+                            $totalLevels = count($breadcrumbs);
+                            $maxVisibleLevels = 3; // Maximum breadcrumbs to show before collapsing
+                        @endphp
+
+                        @if ($totalLevels > $maxVisibleLevels)
+                            {{-- Show "..." dropdown for hidden breadcrumbs --}}
+                            <div class="dropdown">
+                                <button class="btn btn-link text-dark fw-semibold text-decoration-none p-0 dropdown-toggle"
+                                    type="button" id="hiddenBreadcrumbsDropdown" data-bs-toggle="dropdown"
+                                    aria-expanded="false" style="font-size: 1.1rem;">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="hiddenBreadcrumbsDropdown">
+                                    @foreach ($breadcrumbs as $index => $crumb)
+                                        @if ($index < $totalLevels - $maxVisibleLevels + 1)
+                                            <li>
+                                                <a class="dropdown-item"
+                                                    href="{{ route('terminaldata.folder.detail', $crumb->id) }}">
+                                                    <i class="bi bi-folder me-2"></i>{{ $crumb->name }}
+                                                </a>
+                                            </li>
+                                        @endif
+                                    @endforeach
+                                </ul>
+                            </div>
+                            <span class="text-muted">&gt;</span>
+
+                            {{-- Show last visible breadcrumbs --}}
+                            @foreach ($breadcrumbs as $index => $crumb)
+                                @if ($index >= $totalLevels - $maxVisibleLevels + 1)
+                                    @if (!$loop->last)
+                                        <a href="{{ route('terminaldata.folder.detail', $crumb->id) }}"
+                                            class="text-decoration-none text-dark fw-semibold" style="cursor: pointer;">
+                                            {{ $crumb->name }}
+                                        </a>
+                                        <span class="text-muted">&gt;</span>
+                                    @else
+                                        {{-- Current folder with dropdown --}}
+                                        <div class="dropdown">
+                                            <button
+                                                class="btn btn-link text-dark fw-semibold text-decoration-none p-0 dropdown-toggle"
+                                                type="button" id="currentFolderDropdown" data-bs-toggle="dropdown"
+                                                aria-expanded="false" style="font-size: 1.1rem;">
+                                                {{ $crumb->name }}
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="currentFolderDropdown">
+                                                <li><span
+                                                        class="dropdown-item-text"><strong>{{ $crumb->name }}</strong></span>
+                                                </li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item" href="#"><i
+                                                            class="bi bi-pencil me-2"></i>Ganti Nama</a></li>
+                                                <li><a class="dropdown-item" href="#"><i
+                                                            class="bi bi-share me-2"></i>Bagikan</a></li>
+                                                <li><a class="dropdown-item" href="#"><i
+                                                            class="bi bi-info-circle me-2"></i>Info Folder</a></li>
+                                            </ul>
+                                        </div>
+                                    @endif
+                                @endif
+                            @endforeach
                         @else
-                            <li class="breadcrumb-item">
-                                <a href="{{ route('terminaldata.folder.detail', $crumb->id) }}">{{ $crumb->name }}</a>
-                            </li>
+                            {{-- Show all breadcrumbs if less than or equal to maxVisibleLevels --}}
+                            @foreach ($breadcrumbs as $index => $crumb)
+                                @if (!$loop->last)
+                                    <a href="{{ route('terminaldata.folder.detail', $crumb->id) }}"
+                                        class="text-decoration-none text-dark fw-semibold" style="cursor: pointer;">
+                                        {{ $crumb->name }}
+                                    </a>
+                                    <span class="text-muted">&gt;</span>
+                                @else
+                                    <div class="dropdown">
+                                        <button
+                                            class="btn btn-link text-dark fw-semibold text-decoration-none p-0 dropdown-toggle"
+                                            type="button" id="currentFolderDropdown" data-bs-toggle="dropdown"
+                                            aria-expanded="false" style="font-size: 1.1rem;">
+                                            {{ $crumb->name }}
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="currentFolderDropdown">
+                                            <li><span class="dropdown-item-text"><strong>{{ $crumb->name }}</strong></span>
+                                            </li>
+                                            <li>
+                                                <hr class="dropdown-divider">
+                                            </li>
+                                            <li><a class="dropdown-item" href="#"><i
+                                                        class="bi bi-pencil me-2"></i>Ganti Nama</a></li>
+                                            <li><a class="dropdown-item" href="#"><i
+                                                        class="bi bi-share me-2"></i>Bagikan</a></li>
+                                            <li><a class="dropdown-item" href="#"><i
+                                                        class="bi bi-info-circle me-2"></i>Info Folder</a></li>
+                                        </ul>
+                                    </div>
+                                @endif
+                            @endforeach
                         @endif
-                    @endforeach
-                @endif
-            </ol>
+                    @else
+                        <span class="fw-semibold">Terminal Data</span>
+                    @endif
+                </div>
+            </div>
         </nav>
-        <h1><i class="bi bi-folder-fill text-primary me-2"></i>{{ $folder->name ?? 'Folder' }}</h1>
     </div>
 
     <section class="section">
         <div class="row">
             <div class="col-lg-12">
-                <div class="mb-3">
-                    <a href="{{ route('terminaldata.folders.index') }}" class="btn btn-outline-secondary me-2">
-                        <i class="bi bi-arrow-left me-1"></i>Kembali
-                    </a>
-                </div>
-
                 <!-- Dokumen Section -->
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
                         <!-- Header -->
                         <div class="d-flex justify-content-between align-items-center mb-4">
+                            <!-- View Toggle -->
                             <div>
-                                <h5 class="card-title mb-1 d-flex align-items-center">
-                                    <div class="icon-box bg-primary bg-opacity-10 rounded-3 p-2 me-3">
-                                        <i class="bi bi-file-earmark-text-fill text-primary" style="font-size: 1.5rem;"></i>
-                                    </div>
-                                    <div>
-                                        <span class="fw-bold">Daftar Dokumen</span>
-                                        <small class="d-block text-muted fw-normal mt-1">Dokumen yang tersimpan di folder
-                                            ini</small>
-                                    </div>
-                                </h5>
+                                <div class="btn-group shadow-sm" role="group">
+                                    <input type="radio" class="btn-check" name="viewMode" id="viewGrid" checked>
+                                    <label class="btn btn-outline-primary px-4" for="viewGrid">
+                                        <i class="bi bi-grid-3x3-gap me-2"></i>Grid View
+                                    </label>
+                                    <input type="radio" class="btn-check" name="viewMode" id="viewTable">
+                                    <label class="btn btn-outline-primary px-4" for="viewTable">
+                                        <i class="bi bi-table me-2"></i>Table View
+                                    </label>
+                                </div>
                             </div>
                             <div>
                                 <button type="button" class="btn btn-success shadow-sm me-2" data-bs-toggle="modal"
@@ -57,8 +160,11 @@
                                     @csrf
                                     <input type="hidden" name="folder_id" value="{{ $folder->id }}">
                                     <input type="file" id="fileUpload" name="file" style="display: none;"
-                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" multiple>
-                                    <button type="button" class="btn btn-primary shadow-sm" id="btnTriggerUpload">
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.bmp,.svg,.webp"
+                                        multiple>
+                                    <button type="button" class="btn btn-primary shadow-sm" id="btnTriggerUpload"
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Upload dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll). Maksimal 50MB">
                                         <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
                                     </button>
                                 </form>
@@ -84,7 +190,8 @@
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="searchDokumen"
                                                         placeholder="Cari dokumen...">
-                                                    <button class="btn btn-outline-primary" type="button" id="btnSearch">
+                                                    <button class="btn btn-outline-primary" type="button"
+                                                        id="btnSearch">
                                                         <i class="bi bi-search"></i>
                                                     </button>
                                                 </div>
@@ -100,26 +207,12 @@
                             </div>
                         </div>
 
-                        <!-- View Toggle -->
-                        <div class="mb-3">
-                            <div class="btn-group shadow-sm" role="group">
-                                <input type="radio" class="btn-check" name="viewMode" id="viewGrid" checked>
-                                <label class="btn btn-outline-primary px-4" for="viewGrid">
-                                    <i class="bi bi-grid-3x3-gap me-2"></i>Grid View
-                                </label>
-                                <input type="radio" class="btn-check" name="viewMode" id="viewTable">
-                                <label class="btn btn-outline-primary px-4" for="viewTable">
-                                    <i class="bi bi-table me-2"></i>Table View
-                                </label>
-                            </div>
-                        </div>
-
                         <!-- Grid View -->
                         <div id="gridView">
                             <!-- Subfolders Section -->
                             <div id="subfoldersSection" style="display: none;">
                                 <h6 class="text-muted mb-3">
-                                    <i class="bi bi-folder me-2"></i>Subfolder (<span id="subfolderCount">0</span>)
+                                    <i class="bi bi-folder me-2"></i>Folder (<span id="subfolderCount">0</span>)
                                 </h6>
                                 <!-- Skeleton Loading for Subfolders -->
                                 <div class="row g-3 mb-3" id="subfoldersSkeleton">
@@ -174,7 +267,7 @@
 
                             <!-- Documents Section -->
                             <h6 class="text-muted mb-3">
-                                <i class="bi bi-file-earmark-text me-2"></i>Dokumen (<span
+                                <i class="bi bi-file-earmark-text me-2"></i>File (<span
                                     id="documentCount">{{ $files ? count($files) : '0' }}</span>)
                             </h6>
                             @if (count($files) > 0)
@@ -187,7 +280,8 @@
                                                 // TdFile structure (direct file)
                                                 $extension = $item->extension ?? 'pdf';
                                                 $fileName = $item->name ?? $item->original_name;
-                                                $fileSize = round($item->size / 1024, 2); // Convert bytes to KB
+                                                $fileSizeBytes = $item->size; // Store as bytes
+                                                $fileSize = formatBytes($fileSizeBytes); // Format for display
                                             } else {
                                                 // Dokumen structure (multiple versions)
                                                 $currentFile = null;
@@ -200,7 +294,8 @@
                                                 if ($currentFile) {
                                                     $extension = $currentFile->extension ?? 'pdf';
                                                     $fileName = $item->judul ?? ($item->name ?? 'Unknown');
-                                                    $fileSize = $currentFile->ukuran_kb ?? 0;
+                                                    $fileSizeBytes = ($currentFile->ukuran_kb ?? 0) * 1024; // Convert KB to bytes
+                                                    $fileSize = formatBytes($fileSizeBytes);
                                                 } else {
                                                     // Fallback if no files found
                                                     continue;
@@ -219,9 +314,25 @@
                                             } elseif (in_array($extension, ['xls', 'xlsx'])) {
                                                 $fileIcon = 'bi-file-earmark-excel-fill';
                                                 $iconColor = '#198754';
-                                            } elseif (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
+                                            } elseif (in_array($extension, ['ppt', 'pptx'])) {
+                                                $fileIcon = 'bi-file-earmark-slides-fill';
+                                                $iconColor = '#ff6b35';
+                                            } elseif (
+                                                in_array($extension, [
+                                                    'jpg',
+                                                    'jpeg',
+                                                    'png',
+                                                    'gif',
+                                                    'bmp',
+                                                    'svg',
+                                                    'webp',
+                                                ])
+                                            ) {
                                                 $fileIcon = 'bi-file-earmark-image-fill';
                                                 $iconColor = '#fd7e14';
+                                            } elseif (in_array($extension, ['zip', 'rar', '7z', 'tar', 'gz'])) {
+                                                $fileIcon = 'bi-file-earmark-zip-fill';
+                                                $iconColor = '#ffc107';
                                             }
                                         @endphp
                                         <div class="col-12 col-sm-6 col-md-4 col-lg-3">
@@ -236,7 +347,7 @@
                                                     </div>
                                                     <div class="gdrive-card-meta">
                                                         <small class="text-muted">
-                                                            {{ number_format($fileSize, 0) }} KB
+                                                            {{ $fileSize }}
                                                         </small>
                                                     </div>
                                                 </div>
@@ -271,7 +382,7 @@
                                                                 <hr class="dropdown-divider">
                                                             </li>
                                                             <li><a class="dropdown-item text-danger" href="#"
-                                                                    onclick="deleteFile({{ $item->id }}); return false;">
+                                                                    onclick="deleteFile('{{ $item->id }}', '{{ addslashes($fileName) }}'); return false;">
                                                                     <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                                                 </a></li>
                                                         </ul>
@@ -296,7 +407,7 @@
                         <!-- Table View -->
                         <div id="tableView" style="display: none;">
                             <h6 class="text-muted mb-3">
-                                <i class="bi bi-folder-fill me-2"></i>Folder & Dokumen
+                                <i class="bi bi-folder-fill me-2"></i>Folder & File
                             </h6>
                             <table class="table" id="combinedTable">
                                 <thead>
@@ -561,6 +672,36 @@
 
 @push('styles')
     <style>
+        /* Breadcrumb Navigation Styles */
+        .pagetitle {
+            margin-bottom: 1rem;
+            padding: 0.75rem 0;
+        }
+
+        .pagetitle .d-flex {
+            align-items: center;
+        }
+
+        .pagetitle a {
+            color: #202124;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .pagetitle a:hover {
+            color: #1a73e8;
+        }
+
+        .pagetitle .dropdown-toggle::after {
+            margin-left: 0.3em;
+            vertical-align: 0.15em;
+        }
+
+        .pagetitle .text-muted {
+            color: #5f6368 !important;
+            font-weight: 400;
+        }
+
         /* Google Drive Style Folder Cards */
         .gdrive-folder-card {
             background: white;
@@ -1024,6 +1165,12 @@
             console.log('Document ready');
             console.log('Files/Documents data:', documents);
 
+            // Initialize Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
             // Load subfolders
             loadSubfolders();
 
@@ -1038,14 +1185,35 @@
                 if (files.length > 0) {
                     // Validate all files
                     const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+                    const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg',
+                        'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'
+                    ];
                     let hasError = false;
 
                     for (let i = 0; i < files.length; i++) {
+                        // Check file size
                         if (files[i].size > maxSize) {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'File Terlalu Besar',
                                 text: `File "${files[i].name}" melebihi batas 50MB`,
+                                confirmButtonColor: '#0d6efd'
+                            });
+                            hasError = true;
+                            break;
+                        }
+
+                        // Check file extension
+                        const fileName = files[i].name;
+                        const fileExtension = fileName.split('.').pop().toLowerCase();
+                        if (!allowedExtensions.includes(fileExtension)) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Format File Tidak Didukung',
+                                html: `File "${fileName}" memiliki format yang tidak didukung.<br><br>
+                                       <small>Format yang didukung:<br>
+                                       <strong>Dokumen:</strong> PDF, Word, Excel, PowerPoint<br>
+                                       <strong>Gambar:</strong> JPG, PNG, GIF, BMP, SVG, WebP</small>`,
                                 confirmButtonColor: '#0d6efd'
                             });
                             hasError = true;
@@ -1235,9 +1403,19 @@
             const extension = file.name.split('.').pop().toLowerCase();
 
             let iconClass = 'bi-file-earmark-text-fill text-secondary';
-            if (extension === 'pdf') iconClass = 'bi-file-earmark-pdf-fill text-danger';
-            else if (['doc', 'docx'].includes(extension)) iconClass = 'bi-file-earmark-word-fill text-primary';
-            else if (['xls', 'xlsx'].includes(extension)) iconClass = 'bi-file-earmark-excel-fill text-success';
+            if (extension === 'pdf') {
+                iconClass = 'bi-file-earmark-pdf-fill text-danger';
+            } else if (['doc', 'docx'].includes(extension)) {
+                iconClass = 'bi-file-earmark-word-fill text-primary';
+            } else if (['xls', 'xlsx'].includes(extension)) {
+                iconClass = 'bi-file-earmark-excel-fill text-success';
+            } else if (['ppt', 'pptx'].includes(extension)) {
+                iconClass = 'bi-file-earmark-slides-fill text-danger';
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) {
+                iconClass = 'bi-file-earmark-image-fill text-warning';
+            } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+                iconClass = 'bi-file-earmark-zip-fill text-info';
+            }
 
             const html = `
                 <div class="upload-item" data-upload-id="${uploadId}">
@@ -1366,12 +1544,20 @@
             return 'upload_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
+        /**
+         * Format file size from bytes to human readable format
+         * Examples:
+         * - 500 bytes -> "500 Bytes"
+         * - 1500 bytes -> "1.46 KB"
+         * - 1500000 bytes -> "1.43 MB"
+         * - 1500000000 bytes -> "1.40 GB"
+         */
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+            return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
         }
 
         // ============================================
@@ -1632,7 +1818,7 @@
                         // TdFile structure (direct file)
                         extension = doc.extension || 'pdf';
                         fileName = doc.name || doc.original_name;
-                        fileSize = doc.size ? `${(doc.size / 1024).toFixed(2)} KB` : '-';
+                        fileSize = doc.size ? formatFileSize(doc.size) : '-'; // Use formatFileSize function
                         updatedDate = doc.updated_at ? new Date(doc.updated_at).toLocaleDateString('id-ID', {
                             day: '2-digit',
                             month: 'short',
@@ -1646,7 +1832,8 @@
                             doc.files[0]) : null;
                         extension = currentFile ? currentFile.extension : 'pdf';
                         fileName = doc.judul;
-                        fileSize = currentFile ? `${Number(currentFile.size_kb).toLocaleString('id-ID')} KB` : '-';
+                        // Convert KB to bytes first, then format
+                        fileSize = currentFile ? formatFileSize(Number(currentFile.size_kb) * 1024) : '-';
                         updatedDate = doc.updated_at ? new Date(doc.updated_at).toLocaleDateString('id-ID', {
                             day: '2-digit',
                             month: 'short',
@@ -1662,8 +1849,12 @@
                         fileIcon = 'bi-file-earmark-word-fill text-primary';
                     } else if (['xls', 'xlsx'].includes(extension)) {
                         fileIcon = 'bi-file-earmark-excel-fill text-success';
-                    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+                    } else if (['ppt', 'pptx'].includes(extension)) {
+                        fileIcon = 'bi-file-earmark-slides-fill';
+                    } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) {
                         fileIcon = 'bi-file-earmark-image-fill text-warning';
+                    } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+                        fileIcon = 'bi-file-earmark-zip-fill';
                     }
 
                     tbody += `
@@ -1691,7 +1882,7 @@
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="deleteFile('${doc.id}', '${fileName}'); return false;">
-                                    <i class="bi bi-trash me-2"></i>Hapus
+                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                 </a></li>
                             </ul>
                         </td>
@@ -2310,35 +2501,30 @@
             });
         }
 
-        function formatFileSize(sizeKb) {
-            if (!sizeKb) return '0 KB';
-            if (sizeKb < 1024) {
-                return sizeKb + ' KB';
-            } else {
-                return (sizeKb / 1024).toFixed(2) + ' MB';
-            }
-        }
-
         // ============================================
         // FOLDER DELETE FUNCTION
         // ============================================
 
         function deleteFolder(folderId, folderName) {
             Swal.fire({
-                title: 'Hapus Folder?',
-                html: `Apakah Anda yakin ingin memindahkan folder <strong>"${folderName}"</strong> ke sampah?<br><small class="text-muted">Folder harus kosong (tidak ada subfolder dan dokumen)</small>`,
+                title: 'Pindahkan Folder ke Sampah?',
+                html: `Folder <strong>"${folderName}"</strong> akan dipindahkan ke sampah.<br><small class="text-muted">Catatan: Folder harus kosong (tidak ada subfolder dan dokumen)</small>`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal'
+                confirmButtonText: '<i class="bi bi-trash me-1"></i>Pindahkan ke Sampah',
+                cancelButtonText: '<i class="bi bi-x-circle me-1"></i>Batal',
+                reverseButtons: true,
+                focusCancel: true
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Show loading
                     Swal.fire({
-                        title: 'Menghapus...',
+                        title: 'Memproses...',
+                        text: 'Memindahkan folder ke sampah',
                         allowOutsideClick: false,
+                        allowEscapeKey: false,
                         didOpen: () => {
                             Swal.showLoading();
                         }
@@ -2357,8 +2543,9 @@
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Berhasil!',
-                                text: response.message || 'Folder berhasil dihapus',
-                                timer: 1500,
+                                text: response.message ||
+                                    'Folder berhasil dipindahkan ke sampah',
+                                timer: 2000,
                                 showConfirmButton: false
                             }).then(() => {
                                 // Reload subfolders or redirect to parent
@@ -2366,7 +2553,7 @@
                             });
                         },
                         error: function(xhr) {
-                            let message = 'Gagal menghapus folder';
+                            let message = 'Gagal memindahkan folder ke sampah';
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 message = xhr.responseJSON.message;
                             }
@@ -2413,20 +2600,31 @@
             });
         }
 
-        function deleteFile(id) {
+        function deleteFile(id, fileName = '') {
             Swal.fire({
-                title: 'Konfirmasi Hapus',
-                text: "File akan dihapus. Tindakan ini tidak dapat dibatalkan!",
+                title: 'Pindahkan ke Sampah?',
+                html: `File <strong>${fileName || 'ini'}</strong> akan dipindahkan ke sampah dan dapat dipulihkan kembali.`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
+                confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="bi bi-trash me-1"></i>Ya, Hapus!',
+                confirmButtonText: '<i class="bi bi-trash me-1"></i>Pindahkan ke Sampah',
                 cancelButtonText: '<i class="bi bi-x-circle me-1"></i>Batal',
                 reverseButtons: true,
                 focusCancel: true
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Memindahkan file ke sampah',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
                     $.ajax({
                         url: `{{ url('terminal-data/api/files') }}/${id}`,
                         type: 'POST',
@@ -2437,8 +2635,8 @@
                         success: function(response) {
                             Swal.fire({
                                 icon: 'success',
-                                title: 'Terhapus!',
-                                text: 'File berhasil dihapus.',
+                                title: 'Berhasil!',
+                                text: 'File berhasil dipindahkan ke sampah.',
                                 timer: 2000,
                                 showConfirmButton: false
                             }).then(() => {
@@ -2449,7 +2647,8 @@
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal!',
-                                text: xhr.responseJSON?.message || 'Gagal menghapus file'
+                                text: xhr.responseJSON?.message ||
+                                    'Gagal memindahkan file ke sampah'
                             });
                         }
                     });
