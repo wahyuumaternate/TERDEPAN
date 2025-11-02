@@ -380,9 +380,9 @@
                                                 <div class="file-card-preview">
                                                     @if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']))
                                                         {{-- Show actual image thumbnail --}}
-                                                        <img src="{{ asset('storage/' . $item->storage_path) }}"
+                                                        <img src="{{ route('terminaldata.filesData.serve', $item->id) }}"
                                                             alt="{{ $fileName }}" class="file-thumbnail-img"
-                                                            onerror="this.style.display='none'; this.parentElement.querySelector('.file-icon-fallback').style.display='flex';">
+                                                            onerror="this.style.display='none'; var fallback = this.parentElement.querySelector('.file-icon-fallback'); if(fallback) fallback.style.display='flex';">
                                                         <div class="file-icon-fallback file-icon-preview"
                                                             data-type="image" style="display: none;">
                                                             <i class="bi bi-image"></i>

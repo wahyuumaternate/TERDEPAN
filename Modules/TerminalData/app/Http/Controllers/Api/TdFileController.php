@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\TerminalData\Jobs\ProcessFileUpload;
 use Modules\TerminalData\Models\TdFile;
@@ -146,6 +147,59 @@ class TdFileController extends Controller
                 'success' => false,
                 'message' => 'Gagal mengubah nama file: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Serve file from private storage
+     */
+    public function serve($fileId)
+    {
+        try {
+            $file = TdFile::findOrFail($fileId);
+
+            // Check if file exists in storage (local disk = storage/app/private)
+            if (!Storage::exists($file->storage_path)) {
+                abort(404, 'File tidak ditemukan di storage');
+            }
+
+            // Get file from private storage
+            $filePath = Storage::path($file->storage_path);
+
+            // Check if file physically exists
+            if (!file_exists($filePath)) {
+                abort(404, 'File tidak ditemukan');
+            }
+
+            // Get mime type from extension
+            $extension = strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'bmp' => 'image/bmp',
+                'webp' => 'image/webp',
+                'pdf' => 'application/pdf',
+                'doc' => 'application/msword',
+                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'xls' => 'application/vnd.ms-excel',
+                'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'ppt' => 'application/vnd.ms-powerpoint',
+                'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            ];
+
+            $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+
+            // Return file response with appropriate headers
+            return response()->file($filePath, [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . $file->original_name . '"',
+                'Cache-Control' => 'public, max-age=31536000',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error serving file: ' . $e->getMessage());
+            abort(404, 'File tidak dapat diakses: ' . $e->getMessage());
         }
     }
 

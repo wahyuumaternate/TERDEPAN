@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // API Routes for files
         Route::post('/api/files/upload', [TdFileController::class, 'upload'])->name('filesData.upload');
         Route::get('/api/files/{file}/download', [TdFileController::class, 'download'])->name('filesData.download');
+        Route::get('/api/files/{file}/serve', [TdFileController::class, 'serve'])->name('filesData.serve');
         Route::put('/api/files/{file}', [TdFileController::class, 'update'])->name('filesData.update');
         Route::delete('/api/files/{file}', [TdFileController::class, 'destroy'])->name('filesData.destroy');
     });
