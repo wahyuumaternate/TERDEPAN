@@ -271,7 +271,7 @@
                             <h6 class="text-muted mb-3">
                                 <i class="bi bi-file-earmark-text me-2"></i>File (<span id="documentCount">0</span>)
                             </h6>
-                            
+
                             <!-- Skeleton Loading for Files -->
                             <div class="row g-3 mb-3" id="filesSkeleton">
                                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
@@ -319,10 +319,10 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Files Grid -->
                             <div class="row g-3" id="dokumenGrid"></div>
-                            
+
                             <!-- Empty State -->
                             <div class="empty-state text-center" id="filesEmptyState" style="display: none;">
                                 <i class="bi bi-file-earmark-x empty-state-icon"></i>
@@ -2172,14 +2172,18 @@
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="${doc.storage_path ? '/api/files/' + doc.id + '/download' : '/dokumen/' + doc.id + '/download'}" onclick="event.stopPropagation()">
+                                <li><a class="dropdown-item" href="{{ url('terminal-data/api/files') }}/${doc.id}/download" onclick="event.stopPropagation()">
                                     <i class="bi bi-download me-2"></i>Unduh
                                 </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="editFile('${doc.id}'); return false;">
+                                <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${doc.id}'); return false;">
                                     <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteFile('${doc.id}', '${fileName}'); return false;">
+                                <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${doc.id}'); return false;">
+                                    <i class="bi bi-info-circle me-2"></i>Info File
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
                                     <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                                 </a></li>
                             </ul>
@@ -2741,7 +2745,7 @@
             // Use documents data that's already loaded from server
             setTimeout(() => {
                 $('#filesSkeleton').hide();
-                
+
                 if (documents && documents.length > 0) {
                     renderFilesGrid(documents);
                     $('#documentCount').text(documents.length);
@@ -2761,7 +2765,7 @@
 
             $('#dokumenGrid').show();
             $('#filesEmptyState').hide();
-            
+
             let html = '';
 
             files.forEach(file => {
@@ -2769,11 +2773,11 @@
                 const fileName = file.name || file.original_name || 'Unknown';
                 const fileSize = formatFileSize(file.size || 0);
                 const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension.toLowerCase());
-                
+
                 // Determine file icon and type
                 let fileIcon = 'bi-file-earmark-text-fill';
                 let dataType = extension.toLowerCase();
-                
+
                 if (extension === 'pdf') {
                     fileIcon = 'bi-file-earmark-pdf-fill';
                 } else if (['doc', 'docx'].includes(extension)) {
@@ -2788,8 +2792,8 @@
                     fileIcon = 'bi-file-earmark-zip-fill';
                 }
 
-                const serveUrl = `/terminal-data/api/files/${file.id}/serve`;
-                const downloadUrl = `/terminal-data/api/files/${file.id}/download`;
+                const serveUrl = `{{ url('terminal-data/api/files') }}/${file.id}/serve`;
+                const downloadUrl = `{{ url('terminal-data/api/files') }}/${file.id}/download`;
 
                 html += `
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
@@ -2822,18 +2826,18 @@
                         </div>
                         <div class="file-card-preview">
                             ${isImage ? `
-                                <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
-                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div class="file-icon-preview" data-type="image" style="display: none;">
-                                    <i class="bi bi-image"></i>
-                                    <div class="file-extension">${extension.toUpperCase()}</div>
-                                </div>
-                            ` : `
-                                <div class="file-icon-preview" data-type="${dataType}">
-                                    <i class="bi ${fileIcon}"></i>
-                                    <div class="file-extension">${extension.toUpperCase()}</div>
-                                </div>
-                            `}
+                                    <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="file-icon-preview" data-type="image" style="display: none;">
+                                        <i class="bi bi-image"></i>
+                                        <div class="file-extension">${extension.toUpperCase()}</div>
+                                    </div>
+                                ` : `
+                                    <div class="file-icon-preview" data-type="${dataType}">
+                                        <i class="bi ${fileIcon}"></i>
+                                        <div class="file-extension">${extension.toUpperCase()}</div>
+                                    </div>
+                                `}
                         </div>
                     </div>
                 </div>

@@ -108,11 +108,11 @@ class TdFileController extends Controller
             $file = TdFile::findOrFail($fileId);
 
             // Check if file exists in storage
-            if (!Storage::exists($file->path)) {
+            if (!$file->storage_path || !Storage::exists($file->storage_path)) {
                 abort(404, 'File tidak ditemukan');
             }
 
-            return Storage::download($file->path, $file->name);
+            return Storage::download($file->storage_path, $file->name);
         } catch (\Exception $e) {
             abort(500, 'Gagal mendownload file: ' . $e->getMessage());
         }
