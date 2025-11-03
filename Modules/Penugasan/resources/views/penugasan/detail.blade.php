@@ -5,7 +5,7 @@
         <h1>Tugas Pokok - {{ $pegawai->nama }}</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
                 <li class="breadcrumb-item">Penugasan</li>
                 <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Tugas Pokok</a></li>
                 <li class="breadcrumb-item active">{{ $pegawai->nama }}</li>

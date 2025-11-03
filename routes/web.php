@@ -6,12 +6,15 @@ use App\Http\Controllers\Master\MasterJabatanController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+Route::get('/e-kinerja', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'verified'])->name('e-kinerja.index');
+
+Route::get('/', function () {
+    return view('welcome');
+})->middleware(['auth', 'verified'])->name('welcome');
 
 Route::middleware('auth')->prefix('master')->name('master.')->group(function () {
-
     // ============================
     // MASTER PEGAWAI ROUTES - /master/pegawai
     // ============================

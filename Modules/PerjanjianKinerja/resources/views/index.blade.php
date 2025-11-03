@@ -5,7 +5,7 @@
         <h1>Perjanjian Kinerja</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
                 <li class="breadcrumb-item active">Perjanjian Kinerja</li>
             </ol>
         </nav>
