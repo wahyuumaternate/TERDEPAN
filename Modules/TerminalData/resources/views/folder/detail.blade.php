@@ -269,148 +269,69 @@
 
                             <!-- Documents Section -->
                             <h6 class="text-muted mb-3">
-                                <i class="bi bi-file-earmark-text me-2"></i>File (<span
-                                    id="documentCount">{{ $files ? count($files) : '0' }}</span>)
+                                <i class="bi bi-file-earmark-text me-2"></i>File (<span id="documentCount">0</span>)
                             </h6>
-                            @if (count($files) > 0)
-                                <div class="row g-3" id="dokumenGrid">
-                                    @foreach ($files as $item)
-                                        @php
-                                            // Support both TdFile and Dokumen structure
-                                            // TdFile has storage_path, while Dokumen has files relationship
-                                            if (isset($item->storage_path) || isset($item->extension)) {
-                                                // TdFile structure (direct file)
-                                                $extension = $item->extension ?? 'pdf';
-                                                $fileName = $item->name ?? $item->original_name;
-                                                $fileSizeBytes = $item->size; // Store as bytes
-                                                $fileSize = formatBytes($fileSizeBytes); // Format for display
-                                            } else {
-                                                // Dokumen structure (multiple versions)
-                                                $currentFile = null;
-                                                if (isset($item->files) && $item->files) {
-                                                    $currentFile =
-                                                        $item->files->where('is_current', true)->first() ??
-                                                        $item->files->first();
-                                                }
-
-                                                if ($currentFile) {
-                                                    $extension = $currentFile->extension ?? 'pdf';
-                                                    $fileName = $item->judul ?? ($item->name ?? 'Unknown');
-                                                    $fileSizeBytes = ($currentFile->ukuran_kb ?? 0) * 1024; // Convert KB to bytes
-                                                    $fileSize = formatBytes($fileSizeBytes);
-                                                } else {
-                                                    // Fallback if no files found
-                                                    continue;
-                                                }
-                                            }
-
-                                            $fileIcon = 'bi-file-earmark-text-fill';
-                                            $iconColor = '#6c757d';
-
-                                            if ($extension === 'pdf') {
-                                                $fileIcon = 'bi-file-earmark-pdf-fill';
-                                                $iconColor = '#dc3545';
-                                            } elseif (in_array($extension, ['doc', 'docx'])) {
-                                                $fileIcon = 'bi-file-earmark-word-fill';
-                                                $iconColor = '#0d6efd';
-                                            } elseif (in_array($extension, ['xls', 'xlsx'])) {
-                                                $fileIcon = 'bi-file-earmark-excel-fill';
-                                                $iconColor = '#198754';
-                                            } elseif (in_array($extension, ['ppt', 'pptx'])) {
-                                                $fileIcon = 'bi-file-earmark-slides-fill';
-                                                $iconColor = '#ff6b35';
-                                            } elseif (
-                                                in_array($extension, [
-                                                    'jpg',
-                                                    'jpeg',
-                                                    'png',
-                                                    'gif',
-                                                    'bmp',
-                                                    'svg',
-                                                    'webp',
-                                                ])
-                                            ) {
-                                                $fileIcon = 'bi-file-earmark-image-fill';
-                                                $iconColor = '#fd7e14';
-                                            } elseif (in_array($extension, ['zip', 'rar', '7z', 'tar', 'gz'])) {
-                                                $fileIcon = 'bi-file-earmark-zip-fill';
-                                                $iconColor = '#ffc107';
-                                            }
-                                        @endphp
-                                        <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
-                                            <div class="file-card" onclick="showFileDetail({{ $item->id }})">
-                                                {{-- Header with file name and action button --}}
-                                                <div class="file-card-header">
-                                                    <div class="file-card-title" title="{{ $fileName }}">
-                                                        {{ $fileName }}
-                                                    </div>
-                                                    <div class="file-card-menu" onclick="event.stopPropagation();">
-                                                        <button class="btn btn-sm btn-link p-0" type="button"
-                                                            data-bs-toggle="dropdown" aria-expanded="false">
-                                                            <i class="bi bi-three-dots-vertical"></i>
-                                                        </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                                                            <li><a class="dropdown-item"
-                                                                    href="{{ route('terminaldata.filesData.download', $item->id) }}"
-                                                                    onclick="event.stopPropagation()">
-                                                                    <i class="bi bi-download me-2"></i>Unduh
-                                                                </a></li>
-                                                            <li><a class="dropdown-item" href="#"
-                                                                    onclick="editFile({{ $item->id }}, '{{ addslashes($fileName) }}'); return false;">
-                                                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                                </a></li>
-                                                            <li>
-                                                                <hr class="dropdown-divider">
-                                                            </li>
-                                                            <li><a class="dropdown-item" href="#"
-                                                                    onclick="showFileDetail({{ $item->id }}); return false;">
-                                                                    <i class="bi bi-info-circle me-2"></i>Info File
-                                                                </a></li>
-                                                            <li>
-                                                                <hr class="dropdown-divider">
-                                                            </li>
-                                                            <li><a class="dropdown-item text-danger" href="#"
-                                                                    onclick="deleteFile('{{ $item->id }}', '{{ addslashes($fileName) }}'); return false;">
-                                                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                                </a></li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-
-                                                <div class="file-card-preview">
-                                                    @if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']))
-                                                        {{-- Show actual image thumbnail --}}
-                                                        <img src="{{ route('terminaldata.filesData.serve', $item->id) }}"
-                                                            alt="{{ $fileName }}" class="file-thumbnail-img"
-                                                            onerror="this.style.display='none'; var fallback = this.parentElement.querySelector('.file-icon-fallback'); if(fallback) fallback.style.display='flex';">
-                                                        <div class="file-icon-fallback file-icon-preview"
-                                                            data-type="image" style="display: none;">
-                                                            <i class="bi bi-image"></i>
-                                                            <div class="file-extension">{{ strtoupper($extension) }}</div>
-                                                        </div>
-                                                    @else
-                                                        {{-- Show file icon for documents --}}
-                                                        <div class="file-icon-preview"
-                                                            data-type="{{ strtolower($extension) }}">
-                                                            <i class="bi {{ $fileIcon }}"></i>
-                                                            <div class="file-extension">{{ strtoupper($extension) }}</div>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            </div>
+                            
+                            <!-- Skeleton Loading for Files -->
+                            <div class="row g-3 mb-3" id="filesSkeleton">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                    <div class="skeleton-card">
+                                        <div class="skeleton-preview">
+                                            <div class="skeleton-icon"></div>
                                         </div>
-                                    @endforeach
+                                        <div class="skeleton-body">
+                                            <div class="skeleton skeleton-title"></div>
+                                            <div class="skeleton skeleton-text"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                            @else
-                                <div class="empty-state text-center">
-                                    <i class="bi bi-file-earmark-x empty-state-icon"></i>
-                                    <h4 class="text-muted mb-2">Belum ada dokumen</h4>
-                                    <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
-                                    <button class="btn btn-primary btn-lg px-5" id="btnTriggerUpload">
-                                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
-                                    </button>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                    <div class="skeleton-card">
+                                        <div class="skeleton-preview">
+                                            <div class="skeleton-icon"></div>
+                                        </div>
+                                        <div class="skeleton-body">
+                                            <div class="skeleton skeleton-title"></div>
+                                            <div class="skeleton skeleton-text"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                            @endif
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                    <div class="skeleton-card">
+                                        <div class="skeleton-preview">
+                                            <div class="skeleton-icon"></div>
+                                        </div>
+                                        <div class="skeleton-body">
+                                            <div class="skeleton skeleton-title"></div>
+                                            <div class="skeleton skeleton-text"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                                    <div class="skeleton-card">
+                                        <div class="skeleton-preview">
+                                            <div class="skeleton-icon"></div>
+                                        </div>
+                                        <div class="skeleton-body">
+                                            <div class="skeleton skeleton-title"></div>
+                                            <div class="skeleton skeleton-text"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Files Grid -->
+                            <div class="row g-3" id="dokumenGrid"></div>
+                            
+                            <!-- Empty State -->
+                            <div class="empty-state text-center" id="filesEmptyState" style="display: none;">
+                                <i class="bi bi-file-earmark-x empty-state-icon"></i>
+                                <h4 class="text-muted mb-2">Belum ada dokumen</h4>
+                                <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
+                                <button class="btn btn-primary btn-lg px-5" id="btnTriggerUpload">
+                                    <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Table View -->
@@ -1027,7 +948,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: visible;
             position: relative;
         }
 
@@ -1046,6 +967,8 @@
             justify-content: space-between;
             gap: 8px;
             min-height: 48px;
+            position: relative;
+            z-index: 10;
         }
 
         .file-card-header .file-card-title {
@@ -1061,7 +984,7 @@
         }
 
         .file-card-header .file-card-menu {
-            position: static;
+            position: relative;
             opacity: 1;
             flex-shrink: 0;
         }
@@ -1086,6 +1009,10 @@
             border-radius: 50%;
         }
 
+        .file-card-header .file-card-menu .dropdown-menu {
+            z-index: 1050;
+        }
+
         .file-card-preview {
             background: #f8f9fa;
             min-height: 180px;
@@ -1094,6 +1021,7 @@
             justify-content: center;
             position: relative;
             overflow: hidden;
+            border-radius: 0;
         }
 
         .file-thumbnail-img {
@@ -1417,8 +1345,11 @@
             // Load subfolders
             loadSubfolders();
 
-            // Trigger file upload when button clicked
-            $('#btnTriggerUpload').click(function() {
+            // Load files
+            loadFiles();
+
+            // Trigger file upload when button clicked (using event delegation for dynamically added buttons)
+            $(document).on('click', '#btnTriggerUpload', function() {
                 $('#fileUpload').click();
             });
 
@@ -2797,6 +2728,121 @@
             $('#subfoldersGrid').html(html);
         }
 
+        // ============================================
+        // FILES FUNCTIONS
+        // ============================================
+
+        function loadFiles() {
+            // Show skeleton
+            $('#filesSkeleton').show();
+            $('#dokumenGrid').hide();
+            $('#filesEmptyState').hide();
+
+            // Use documents data that's already loaded from server
+            setTimeout(() => {
+                $('#filesSkeleton').hide();
+                
+                if (documents && documents.length > 0) {
+                    renderFilesGrid(documents);
+                    $('#documentCount').text(documents.length);
+                } else {
+                    $('#filesEmptyState').show();
+                    $('#documentCount').text(0);
+                }
+            }, 300);
+        }
+
+        function renderFilesGrid(files) {
+            if (!files || files.length === 0) {
+                $('#dokumenGrid').hide();
+                $('#filesEmptyState').show();
+                return;
+            }
+
+            $('#dokumenGrid').show();
+            $('#filesEmptyState').hide();
+            
+            let html = '';
+
+            files.forEach(file => {
+                const extension = file.extension || 'pdf';
+                const fileName = file.name || file.original_name || 'Unknown';
+                const fileSize = formatFileSize(file.size || 0);
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(extension.toLowerCase());
+                
+                // Determine file icon and type
+                let fileIcon = 'bi-file-earmark-text-fill';
+                let dataType = extension.toLowerCase();
+                
+                if (extension === 'pdf') {
+                    fileIcon = 'bi-file-earmark-pdf-fill';
+                } else if (['doc', 'docx'].includes(extension)) {
+                    fileIcon = 'bi-file-earmark-word-fill';
+                } else if (['xls', 'xlsx'].includes(extension)) {
+                    fileIcon = 'bi-file-earmark-excel-fill';
+                } else if (['ppt', 'pptx'].includes(extension)) {
+                    fileIcon = 'bi-file-earmark-slides-fill';
+                } else if (isImage) {
+                    fileIcon = 'bi-file-earmark-image-fill';
+                } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+                    fileIcon = 'bi-file-earmark-zip-fill';
+                }
+
+                const serveUrl = `/terminal-data/api/files/${file.id}/serve`;
+                const downloadUrl = `/terminal-data/api/files/${file.id}/download`;
+
+                html += `
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="file-card" onclick="showFileDetail('${file.id}')">
+                        <div class="file-card-header">
+                            <div class="file-card-title" title="${fileName}">
+                                ${fileName}
+                            </div>
+                            <div class="file-card-menu" onclick="event.stopPropagation();">
+                                <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+                                    <li><a class="dropdown-item" href="${downloadUrl}" onclick="event.stopPropagation()">
+                                        <i class="bi bi-download me-2"></i>Unduh
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
+                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${file.id}'); return false;">
+                                        <i class="bi bi-info-circle me-2"></i>Info File
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
+                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="file-card-preview">
+                            ${isImage ? `
+                                <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="file-icon-preview" data-type="image" style="display: none;">
+                                    <i class="bi bi-image"></i>
+                                    <div class="file-extension">${extension.toUpperCase()}</div>
+                                </div>
+                            ` : `
+                                <div class="file-icon-preview" data-type="${dataType}">
+                                    <i class="bi ${fileIcon}"></i>
+                                    <div class="file-extension">${extension.toUpperCase()}</div>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+
+            $('#dokumenGrid').html(html);
+        }
+
         function navigateToFolder(folderId) {
             window.location.href = `{{ route('terminaldata.folder.detail', ':folderId') }}`.replace(':folderId', folderId);
         }
@@ -2959,25 +3005,26 @@
         }
 
         function editFile(id, fileName = '') {
-            // Get file data
-            const file = documents.find(doc => doc.id == id);
-
-            if (!file) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'File tidak ditemukan',
-                    text: 'Data file tidak dapat ditemukan'
-                });
-                return;
-            }
-
-            // Set file ID and current name
+            // Set file ID
             $('#rename_file_id').val(id);
 
             // Get name without extension
-            let currentName = file.name || file.original_name || fileName;
-            if (file.extension && currentName.endsWith('.' + file.extension)) {
-                currentName = currentName.substring(0, currentName.lastIndexOf('.'));
+            let currentName = fileName;
+
+            // Try to get from documents array if available
+            if (typeof documents !== 'undefined' && documents && documents.length > 0) {
+                const file = documents.find(doc => doc.id == id);
+                if (file) {
+                    currentName = file.name || file.original_name || fileName;
+                }
+            }
+
+            // Remove extension from filename if present
+            if (currentName) {
+                const lastDotIndex = currentName.lastIndexOf('.');
+                if (lastDotIndex > 0) {
+                    currentName = currentName.substring(0, lastDotIndex);
+                }
             }
 
             $('#file_new_name').val(currentName);
@@ -2985,7 +3032,7 @@
             // Show modal
             $('#modalRenameFile').modal('show');
 
-            // Focus on input
+            // Focus on input after modal is shown
             setTimeout(() => {
                 $('#file_new_name').focus().select();
             }, 500);
