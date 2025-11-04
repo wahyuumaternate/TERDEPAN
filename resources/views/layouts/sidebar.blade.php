@@ -2,23 +2,22 @@
  <aside id="sidebar" class="sidebar">
      <ul class="sidebar-nav" id="sidebar-nav">
 
-         <!-- Dashboard Nav -->
-
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
-                 <i class="bi bi-grid"></i>
-                 <span>Dashboard</span>
-             </a>
-         </li><!-- End Dashboard Nav -->
-         <li class="nav-item">
-             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }}"
-                 href="{{ url('/terminal-data') }}">
-                 <i class="bi bi-grid"></i>
-                 <span>Terminal Data</span>
-             </a>
-         </li><!-- End Dashboard Nav -->
+             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }} bg-primary text-white" href="{{ url('/terminal-data') }}">
+                <i class="bi bi-arrow-left text-white"></i>
+                <span>Terminal Data</span>
+            </a>
+        </li><!-- End Dashboard Nav -->
+        
+        <hr>
 
-
+        <!-- Beranda Nav -->
+        <li class="nav-item">
+            <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
+                <i class="bi bi-house"></i>
+                <span>Beranda</span>
+            </a>
+        </li><!-- End Beranda Nav -->
 
          <!-- E-Kinerja -->
          <li class="nav-heading">E-Kinerja Perencana</li>

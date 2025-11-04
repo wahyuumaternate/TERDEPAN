@@ -1,15 +1,11 @@
 @extends('terminaldata::components.layouts.master')
 
 @section('main')
-    <div class="pagetitle">
-        <h1>Selamat Datang di Terminal Data BAPPEDA</h1>
-    </div>
-
     <section class="section">
 
         <div class="row">
             <div class="col-lg-12">
-                <div class="card shadow-sm border-0">
+                <div class="card shadow-sm border-0" style="position: relative; min-height: 600px;">
                     <div class="card-body p-4">
                         {{-- <!-- Header -->
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -52,10 +48,7 @@
                                 <thead>
                                     <tr>
                                         <th>Nama</th>
-                                        <th>Dibuat Oleh</th>
-                                        <th>Tanggal Diubah</th>
-                                        <th>Total</th>
-                                        <th width="80">Aksi</th>
+                                        <th width="120">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -186,6 +179,81 @@
 
 @push('styles')
     <style>
+        /* Page Transition */
+        body {
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        body.loaded {
+            opacity: 1;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+        }
+
+        .loading-overlay .spinner-container {
+            text-align: center;
+        }
+
+        .loading-overlay .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.3rem;
+        }
+
+        .loading-overlay .loading-text {
+            margin-top: 1rem;
+            color: #0d6efd;
+            font-weight: 500;
+        }
+
+        /* Skeleton Loading */
+        .skeleton-card {
+            height: 100px;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Smooth Hover Effects */
+        .gdrive-folder-card {
+            transform: translateY(0);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .gdrive-folder-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .gdrive-folder-card:active {
+            transform: translateY(0);
+        }
+
         /* Stats Cards */
         .stats-card {
             border-radius: 16px !important;
@@ -381,8 +449,17 @@
         let allBidang = [];
         let viewMode = 'grid';
         let dataTable = null;
+        const folderDetailRoute = '{{ route('terminaldata.folder.detail', ':id') }}';
 
         $(document).ready(function() {
+            // Fade in page on load
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+            }, 100);
+
+            // Remove any existing loading overlay from navigation
+            $('.loading-overlay').remove();
+
             loadBidang();
             loadFolders();
 
@@ -422,6 +499,12 @@
 
                 $('#level').val(parentPath ? parentLevel + 1 : 0);
             });
+
+            // Handle browser back button
+            window.addEventListener('pageshow', function(event) {
+                // Remove loading overlay when coming back via browser back button
+                $('.loading-overlay').remove();
+            });
         });
 
         function loadBidang() {
@@ -438,7 +521,7 @@
                     allBidang = Array.isArray(response) ? response : [];
                     let options = '<option value="">Pilih Bidang (Opsional)</option>';
                     allBidang.forEach(function(item) {
-                        options += `<option value="${item.id}">${item.name}</option>`;
+                        options += `<option value="${item.id}">${item.nama}</option>`;
                     });
                     $('#bidang_id').html(options);
                 },
@@ -450,6 +533,18 @@
         }
 
         function loadFolders() {
+            // Show skeleton loading
+            if (viewMode === 'grid') {
+                $('#folderGrid').html(`
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3"><div class="skeleton-card"></div></div>
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3"><div class="skeleton-card"></div></div>
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3"><div class="skeleton-card"></div></div>
+                        <div class="col-12 col-sm-6 col-md-4 col-lg-3"><div class="skeleton-card"></div></div>
+                    </div>
+                `);
+            }
+
             $.ajax({
                 url: '{{ route('terminaldata.foldersData.index') }}',
                 type: 'GET',
@@ -478,10 +573,14 @@
                     } else {
                         renderTable(allFolders);
                     }
+
+                    // Remove any loading overlay after data loaded
+                    $('.loading-overlay').remove();
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading folders:', error);
                     showError('Gagal memuat data folder: ' + error);
+                    $('.loading-overlay').remove();
                 }
             });
         }
@@ -524,70 +623,44 @@
         }
 
         function navigateToFolderFiles(folderId) {
-            window.location.href = `/dokumen/folder/${folderId}/dokumen`;
-        }
+            // Remove any existing loading overlay first
+            $('.loading-overlay').remove();
 
-        // First, add the navigation function
-        function navigateToFolderFiles(folderId) {
-            window.location.href = `/dokumen/folder/${folderId}/dokumen`;
-        }
+            // Show loading overlay in content area only
+            const card = document.querySelector('.card.shadow-sm.border-0');
 
-        // Tree View - Already works, but let's make it more explicit
-        function buildTreeHTML(items, allItems) {
-            let html = '';
-            items.forEach(item => {
-                const children = allItems.filter(f => f.parent_id === item.id);
-                const hasChildren = children.length > 0;
-                const bidangName = item.bidang ? item.bidang.nama : '-';
-
-                html += `
-            <div class="folder-item ${hasChildren ? 'has-children' : ''}" data-id="${item.id}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div onclick="navigateToFolderFiles(${item.id})" style="cursor:pointer; flex-grow: 1;">
-                        <i class="bi bi-folder-fill text-warning me-2"></i>
-                        <strong>${item.name}</strong>
-                        <small class="text-muted ms-2">${item.path}</small>
-                        ${item.is_auto ? '<span class="badge badge-auto ms-2"><i class="bi bi-gear-fill me-1"></i>Auto</span>' : ''}
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="spinner-container">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    <div>
-                        <span class="badge bg-secondary me-2">${item.total_files} files</span>
-                        <button class="btn btn-sm btn-outline-primary" onclick="navigateToFolderFiles(${item.id}); event.stopPropagation();">
-                            <i class="bi bi-folder2-open me-1"></i>Dokumen
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="showDetail(${item.id}); event.stopPropagation();">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" onclick="showEditModal(${item.id}); event.stopPropagation();">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteFolder(${item.id}); event.stopPropagation();">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
+                    <div class="loading-text">Memuat folder...</div>
                 </div>
-            </div>
-        `;
+            `;
+            card.appendChild(overlay);
 
-                if (hasChildren) {
-                    html += `<div class="folder-children">${buildTreeHTML(children, allItems)}</div>`;
-                }
-            });
-            return html;
+            // Navigate
+            setTimeout(() => {
+                const baseUrl = '{{ route('terminaldata.folder.detail', ':id') }}';
+                window.location.href = baseUrl.replace(':id', folderId);
+            }, 100);
         }
 
         // Grid View - Update to make clickable
         function renderGrid(folders) {
             if (!Array.isArray(folders) || folders.length === 0) {
                 $('#folderGrid').html(`
-            <div class="col-12 empty-state text-center">
-                <i class="bi bi-folder-x empty-state-icon"></i>
-                <h4 class="text-muted mb-2">Belum ada folder</h4>
-                <p class="text-muted mb-4">Mulai dengan menambahkan folder baru</p>
-                <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
-                    <i class="bi bi-folder-plus me-2"></i>Tambah Folder Pertama
-                </button>
-            </div>
-        `);
+                    <div class="col-12 empty-state text-center">
+                        <i class="bi bi-folder-x empty-state-icon"></i>
+                        <h4 class="text-muted mb-2">Belum ada folder</h4>
+                        <p class="text-muted mb-4">Mulai dengan menambahkan folder baru</p>
+                        <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
+                            <i class="bi bi-folder-plus me-2"></i>Tambah Folder Pertama
+                        </button>
+                    </div>
+                `);
                 return;
             }
 
@@ -596,15 +669,15 @@
 
             if (level1Folders.length === 0) {
                 $('#folderGrid').html(`
-            <div class="col-12 empty-state text-center">
-                <i class="bi bi-folder-x empty-state-icon"></i>
-                <h4 class="text-muted mb-2">Belum ada folder level 1</h4>
-                <p class="text-muted mb-4">Mulai dengan menambahkan folder utama</p>
-                <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
-                    <i class="bi bi-folder-plus me-2"></i>Tambah Folder
-                </button>
-            </div>
-        `);
+                    <div class="col-12 empty-state text-center">
+                        <i class="bi bi-folder-x empty-state-icon"></i>
+                        <h4 class="text-muted mb-2">Belum ada folder level 1</h4>
+                        <p class="text-muted mb-4">Mulai dengan menambahkan folder utama</p>
+                        <button class="btn btn-primary btn-lg px-5" onclick="showCreateModal()">
+                            <i class="bi bi-folder-plus me-2"></i>Tambah Folder
+                        </button>
+                    </div>
+                `);
                 return;
             }
 
@@ -615,55 +688,70 @@
                 const subfolderCount = folders.filter(f => f.parent_id === item.id).length;
 
                 html += `
-            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                <div class="gdrive-folder-card" onclick="navigateToFolderFiles(${item.id})">
-                    <div class="gdrive-folder-content">
-                        <div class="gdrive-folder-icon">
-                            <i class="bi bi-folder-fill"></i>
-                        </div>
-                        <div class="gdrive-folder-info">
-                            <div class="gdrive-folder-title" title="${item.name}">
-                                ${item.name}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                        <div class="gdrive-folder-card" 
+                             onclick="navigateToFolderFiles('${item.id}')"
+                             onmouseenter="prefetchFolder('${item.id}')"
+                             data-folder-id="${item.id}">
+                            <div class="gdrive-folder-content">
+                                <div class="gdrive-folder-icon">
+                                    <i class="bi bi-folder-fill"></i>
+                                </div>
+                                <div class="gdrive-folder-info">
+                                    <div class="gdrive-folder-title" title="${item.name}">
+                                        ${item.name}
+                                    </div>
+                                    <div class="gdrive-folder-meta">
+                                        <small class="text-muted">${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</small>
+                                        ${subfolderCount > 0 ? ` <span class="text-muted">• ${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="gdrive-folder-menu" onclick="event.stopPropagation();">
+                                    <button class="btn btn-sm btn-link p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles('${item.id}'); return false;">
+                                            <i class="bi bi-download me-2"></i>Unduh
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${item.id}); return false;">
+                                            <i class="bi bi-link-45deg me-2"></i>Salin Link
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                                            <i class="bi bi-gear me-2"></i>Atur
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="showDetail(${item.id}); return false;">
+                                            <i class="bi bi-info-circle me-2"></i>Informasi Folder
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder(${item.id}); return false;">
+                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                        </a></li>
+                                    </ul>
+                                </div>
                             </div>
-                            <div class="gdrive-folder-meta">
-                                <small class="text-muted">${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</small>
-                                ${subfolderCount > 0 ? ` <span class="text-muted">• ${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="gdrive-folder-menu" onclick="event.stopPropagation();">
-                            <button class="btn btn-sm btn-link p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles(${item.id}); return false;">
-                                    <i class="bi bi-download me-2"></i>Unduh
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
-                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${item.id}); return false;">
-                                    <i class="bi bi-link-45deg me-2"></i>Salin Link
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
-                                    <i class="bi bi-gear me-2"></i>Atur
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="showDetail(${item.id}); return false;">
-                                    <i class="bi bi-info-circle me-2"></i>Informasi Folder
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder(${item.id}); return false;">
-                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                </a></li>
-                            </ul>
                         </div>
                     </div>
-                </div>
-            </div>
-        `;
+                `;
             });
             html += '</div>';
             $('#folderGrid').html(html);
+        }
+
+        // Prefetch next page for faster navigation
+        function prefetchFolder(folderId) {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = folderDetailRoute.replace(':id', folderId);
+
+            // Only add if not already prefetched
+            if (!document.querySelector(`link[href="${link.href}"]`)) {
+                document.head.appendChild(link);
+            }
         }
 
         // Table View - Update to make clickable
@@ -677,30 +765,12 @@
 
             let tbody = '';
             level1Folders.forEach((item, index) => {
-                // Hitung subfolder
-                const subfolderCount = folders.filter(f => f.parent_id === item.id).length;
-
-                // Format tanggal (hanya tanggal, tanpa waktu)
-                const updatedDate = item.updated_at ? formatDateOnly(item.updated_at) : '-';
-
-                // Nama pembuat
-                const creatorName = item.creator ? item.creator.name : (item.created_by ? 'User #' + item
-                    .created_by : '-');
-
                 tbody += `
-                <tr style="cursor:pointer;" onclick="navigateToFolderFiles(${item.id})">
+                <tr style="cursor:pointer;" onclick="navigateToFolderFiles('${item.id}')">
                     <td>
                         <div class="d-flex align-items-center">
                             <i class="bi bi-folder-fill text-secondary me-2" style="font-size: 20px;"></i>
                             <strong>${item.name}</strong>
-                        </div>
-                    </td>
-                    <td>${creatorName ?? '-'}</td>
-                    <td>${updatedDate}</td>
-                    <td>
-                        <div style="line-height: 1.4;">
-                            <div>${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</div>
-                            <div>${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</div>
                         </div>
                     </td>
                     <td onclick="event.stopPropagation();">
@@ -708,24 +778,24 @@
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="navigateToFolderFiles('${item.id}'); return false;">
                                 <i class="bi bi-download me-2"></i>Unduh
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="showEditModal('${item.id}'); return false;">
                                 <i class="bi bi-pencil-square me-2"></i>Ganti Nama
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${item.id}'); return false;">
                                 <i class="bi bi-link-45deg me-2"></i>Salin Link
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showEditModal(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="showEditModal('${item.id}'); return false;">
                                 <i class="bi bi-gear me-2"></i>Atur
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showDetail(${item.id}); return false;">
+                            <li><a class="dropdown-item" href="#" onclick="showDetail('${item.id}'); return false;">
                                 <i class="bi bi-info-circle me-2"></i>Informasi Folder
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder(${item.id}); return false;">
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${item.id}'); return false;">
                                 <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
                             </a></li>
                         </ul>
@@ -893,7 +963,7 @@
                 type: 'GET',
                 success: function(response) {
                     const bidangName = response.bidang ? response.bidang.nama : 'Tidak ada';
-                    const parentName = response.parent ? response.parent.nama : 'Root Folder';
+                    const parentName = response.parent ? response.parent.name : 'Root Folder';
                     const creatorName = response.creator ? response.creator.nama : 'Unknown';
 
                     let html = `

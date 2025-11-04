@@ -9,7 +9,7 @@
         <h1>Buat Perjanjian Kinerja Baru</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('perjanjian-kinerja.index') }}">Perjanjian Kinerja</a></li>
                 <li class="breadcrumb-item active">Buat Baru</li>
             </ol>

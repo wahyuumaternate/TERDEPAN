@@ -11,7 +11,22 @@ class UpdateTdFolderRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [];
+        return [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_public' => 'nullable|boolean',
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'Nama folder wajib diisi',
+            'name.max' => 'Nama folder maksimal 255 karakter',
+        ];
     }
 
     /**

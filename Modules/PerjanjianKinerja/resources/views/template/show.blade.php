@@ -5,7 +5,7 @@
         <h1>Detail Template</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('perjanjian-kinerja.template.index') }}">Template PK</a></li>
                 <li class="breadcrumb-item active">Detail</li>
             </ol>

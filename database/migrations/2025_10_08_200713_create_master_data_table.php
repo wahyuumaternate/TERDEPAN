@@ -31,7 +31,7 @@ return new class extends Migration
             $table->string('kode', 20)->unique()->comment('Kode unik: PLAN, EVAL, DATA, SEKRET');
             $table->string('nama', 100)->comment('Nama lengkap bidang untuk display');
             $table->string('warna', 7)->nullable()->comment('Hex color untuk UI');
-            $table->boolean('is_active')->default(true)->comment('Status aktif, untuk soft disable');
+            $table->boolean('is_active')->default(true)->comment('TRUE=aktif, FALSE=tidak bisa assign pegawai baru');
             $table->timestamps();
             $table->softDeletes();
         });

@@ -5,7 +5,7 @@
         <h1>Daftar Penugasan Pegawai</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
                 <li class="breadcrumb-item active">Daftar Pegawai</li>
             </ol>

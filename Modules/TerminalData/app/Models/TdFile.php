@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\Auth;
 class TdFile extends Model
 {
     use HasFactory, SoftDeletes;
-    
+
     protected $table = 'td_files';
     protected $keyType = 'string';
     public $incrementing = false;
-    
+
     protected $fillable = [
         'folder_id',
         'bidang_id',
@@ -52,7 +52,7 @@ class TdFile extends Model
         'created_by',
         'updated_by',
     ];
-    
+
     protected $casts = [
         'metadata' => 'array',
         'extracted_content' => 'array',
@@ -69,43 +69,43 @@ class TdFile extends Model
         'version' => 'integer',
         'size' => 'integer',
     ];
-    
+
     protected $with = ['creator', 'folder'];
-    
+
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
             }
-            
+
             // Generate hash if not exists
             if (empty($model->hash) && $model->storage_path) {
                 $model->hash = hash_file('sha256', Storage::path($model->storage_path));
             }
         });
-        
+
         static::created(function ($model) {
             // Update folder stats
             if ($model->folder) {
                 $model->folder->updateStats();
             }
         });
-        
+
         static::deleting(function ($model) {
             // Delete physical file
             if ($model->storage_path && Storage::exists($model->storage_path)) {
                 Storage::delete($model->storage_path);
             }
-            
+
             // Delete thumbnail
             if ($model->thumbnail_path && Storage::exists($model->thumbnail_path)) {
                 Storage::delete($model->thumbnail_path);
             }
         });
-        
+
         static::deleted(function ($model) {
             // Update folder stats
             if ($model->folder) {
@@ -113,198 +113,211 @@ class TdFile extends Model
             }
         });
     }
-    
+
     // ==================== Relationships ====================
-    
+
     public function folder()
     {
         return $this->belongsTo(TdFolder::class, 'folder_id');
     }
-    
+
     public function originalFile()
     {
         return $this->belongsTo(TdFile::class, 'original_file_id');
     }
-    
+
     public function versions()
     {
         return $this->hasMany(TdFile::class, 'original_file_id')
             ->orderBy('version', 'desc');
     }
-    
+
     public function attachable()
     {
         return $this->morphTo();
     }
-    
+
     public function creator()
     {
         return $this->belongsTo(MasterPegawai::class, 'created_by');
     }
-    
+
     public function updater()
     {
         return $this->belongsTo(MasterPegawai::class, 'updated_by');
     }
-    
+
     public function bidang()
     {
         return $this->belongsTo(MasterBidang::class);
     }
-    
+
     public function shares()
     {
         return $this->morphMany(TdShare::class, 'shareable');
     }
-    
+
     public function activities()
     {
         return $this->morphMany(TdActivity::class, 'trackable');
     }
-    
+
     public function tags()
     {
         return $this->morphToMany(TdTag::class, 'taggable', 'td_taggables');
     }
-    
+
     public function comments()
     {
         return $this->morphMany(TdComment::class, 'commentable');
     }
-    
+
     public function lock()
     {
         return $this->hasOne(TdFileLock::class, 'file_id');
     }
-    
+
     // ==================== Scopes ====================
-    
+
     public function scopeInFolder($query, $folderId)
     {
         return $query->where('folder_id', $folderId);
     }
-    
+
     public function scopeLatestVersions($query)
     {
         return $query->where('is_latest_version', true);
     }
-    
+
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
     }
-    
+
     public function scopePublic($query)
     {
         return $query->where('is_public', true);
     }
-    
+
     public function scopeStarred($query)
     {
         return $query->where('is_starred', true);
     }
-    
+
     public function scopeOwnedBy($query, $userId)
     {
         return $query->where('created_by', $userId);
     }
-    
+
     public function scopeByType($query, $type)
     {
         return $query->where('document_type', $type);
     }
-    
+
     public function scopeSearch($query, $search)
     {
-        return $query->where(function($q) use ($search) {
+        return $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('original_name', 'like', "%{$search}%")
-              ->orWhere('document_number', 'like', "%{$search}%");
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('original_name', 'like', "%{$search}%")
+                ->orWhere('document_number', 'like', "%{$search}%");
         });
     }
-    
+
     public function scopeRecentlyUploaded($query, $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
-    
+
     // ==================== Helper Methods ====================
-    
+
+    /**
+     * Get human readable file size
+     * Returns formatted size like: 1.5 KB, 2.3 MB, 1.2 GB
+     */
     public function getHumanSize()
     {
         $bytes = $this->size;
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
-            $bytes /= 1024;
-        }
-        
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        if ($bytes == 0) return '0 Bytes';
+
+        $k = 1024;
+        $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes) / log($k));
+
+        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
-    
+
+    /**
+     * Accessor for human_size attribute
+     */
+    public function getHumanSizeAttribute()
+    {
+        return $this->getHumanSize();
+    }
+
     public function getFullPath()
     {
         return $this->folder->path . '/' . $this->name;
     }
-    
+
     public function incrementViews()
     {
         $this->increment('views');
         $this->update(['last_viewed_at' => now()]);
     }
-    
+
     public function incrementDownloads()
     {
         $this->increment('downloads');
         $this->update(['last_downloaded_at' => now()]);
     }
-    
+
     public function isLocked()
     {
         if (!$this->lock) return false;
         return $this->lock->expires_at->isFuture();
     }
-    
+
     public function isImage()
     {
         return in_array($this->extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
     }
-    
+
     public function isPdf()
     {
         return $this->extension === 'pdf';
     }
-    
+
     public function isDocument()
     {
         return in_array($this->extension, ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
     }
-    
+
     public function getDownloadUrl()
     {
         return route('td.files.download', $this->id);
     }
-    
+
     public function getPreviewUrl()
     {
         if ($this->thumbnail_path) {
             return Storage::url($this->thumbnail_path);
         }
-        
+
         if ($this->isImage()) {
             return Storage::url($this->storage_path);
         }
-        
+
         return null;
     }
-    
+
     public function createVersion($newFilePath, $notes = null)
     {
         // Mark current as not latest
         $this->is_latest_version = false;
         $this->save();
-        
+
         // Create new version
         $newFile = new static([
             'folder_id' => $this->folder_id,
@@ -328,50 +341,50 @@ class TdFile extends Model
             'attachable_id' => $this->attachable_id,
             'created_by' => Auth::user()->id,
         ]);
-        
+
         $newFile->save();
-        
+
         return $newFile;
     }
-    
+
     public function canAccess($user, $permission = 'viewer')
     {
         // Owner always has access
         if ($this->created_by === $user->id) {
             return true;
         }
-        
+
         // Check if public
         if ($this->is_public && $permission === 'viewer') {
             return true;
         }
-        
+
         // Check folder access
         if ($this->folder->canAccess($user, $permission)) {
             return true;
         }
-        
+
         // Check direct shares
         $share = $this->shares()
-            ->where(function($q) use ($user) {
+            ->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
-                  ->orWhere('bidang_id', $user->bidang_id);
+                    ->orWhere('bidang_id', $user->bidang_id);
             })
-            ->where(function($q) use ($permission) {
+            ->where(function ($q) use ($permission) {
                 $levels = ['viewer', 'commenter', 'editor', 'owner'];
                 $minIndex = array_search($permission, $levels);
                 $allowedLevels = array_slice($levels, $minIndex);
                 $q->whereIn('access_level', $allowedLevels);
             })
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', now());
+                    ->orWhere('expires_at', '>', now());
             })
             ->first();
-            
+
         return $share !== null;
     }
-    
+
     public function duplicate($newFolderId = null, $newName = null)
     {
         $newFile = $this->replicate();
@@ -385,14 +398,14 @@ class TdFile extends Model
         $newFile->downloads = 0;
         $newFile->created_by = Auth::user()->id;
         $newFile->created_at = now();
-        
+
         // Copy physical file
         $newPath = str_replace($this->id, $newFile->id, $this->storage_path);
         Storage::copy($this->storage_path, $newPath);
         $newFile->storage_path = $newPath;
-        
+
         $newFile->save();
-        
+
         return $newFile;
     }
 }
