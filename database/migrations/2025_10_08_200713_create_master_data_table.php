@@ -21,7 +21,7 @@ return new class extends Migration
             $table->boolean('bebas_nilai_kinerja')->default(false)->comment('TRUE untuk Tenaga Teknis yang tidak dinilai');
             $table->boolean('is_active')->default(true)->comment('Status aktif, untuk soft disable');
             $table->timestamps();
-            
+
             $table->index('level');
         });
 
@@ -31,6 +31,7 @@ return new class extends Migration
             $table->string('kode', 20)->unique()->comment('Kode unik: PLAN, EVAL, DATA, SEKRET');
             $table->string('nama', 100)->comment('Nama lengkap bidang untuk display');
             $table->string('warna', 7)->nullable()->comment('Hex color untuk UI');
+            $table->boolean('is_active')->default(true)->comment('Status aktif, untuk soft disable');
             $table->timestamps();
             $table->softDeletes();
         });
@@ -73,7 +74,7 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->index('bidang_id');
             $table->index('jabatan_id');
             $table->index('status_aktif');
@@ -94,7 +95,7 @@ return new class extends Migration
             $table->boolean('is_verified')->default(false)->comment('TRUE jika sudah diverifikasi admin');
             $table->timestamps();
             $table->softDeletes();
-            
+
             // Hanya satu TTD aktif per pegawai
             $table->unique(['pegawai_id', 'is_active'], 'uq_pegawai_active_ttd');
         });

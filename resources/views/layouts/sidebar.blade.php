@@ -11,62 +11,14 @@
              </a>
          </li><!-- End Dashboard Nav -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }}" href="{{ url('/terminal-data') }}">
+             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }}"
+                 href="{{ url('/terminal-data') }}">
                  <i class="bi bi-grid"></i>
                  <span>Terminal Data</span>
              </a>
          </li><!-- End Dashboard Nav -->
 
 
-         <!-- Bappeda Storage -->
-         <li class="nav-heading">Terminal Data</li>
-
-         <!-- Management File / Arsip Dokumen -->
-         @php
-             $dokumenActive = request()->is('dokumen*');
-         @endphp
-
-         <li class="nav-item">
-             <a class="nav-link {{ $dokumenActive ? '' : 'collapsed' }}" data-bs-target="#dokumen-nav"
-                 data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-folder2-open"></i><span>Penyimpanan</span><i class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="dokumen-nav" class="nav-content collapse {{ $dokumenActive ? 'show' : '' }}"
-                 data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ url('dokumen/folder') }}"
-                         class="{{ request()->is('dokumen/folder') ? 'active' : '' }}">
-                         <i class="bi bi-circle"></i><span>Semua Folder</span>
-                     </a>
-                 </li>
-
-                 <li>
-                     <a href="{{ url('dokumen') }}" class="{{ request()->is('dokumen') ? 'active' : '' }}">
-                         <i class="bi bi-circle"></i><span>Semua Dokumen</span>
-                     </a>
-                 </li>
-
-                 {{-- <li>
-                     <a href="{{ url('dokumen/log') }}" class="{{ request()->is('dokumen/log') ? 'active' : '' }}">
-                         <i class="bi bi-circle"></i><span>Log Aktivitas Dokumen</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('dokumen/nomor') }}"
-                         class="{{ request()->is('dokumen/nomor') ? 'active' : '' }}">
-                         <i class="bi bi-circle"></i><span>Penomoran Dokumen</span>
-                     </a>
-                 </li> --}}
-             </ul>
-         </li>
-
-         <li class="nav-item">
-             <a class="nav-link collapsed" href="#">
-                 <i class="bi bi-trash"></i>
-                 <span>Sampah</span>
-             </a>
-         </li>
-         <!-- End Management File Nav -->
 
          <!-- E-Kinerja -->
          <li class="nav-heading">E-Kinerja Perencana</li>
