@@ -24,18 +24,19 @@ class TugasPokok extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'perjanjian_kinerja_id',
         'pegawai_id',
+        'perjanjian_kinerja_id',
         'indikator_id',
         'nama_tugas',
         'deskripsi',
         'bobot_persen',
-        'periode_mulai',
-        'periode_selesai',
         'target_value',
         'satuan',
+        'tanggal_mulai',
+        'tanggal_selesai',
         'status',
         'progress_persen',
+        'nilai_akhir',
         'diterima_at',
     ];
 
@@ -96,16 +97,6 @@ class TugasPokok extends Model
     public function progress(): HasMany
     {
         return $this->hasMany(Progress::class, 'tugas_pokok_id');
-    }
-
-    public function validasi(): HasOne
-    {
-        return $this->hasOne(Validasi::class, 'tugas_pokok_id');
-    }
-    
-    public function penugasanMandiri(): HasMany
-    {
-        return $this->hasMany(PenugasanMandiri::class, 'tugas_pokok_id');
     }
 
     // Scopes

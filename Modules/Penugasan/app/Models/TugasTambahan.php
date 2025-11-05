@@ -28,29 +28,48 @@ class TugasTambahan extends Model
         'alasan_penugasan',
         'tanggal_mulai',
         'deadline',
-        'target_penilaian',
-        'penilaian',
-        'nilai_akhir',
-        'tanggal_penilaian',
         'status',
-        'validasi_oleh',
-        'tanggal_validasi',
+        'validator_id',
+        'hasil_validasi',
         'catatan_validasi',
+        'penilaian_kualitas',
+        'validated_at',
+        'target_penilaian',
+        'nilai_akhir',
     ];
 
     protected $casts = [
         'tanggal_mulai' => 'date',
         'deadline' => 'date',
-        'tanggal_penilaian' => 'date',
-        'tanggal_validasi' => 'date',
+        'validated_at' => 'datetime',
         'target_penilaian' => 'decimal:2',
-        'penilaian' => 'decimal:2',
         'nilai_akhir' => 'decimal:2',
+        'penilaian_kualitas' => 'integer',
     ];
 
     protected $attributes = [
         'status' => 'pending',
     ];
+
+    // Status constants (sesuai migration - Bahasa Indonesia)
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_DIKERJAKAN = 'dikerjakan';
+    public const STATUS_VALIDASI = 'validasi';
+    public const STATUS_REVISI = 'revisi';
+    public const STATUS_SELESAI = 'selesai';
+    
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_DIKERJAKAN,
+        self::STATUS_VALIDASI,
+        self::STATUS_REVISI,
+        self::STATUS_SELESAI,
+    ];
+
+    // Hasil validasi constants
+    public const VALIDASI_DITERIMA = 'diterima';
+    public const VALIDASI_REVISI = 'revisi';
+    public const VALIDASI_DITOLAK = 'ditolak';
 
     // Relationships
     public function pegawai(): BelongsTo
@@ -63,9 +82,9 @@ class TugasTambahan extends Model
         return $this->belongsTo(\App\Models\MasterPegawai::class, 'pemberi_tugas_id');
     }
 
-    public function validasiOleh(): BelongsTo
+    public function validator(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'validasi_oleh');
+        return $this->belongsTo(\App\Models\MasterPegawai::class, 'validator_id');
     }
 
     /**
@@ -76,20 +95,26 @@ class TugasTambahan extends Model
         return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
     }
 
-    public function progress(): HasMany
+    /**
+     * Get all progress entries (polymorphic)
+     */
+    public function progress(): MorphMany
     {
-        return $this->hasMany(Progress::class, 'tugas_tambahan_id');
+        return $this->morphMany(Progress::class, 'progressable', 'tipe_progress', 'tipe_progress_id');
     }
 
-    public function validasi(): HasOne
+    /**
+     * Get revision history (polymorphic)
+     */
+    public function historyRevisi(): MorphMany
     {
-        return $this->hasOne(Validasi::class, 'tugas_tambahan_id');
+        return $this->morphMany(HistoriRevisi::class, 'revisable', 'tipe_revisi', 'tipe_revisi_id');
     }
 
     // Scopes
     public function scopeActive($query)
     {
-        return $query->whereIn('status', ['pending', 'dikerjakan']);
+        return $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_DIKERJAKAN]);
     }
 
     public function scopeByPegawai($query, $pegawaiId)

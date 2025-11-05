@@ -5,7 +5,7 @@ namespace Modules\Penugasan\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 // use Modules\Penugasan\Database\Factories\ProgressFactory;
 
@@ -19,10 +19,8 @@ class Progress extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'tugas_pokok_id',
-        'tugas_harian_id',
-        'tugas_tambahan_id',
-        'penugasan_mandiri_id',
+        'tipe_progress',
+        'tipe_progress_id',
         'pegawai_id',
         'tanggal',
         'progress_persen',
@@ -36,24 +34,13 @@ class Progress extends Model
     ];
 
     // Relationships
-    public function tugasPokok(): BelongsTo
+    
+    /**
+     * Get the parent progressable model (TugasPokok, TugasHarian, TugasTambahan)
+     */
+    public function progressable(): MorphTo
     {
-        return $this->belongsTo(TugasPokok::class, 'tugas_pokok_id');
-    }
-
-    public function tugasHarian(): BelongsTo
-    {
-        return $this->belongsTo(TugasHarian::class, 'tugas_harian_id');
-    }
-
-    public function tugasTambahan(): BelongsTo
-    {
-        return $this->belongsTo(TugasTambahan::class, 'tugas_tambahan_id');
-    }
-
-    public function penugasanMandiri(): BelongsTo
-    {
-        return $this->belongsTo(PenugasanMandiri::class, 'penugasan_mandiri_id');
+        return $this->morphTo('progressable', 'tipe_progress', 'tipe_progress_id');
     }
 
     public function pegawai(): BelongsTo
@@ -80,9 +67,10 @@ class Progress extends Model
         return $query->where('tanggal', $tanggal);
     }
 
-    public function scopeByTugasPokok($query, $tugasPokokId)
+    public function scopeByProgressable($query, $type, $id)
     {
-        return $query->where('tugas_pokok_id', $tugasPokokId);
+        return $query->where('tipe_progress', $type)
+                    ->where('tipe_progress_id', $id);
     }
 
     // protected static function newFactory(): ProgressFactory

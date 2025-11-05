@@ -12,36 +12,44 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knj_tugas_pokok', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('pegawai_id')->constrained('master_pegawai')->comment('Penerima tugas');
-            $table->foreignId('perjanjian_kinerja_id')->constrained('pk_perjanjian_kinerja')->comment('Source dari PK');
-            $table->foreignId('indikator_id')->constrained('pk_indikator')->comment('1 indikator = 1 tugas pokok');
+            $table->uuid('id')->primary();
 
-            $table->string('nama_tugas')->comment('Nama/judul tugas');
-            $table->text('deskripsi')->comment('Deskripsi lengkap tugas');
-            $table->decimal('bobot_persen', 5, 2)->comment('Bobot 60-70%, CHECK >=60 AND <=70');
-            $table->date('periode_mulai')->comment('Tanggal mulai');
-            $table->date('periode_selesai')->comment('Tanggal target selesai');
+            // diambil dari PerjanjianKinerja (read-only)
+            $table->foreignId('pegawai_id')->constrained('master_pegawai');
+            $table->foreignId('perjanjian_kinerja_id')->constrained('pk_perjanjian_kinerja');
+            $table->foreignId('indikator_id')->constrained('pk_indikator')
+                ->comment('1 indikator = 1 tugas pokok');
 
-            $table->decimal('target_value', 10, 2)->comment('Target yang harus dicapai');
-            $table->string('satuan', 30)->comment('Satuan target');
+            // Copied data from PK (snapshot)
+            $table->string('nama_tugas');
+            $table->text('deskripsi');
+            $table->decimal('bobot_persen', 5, 2)->comment('60-70% dari PK');
+            $table->decimal('target_value', 10, 2);
+            $table->string('satuan', 30);
+
+            // Periode Waktu
+            $table->date('tanggal_mulai')->comment('Tanggal mulai');
+            $table->date('tanggal_selesai')->comment('Tanggal target selesai');
+
+            // Status 
             $table->enum('status', ['pending', 'dikerjakan', 'selesai'])->default('pending');
-            $table->decimal('progress_persen', 5, 2)->default(0)->comment('Progress 0-100%, auto-calc');
 
+            // Progress 
+            $table->decimal('progress_persen', 5, 2)->default(0)->comment('Progress 0-100%, auto-calculated dari tugas harian');
+
+            // Nilai
+            $table->decimal('nilai_akhir', 5, 2)->comment('auto-calculated rate-rata dari tugas harian');
+
+            // Acceptance
             $table->timestamp('diterima_at')->nullable()->comment('Waktu pegawai terima');
 
-            // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
-            // No direct foreign key needed - files will reference this table via polymorphic
-
+            // timestamps dan soft delete
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(['pegawai_id', 'status']);
             $table->index('perjanjian_kinerja_id');
-            $table->index('indikator_id');
-            $table->index('periode_selesai');
-
-            // Check constraint for bobot_persen >= 60 and <= 70 akan diimplementasikan di level aplikasi
+            $table->index('tanggal_selesai');
         });
     }
 
