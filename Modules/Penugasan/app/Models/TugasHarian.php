@@ -96,11 +96,6 @@ class TugasHarian extends Model
         return $this->hasOne(Validasi::class, 'tugas_harian_id');
     }
 
-    public function delegasi(): HasOne
-    {
-        return $this->hasOne(Delegasi::class, 'tugas_harian_id');
-    }
-
     public function historyRevisi(): HasMany
     {
         return $this->hasMany(HistoriRevisi::class, 'tugas_harian_id');

@@ -69,11 +69,6 @@ class Progress extends Model
         return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
     }
 
-    public function fotoBukti(): HasMany
-    {
-        return $this->hasMany(FotoBukti::class, 'progress_id');
-    }
-
     // Scopes
     public function scopeByPegawai($query, $pegawaiId)
     {

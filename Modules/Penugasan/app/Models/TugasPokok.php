@@ -102,12 +102,7 @@ class TugasPokok extends Model
     {
         return $this->hasOne(Validasi::class, 'tugas_pokok_id');
     }
-
-    public function delegasi(): HasOne
-    {
-        return $this->hasOne(Delegasi::class, 'tugas_pokok_id');
-    }
-
+    
     public function penugasanMandiri(): HasMany
     {
         return $this->hasMany(PenugasanMandiri::class, 'tugas_pokok_id');

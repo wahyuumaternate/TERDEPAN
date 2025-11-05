@@ -86,11 +86,6 @@ class TugasTambahan extends Model
         return $this->hasOne(Validasi::class, 'tugas_tambahan_id');
     }
 
-    public function delegasi(): HasOne
-    {
-        return $this->hasOne(Delegasi::class, 'tugas_tambahan_id');
-    }
-
     // Scopes
     public function scopeActive($query)
     {

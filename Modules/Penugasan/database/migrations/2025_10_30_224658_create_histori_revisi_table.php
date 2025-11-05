@@ -18,11 +18,14 @@ return new class extends Migration
             $table->integer('revisi_ke')->default(1)->comment('Nomor revisi ke berapa');
             $table->timestamp('tanggal_revisi')->comment('Tanggal revisi dilakukan');
             $table->text('catatan_revisi')->comment('Alasan/catatan revisi');
+            $table->foreignId('validasi_id')->nullable()->constrained('knj_validasi');
             $table->foreignId('direvisi_oleh')->constrained('master_pegawai')->comment('Atasan yang melakukan revisi');
-
+            $table->decimal('penalty_nilai', 5, 2)->default(0);
+            
             // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
             // No direct foreign key needed - files will reference this table via polymorphic
-
+            
+            $table->timestamp('deadline_revisi')->nullable();
             $table->timestamps();
 
             $table->index(['tugas_harian_id', 'revisi_ke']);
