@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 // use Modules\Penugasan\Database\Factories\TugasHarianFactory;
 
 class TugasHarian extends Model
@@ -38,7 +39,6 @@ class TugasHarian extends Model
         'validasi_oleh',
         'tanggal_validasi',
         'catatan_validasi',
-        'dokumen_lampiran_id',
     ];
 
     protected $casts = [
@@ -78,9 +78,12 @@ class TugasHarian extends Model
         return $this->belongsTo(\App\Models\MasterPegawai::class, 'validasi_oleh');
     }
 
-    public function dokumenLampiran(): BelongsTo
+    /**
+     * Get all attached files from Terminal Data (polymorphic)
+     */
+    public function attachedFiles(): MorphMany
     {
-        return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_lampiran_id');
+        return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
     }
 
     public function progress(): HasMany

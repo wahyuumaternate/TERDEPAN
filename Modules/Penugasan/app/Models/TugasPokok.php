@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\PerjanjianKinerja\Models\PkIndikator;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
 
@@ -36,7 +37,6 @@ class TugasPokok extends Model
         'status',
         'progress_persen',
         'diterima_at',
-        'dokumen_lampiran_id',
     ];
 
     protected $casts = [
@@ -80,9 +80,12 @@ class TugasPokok extends Model
         return $this->belongsTo(PkIndikator::class, 'indikator_id');
     }
 
-    public function dokumenLampiran(): BelongsTo
+    /**
+     * Get all attached files from Terminal Data (polymorphic)
+     */
+    public function attachedFiles(): MorphMany
     {
-        return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_lampiran_id');
+        return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
     }
 
     public function tugasHarian(): HasMany

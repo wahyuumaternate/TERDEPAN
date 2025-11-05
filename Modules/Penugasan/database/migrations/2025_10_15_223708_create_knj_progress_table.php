@@ -22,7 +22,10 @@ return new class extends Migration
             $table->decimal('progress_persen', 5, 2)->comment('Progress hari ini cumulative 0-100%');
             $table->text('deskripsi_kegiatan')->comment('Apa yang dikerjakan hari ini');
             $table->text('kendala')->nullable()->comment('Kendala yang dihadapi optional');
-            $table->foreignId('dokumen_bukti_id')->nullable()->constrained('doc_dokumen')->comment('Foreign key ke DOC_DOKUMEN untuk bukti');
+
+            // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
+            // No direct foreign key needed - files will reference this table via polymorphic
+
             $table->timestamps();
 
             $table->index(['pegawai_id', 'tanggal']);

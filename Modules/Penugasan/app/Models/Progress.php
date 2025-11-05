@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 // use Modules\Penugasan\Database\Factories\ProgressFactory;
 
 class Progress extends Model
@@ -27,7 +28,6 @@ class Progress extends Model
         'progress_persen',
         'deskripsi_kegiatan',
         'kendala',
-        'dokumen_bukti_id',
     ];
 
     protected $casts = [
@@ -61,9 +61,12 @@ class Progress extends Model
         return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
     }
 
-    public function dokumenBukti(): BelongsTo
+    /**
+     * Get all attached files from Terminal Data (polymorphic)
+     */
+    public function attachedFiles(): MorphMany
     {
-        return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_bukti_id');
+        return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
     }
 
     public function fotoBukti(): HasMany

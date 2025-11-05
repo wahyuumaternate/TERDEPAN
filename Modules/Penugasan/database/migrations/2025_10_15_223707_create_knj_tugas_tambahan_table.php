@@ -34,8 +34,9 @@ return new class extends Migration
             $table->date('tanggal_validasi')->nullable()->comment('Tanggal validasi');
             $table->text('catatan_validasi')->nullable()->comment('Catatan validasi/revisi');
 
-            // Dokumen lampiran
-            $table->foreignId('dokumen_lampiran_id')->nullable()->constrained('doc_dokumen')->comment('Foreign key ke DOC_DOKUMEN');
+            // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
+            // No direct foreign key needed - files will reference this table via polymorphic
+
             $table->timestamps();
             $table->softDeletes();
 

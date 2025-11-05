@@ -29,7 +29,10 @@ return new class extends Migration
             $table->decimal('progress_persen', 5, 2)->default(0)->comment('Progress 0-100%, auto-calc');
 
             $table->timestamp('diterima_at')->nullable()->comment('Waktu pegawai terima');
-            $table->foreignId('dokumen_lampiran_id')->nullable()->constrained('doc_dokumen')->comment('Foreign key ke DOC_DOKUMEN');
+
+            // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
+            // No direct foreign key needed - files will reference this table via polymorphic
+
             $table->timestamps();
             $table->softDeletes();
 

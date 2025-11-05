@@ -4,6 +4,7 @@ namespace Modules\Penugasan\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\MasterPegawai;
 
 class HistoriRevisi extends Model
@@ -19,7 +20,6 @@ class HistoriRevisi extends Model
         'tanggal_revisi',
         'catatan_revisi',
         'direvisi_oleh',
-        'dokumen_lama_id'
     ];
 
     protected $casts = [
@@ -52,10 +52,10 @@ class HistoriRevisi extends Model
     }
 
     /**
-     * Relasi ke dokumen lama
+     * Get all attached files from Terminal Data (polymorphic)
      */
-    public function dokumenLama()
+    public function attachedFiles(): MorphMany
     {
-        return $this->belongsTo(\Modules\Dokumen\Models\Dokumen::class, 'dokumen_lama_id');
+        return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
     }
 }
