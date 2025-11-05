@@ -4,7 +4,7 @@
 
         <!-- E-Kinerja Nav -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }} bg-primary text-white" href="{{ url('/') }}">
+             <a class="nav-link bg-primary text-white" href="{{ url('/e-kinerja') }}">
                  <i class="bi bi-arrow-left text-white"></i>
                  <span>E-Kinerja Perencana</span>
              </a>

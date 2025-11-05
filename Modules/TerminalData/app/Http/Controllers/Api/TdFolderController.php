@@ -5,6 +5,7 @@ namespace Modules\TerminalData\Http\Controllers\Api;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Http\Requests\StoreTdFolderRequest;
 use Modules\TerminalData\Http\Requests\UpdateTdFolderRequest;
@@ -23,41 +24,30 @@ class TdFolderController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $user = auth()->user();
+        $parentId = $request->get('parent_id');
+
         try {
-            /** @var \App\Models\MasterPegawai $user */
-            $user = $request->user();
+            if ($parentId === null || $parentId === 'null') {
+                // Get root folders - TANPA whereUserHasAccess untuk sementara
+                $folders = TdFolder::whereNull('parent_id')
+                    ->withCount('subfolders')
+                    ->orderBy('name')
+                    ->get();
+            } else {
+                // Get subfolders - TANPA whereUserHasAccess untuk sementara
+                $folders = TdFolder::where('parent_id', $parentId)
+                    ->withCount('subfolders')
+                    ->orderBy('name')
+                    ->get();
+            }
 
-            // Build filters from request
-            $filters = [
-                'level' => $request->input('level', 0), // Default to level 0 (bidang)
-                'bidang_id' => $request->input('bidang_id'),
-                'search' => $request->input('search'),
-                'is_starred' => $request->input('starred'),
-                'is_public' => $request->input('is_public'),
-                'sort_by' => $request->input('sort_by', 'name'),
-                'sort_order' => $request->input('sort_order', 'asc'),
-            ];
-
-            // Remove null values
-            $filters = array_filter($filters, fn($value) => $value !== null);
-
-            // Get folders from service
-            $folders = $this->folderService->getRootFolders($user);
-
-            return response()->json([
-                'success' => true,
-                'data' => TdFolderResource::collection($folders),
-                'message' => 'Data folder berhasil dimuat'
-            ]);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 403);
+            return response()->json($folders);
         } catch (\Exception $e) {
+            Log::error('Error loading folders: ' . $e->getMessage());
             return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Gagal memuat folder',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

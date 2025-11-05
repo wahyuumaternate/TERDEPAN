@@ -40,6 +40,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     Route::prefix('tugas-harian')->name('tugas-harian.')->group(function () {
         Route::get('/', [TugasHarianController::class, 'index'])->name('index');
         Route::get('/{id}/detail', [TugasHarianController::class, 'detail'])->name('detail');
+        Route::get('/{id}/upload-eviden', [TugasHarianController::class, 'uploadEviden'])->name('upload-eviden');
         Route::get('/{id}/edit', [TugasHarianController::class, 'edit'])->name('edit');
         Route::get('/{id}/history', [TugasHarianController::class, 'getHistory'])->name('history');
         Route::put('/{id}', [TugasHarianController::class, 'update'])->name('update');

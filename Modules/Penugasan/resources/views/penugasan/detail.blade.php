@@ -557,9 +557,7 @@
                                                                         </li>
                                                                     @elseif($tugas->status === 'dikerjakan')
                                                                         <li>
-                                                                            <a href="javascript:void(0)"
-                                                                                onclick="uploadBukti({{ $tugas->id }}, 'tugas_harian')"
-                                                                                class="dropdown-item">
+                                                                            <a href="{{ route('penugasan.tugas-harian.upload-eviden', $tugas->id) }}" class="dropdown-item">
                                                                                 <i
                                                                                     class="bi bi-cloud-upload text-primary me-2"></i>
                                                                                 Upload Bukti

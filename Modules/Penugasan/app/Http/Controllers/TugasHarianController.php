@@ -132,6 +132,24 @@ class TugasHarianController extends Controller
     }
 
     /**
+     * Show upload eviden page
+     */
+    public function uploadEviden($id)
+    {
+        try {
+            $tugas = \Modules\Penugasan\Models\TugasHarian::with([
+                'tugasPokok',
+                'pegawai',
+                'dokumenLampiran'
+            ])->findOrFail($id);
+
+            return view('penugasan::penugasan.upload-eviden', compact('tugas'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Tugas tidak ditemukan');
+        }
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit($id)

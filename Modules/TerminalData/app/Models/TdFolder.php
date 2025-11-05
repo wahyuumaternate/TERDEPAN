@@ -129,10 +129,10 @@ class TdFolder extends Model
         return $this->belongsTo(MasterBidang::class);
     }
 
-    public function shares()
-    {
-        return $this->morphMany(TdShare::class, 'shareable');
-    }
+    // public function shares()
+    // {
+    //     return $this->morphMany(TdShare::class, 'shareable');
+    // }
 
     public function activities()
     {
