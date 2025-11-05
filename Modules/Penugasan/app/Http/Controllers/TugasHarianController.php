@@ -12,7 +12,7 @@ class TugasHarianController extends Controller
      */
     public function index(Request $request)
     {
-        $query = \Modules\Penugasan\Models\TugasHarian::with(['tugasPokok', 'pegawai', 'pemberiTugas', 'dokumenLampiran'])
+        $query = \Modules\Penugasan\Models\TugasHarian::with(['tugasPokok', 'pegawai', 'pemberiTugas', 'attachedFiles'])
             ->orderBy('tanggal_mulai', 'desc');
 
         // Filter berdasarkan status
@@ -65,9 +65,9 @@ class TugasHarianController extends Controller
                 'pegawai.bidang',
                 'pegawai.jabatan',
                 'pemberiTugas',
-                'dokumen.file',
+                'attachedFiles',
                 'historyRevisi.direvisiOleh',
-                'historyRevisi.dokumenLama'
+                'historyRevisi.attachedFiles'
             ])->findOrFail($id);
 
             $pegawai = $tugasHarian->pegawai;
@@ -85,7 +85,7 @@ class TugasHarianController extends Controller
             $tugasHarianList = \Modules\Penugasan\Models\TugasHarian::with([
                 'tugasPokok',
                 'pemberiTugas',
-                'dokumen.file',
+                'attachedFiles',
                 'validasiOleh'
             ])->where('pegawai_id', $pegawai->id)
                 ->orderBy('created_at', 'desc')
@@ -140,7 +140,7 @@ class TugasHarianController extends Controller
             $tugas = \Modules\Penugasan\Models\TugasHarian::with([
                 'tugasPokok',
                 'pegawai',
-                'dokumenLampiran'
+                'attachedFiles'
             ])->findOrFail($id);
 
             return view('penugasan::penugasan.upload-eviden', compact('tugas'));
@@ -299,7 +299,7 @@ class TugasHarianController extends Controller
             // Get history revisi jika model ada
             $history = [];
             if (class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
-                $history = \Modules\Penugasan\Models\HistoriRevisi::with(['direvisiOleh', 'dokumenLama'])
+                $history = \Modules\Penugasan\Models\HistoriRevisi::with(['direvisiOleh', 'attachedFiles'])
                     ->where('tugas_harian_id', $id)
                     ->orderBy('revisi_ke', 'desc')
                     ->get()
@@ -313,10 +313,13 @@ class TugasHarianController extends Controller
                                 'id' => $item->direvisiOleh->id,
                                 'nama' => $item->direvisiOleh->nama
                             ] : null,
-                            'dokumen_lama' => $item->dokumenLama ? [
-                                'id' => $item->dokumenLama->id,
-                                'judul' => $item->dokumenLama->judul
-                            ] : null
+                            'files' => $item->attachedFiles->map(function ($file) {
+                                return [
+                                    'id' => $file->id,
+                                    'name' => $file->name,
+                                    'original_name' => $file->original_name,
+                                ];
+                            })
                         ];
                     });
             }

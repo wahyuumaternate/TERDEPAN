@@ -21,45 +21,6 @@ class PenugasanController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('penugasan::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
-    {
-        return view('penugasan::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('penugasan::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
-
-    /**
      * Berikan tugas (harian atau tambahan) ke pegawai
      */
     public function berikanTugas(Request $request)
@@ -156,6 +117,7 @@ class PenugasanController extends Controller
 
     /**
      * Upload bukti pengerjaan tugas
+     * UPDATED: Menggunakan Terminal Data (td_files) dengan polymorphic relation
      */
     public function uploadBukti(Request $request)
     {
@@ -163,102 +125,65 @@ class PenugasanController extends Controller
             'tugas_id' => 'required|integer',
             'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
             'files' => 'required|array|min:1',
-            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,xls|max:10240', // Max 10MB per file
+            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,xls|max:10240',
+            'folder_ids' => 'required|array|min:1',
+            'folder_ids.*' => 'required|uuid|exists:td_folders,id',
             'keterangan' => 'nullable|string|max:1000',
         ]);
 
         DB::beginTransaction();
         try {
-            // Tentukan model berdasarkan jenis tugas
             $modelClass = $validated['jenis_tugas'] === 'tugas_harian'
-                ? TugasHarian::class
-                : TugasTambahan::class;
+                ? \Modules\Penugasan\Models\TugasHarian::class
+                : \Modules\Penugasan\Models\TugasTambahan::class;
 
             $tugas = $modelClass::findOrFail($validated['tugas_id']);
 
-            // Validasi bahwa yang upload adalah penerima tugas
+            // Validasi pegawai
             if ($tugas->pegawai_id !== Auth::id()) {
-                throw new \Exception('Anda tidak berhak mengupload bukti untuk tugas ini');
+                throw new \Exception('Anda tidak memiliki izin untuk upload bukti tugas ini');
             }
 
-            // Validasi status tugas harus 'dikerjakan' atau 'revisi' untuk bisa upload bukti
             if (!in_array($tugas->status, ['dikerjakan', 'revisi'])) {
-                throw new \Exception('Tugas harus dalam status dikerjakan atau revisi untuk dapat mengupload bukti');
+                throw new \Exception('Status tugas harus dikerjakan atau revisi untuk dapat upload bukti');
             }
 
-            // Dapatkan informasi pegawai dan bidang
-            $pegawai = \App\Models\MasterPegawai::with('bidang')->findOrFail($tugas->pegawai_id);
-            $namaPegawai = str_replace(' ', '_', $pegawai->nama);
-
-            if (!$pegawai->bidang) {
-                throw new \Exception('Pegawai tidak memiliki bidang yang terdaftar');
-            }
-
-            $bidangNama = str_replace(' ', '_', strtolower($pegawai->bidang->nama));
-
-            // Handle versioning untuk dokumen
             $isRevision = $tugas->status === 'revisi';
-            $version = 1;
-            $oldDokumen = null;
-
-            if ($isRevision && $tugas->dokumen_lampiran_id) {
-                // Jika ini adalah revisi, set file lama menjadi tidak current
-                $oldDokumen = \Modules\Dokumen\Models\Dokumen::find($tugas->dokumen_lampiran_id);
-                if ($oldDokumen) {
-                    // Update file lama menjadi tidak current
-                    \Modules\Dokumen\Models\File::where('dokumen_id', $oldDokumen->id)
-                        ->update(['is_current' => false]);
-
-                    // Get next version
-                    $version = \Modules\Dokumen\Models\File::where('dokumen_id', $oldDokumen->id)->max('version') + 1;
-                }
-            }
+            $uploadedFiles = [];
 
             // Process each uploaded file
-            $uploadedFiles = [];
-            $dokumen = null; // Single dokumen untuk semua file
-
             foreach ($request->file('files') as $index => $file) {
-                // Upload file ke folder bidang/eviden/nama_pegawai
+                $folderId = $validated['folder_ids'][$index] ?? $validated['folder_ids'][0];
+
+                // Upload file ke storage
                 $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
-                $folderPath = "{$bidangNama}/eviden/" . str_replace(' ', '_', strtolower($namaPegawai));
-                $filePath = $file->storeAs($folderPath, $fileName, 'public');
+                $filePath = $file->store('terminal-data', 'public');
 
-                // Create dokumen hanya sekali (untuk file pertama)
-                if ($index === 0) {
-                    if ($oldDokumen) {
-                        // Gunakan dokumen yang sama, update info
-                        $dokumen = $oldDokumen;
-                        $dokumen->update([
-                            'version' => $version,
-                            'deskripsi' => $validated['keterangan'] . ' (Revisi ke-' . ($version - 1) . ')',
-                            'tanggal_dokumen' => now(),
-                        ]);
-                    } else {
-                        // Upload pertama kali, buat dokumen baru
-                        $dokumen = $this->createNewDokumen($tugas, $validated, $namaPegawai);
-                    }
-                }
-
-                // Buat record file baru (semua file menggunakan dokumen yang sama)
-                \Modules\Dokumen\Models\File::create([
-                    'dokumen_id' => $dokumen->id,
-                    'version' => $version,
-                    'nama_file' => $file->getClientOriginalName(),
-                    'file_path' => $filePath,
+                // Create TdFile record (polymorphic ke tugas)
+                $tdFile = \Modules\TerminalData\Models\TdFile::create([
+                    'folder_id' => $folderId,
+                    'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                    'original_name' => $file->getClientOriginalName(),
+                    'description' => $validated['keterangan'],
+                    'storage_path' => $filePath,
                     'extension' => $file->getClientOriginalExtension(),
-                    'size_kb' => round($file->getSize() / 1024),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
                     'hash' => hash_file('sha256', $file->getRealPath()),
-                    'is_current' => true,
-                    'uploaded_by' => Auth::id(),
+                    'version' => $isRevision ? 2 : 1,
+                    'is_latest_version' => true,
+                    'version_notes' => $isRevision ? 'Revisi: ' . $validated['keterangan'] : null,
+                    'created_by' => Auth::id(),
+                    // Polymorphic relation
+                    'attachable_type' => $modelClass,
+                    'attachable_id' => $tugas->id,
                 ]);
+
+                $uploadedFiles[] = $tdFile;
             }
 
-            // Update status tugas menjadi 'validasi' dan simpan dokumen lampiran
-            $tugas->update([
-                'status' => 'validasi',
-                'dokumen_lampiran_id' => $dokumen->id,
-            ]);
+            // Update status tugas
+            $tugas->update(['status' => 'validasi']);
 
             // Buat record progress
             \Modules\Penugasan\Models\Progress::create([
@@ -266,16 +191,21 @@ class PenugasanController extends Controller
                 'tugas_tambahan_id' => $validated['jenis_tugas'] === 'tugas_tambahan' ? $tugas->id : null,
                 'pegawai_id' => $tugas->pegawai_id,
                 'tanggal' => now(),
-                'progress_persen' => 100.00, // Karena upload bukti berarti selesai
-                'deskripsi_kegiatan' => "Upload bukti pengerjaan: {$validated['keterangan']} (" . count($request->file('files')) . " file)",
-                'dokumen_bukti_id' => $dokumen->id,
+                'progress_persen' => 100.00,
+                'deskripsi_kegiatan' => "Upload bukti: {$validated['keterangan']} (" . count($uploadedFiles) . " file)",
             ]);
+
+            // Simpan history revisi jika ini revisi
+            if ($isRevision) {
+                $this->saveRevisionHistory($tugas, $validated);
+            }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Bukti berhasil diupload. Status tugas diubah menjadi menunggu validasi.',
+                'files' => $uploadedFiles,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -285,75 +215,6 @@ class PenugasanController extends Controller
                 'message' => 'Gagal upload bukti: ' . $e->getMessage(),
             ], 500);
         }
-    }
-
-    /**
-     * Dapatkan atau buat folder eviden untuk pegawai berdasarkan bidang
-     */
-    private function getOrCreateEvidenFolder($namaPegawai)
-    {
-        // Dapatkan informasi bidang pegawai yang sedang login
-        $pegawai = \App\Models\MasterPegawai::with('bidang')->findOrFail(Auth::id());
-
-        if (!$pegawai->bidang) {
-            throw new \Exception('Pegawai tidak memiliki bidang yang terdaftar');
-        }
-
-        $bidangNama = $pegawai->bidang->nama;
-
-        // 1. Cari atau buat folder bidang
-        $bidangFolder = \Modules\Dokumen\Models\Folder::where('nama', $bidangNama)
-            ->whereNull('parent_id')
-            ->first();
-
-        if (!$bidangFolder) {
-            // Buat folder bidang
-            $bidangFolder = \Modules\Dokumen\Models\Folder::create([
-                'bidang_id' => $pegawai->bidang_id,
-                'nama' => $bidangNama,
-                'path' => '/' . str_replace(' ', '_', strtolower($bidangNama)),
-                'level' => 0,
-                'is_auto' => true,
-                'created_by' => Auth::id(),
-            ]);
-        }
-
-        // 2. Cari atau buat folder Eviden di dalam bidang
-        $evidenFolder = \Modules\Dokumen\Models\Folder::where('nama', 'Eviden')
-            ->where('parent_id', $bidangFolder->id)
-            ->first();
-
-        if (!$evidenFolder) {
-            // Buat folder eviden di dalam bidang
-            $evidenFolder = \Modules\Dokumen\Models\Folder::create([
-                'parent_id' => $bidangFolder->id,
-                'bidang_id' => $pegawai->bidang_id,
-                'nama' => 'Eviden',
-                'path' => $bidangFolder->path . '/eviden',
-                'level' => 1,
-                'is_auto' => true,
-                'created_by' => Auth::id(),
-            ]);
-        }
-
-        // 3. Cari atau buat folder pegawai di dalam Eviden
-        $pegawaiFolder = \Modules\Dokumen\Models\Folder::where('nama', $namaPegawai)
-            ->where('parent_id', $evidenFolder->id)
-            ->first();
-
-        if (!$pegawaiFolder) {
-            $pegawaiFolder = \Modules\Dokumen\Models\Folder::create([
-                'parent_id' => $evidenFolder->id,
-                'bidang_id' => $pegawai->bidang_id,
-                'nama' => $namaPegawai,
-                'path' => $evidenFolder->path . '/' . str_replace(' ', '_', strtolower($namaPegawai)),
-                'level' => 2,
-                'is_auto' => true,
-                'created_by' => Auth::id(),
-            ]);
-        }
-
-        return $pegawaiFolder->id;
     }
 
     /**
@@ -454,12 +315,11 @@ class PenugasanController extends Controller
             'tugas_pokok_id' => $tugasPokok->id,
             'pegawai_id' => $tugasHarian->pegawai_id,
             'tanggal' => now(),
-            'progress_persen' => 100.00, // Tugas harian selesai = 100%
+            'progress_persen' => 100.00,
             'deskripsi_kegiatan' => "Penyelesaian tugas harian: {$tugasHarian->nama_tugas} (Nilai: {$tugasHarian->penilaian})",
-            'dokumen_bukti_id' => $tugasHarian->dokumen_lampiran_id,
         ]);
 
-        // Update total progress tugas pokok (bisa dihitung dari akumulasi tugas harian)
+        // Update total progress tugas pokok
         $this->recalculateProgressTugasPokok($tugasPokok);
     }
 
@@ -487,16 +347,14 @@ class PenugasanController extends Controller
      */
     private function saveRevisionHistory($tugas, $validated)
     {
-        // Cek apakah model HistoriRevisi ada
         if (class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
             \Modules\Penugasan\Models\HistoriRevisi::create([
                 'tugas_harian_id' => $validated['jenis_tugas'] === 'tugas_harian' ? $tugas->id : null,
                 'tugas_tambahan_id' => $validated['jenis_tugas'] === 'tugas_tambahan' ? $tugas->id : null,
                 'revisi_ke' => $this->getNextRevisionNumber($tugas, $validated['jenis_tugas']),
                 'tanggal_revisi' => now(),
-                'catatan_revisi' => $validated['catatan_revisi'],
+                'catatan_revisi' => $validated['catatan_revisi'] ?? $validated['catatan_validasi'] ?? 'Revisi',
                 'direvisi_oleh' => Auth::id(),
-                'dokumen_lama_id' => $tugas->dokumen_lampiran_id,
             ]);
         }
     }
@@ -516,25 +374,6 @@ class PenugasanController extends Controller
             ->max('revisi_ke');
 
         return ($lastRevision ?? 0) + 1;
-    }
-
-    /**
-     * Create new dokumen for bukti
-     */
-    private function createNewDokumen($tugas, $validated, $namaPegawai, $fileIndex = null)
-    {
-        $suffix = $fileIndex ? " (File {$fileIndex})" : "";
-        return \Modules\Dokumen\Models\Dokumen::create([
-            'nomor' => 'BUKTI-' . $tugas->id . '-' . time() . ($fileIndex ? "-{$fileIndex}" : ""),
-            'folder_id' => $this->getOrCreateEvidenFolder($namaPegawai),
-            'judul' => "Bukti Pengerjaan - {$tugas->nama_tugas}{$suffix}",
-            'deskripsi' => $validated['keterangan'],
-            'tanggal_dokumen' => now(),
-            'status' => 'Final',
-            'uploaded_by' => Auth::id(),
-            'related_type' => $validated['jenis_tugas'],
-            'related_id' => $tugas->id,
-        ]);
     }
 
     /**

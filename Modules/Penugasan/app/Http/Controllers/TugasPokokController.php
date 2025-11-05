@@ -158,7 +158,7 @@ class TugasPokokController extends Controller
             ->with([
                 'perjanjianKinerja',
                 'indikatorPK',
-                'dokumenLampiran',
+                'attachedFiles',
                 'progress'
             ])
             ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun]);
@@ -196,7 +196,7 @@ class TugasPokokController extends Controller
             ->with([
                 'tugasPokok',
                 'pemberiTugas',
-                'dokumenLampiran',
+                'attachedFiles',
                 'progress'
             ])
             ->whereYear('tanggal_mulai', $tahun);

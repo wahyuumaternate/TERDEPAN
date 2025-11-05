@@ -14,7 +14,7 @@ class TugasTambahanController extends Controller
      */
     public function index(Request $request)
     {
-        $query = TugasTambahan::with(['pegawai', 'pemberiTugas', 'dokumenLampiran'])
+        $query = TugasTambahan::with(['pegawai', 'pemberiTugas', 'attachedFiles'])
             ->orderBy('tanggal_mulai', 'desc');
 
         // Filter berdasarkan status
@@ -46,7 +46,7 @@ class TugasTambahanController extends Controller
     public function edit($id)
     {
         try {
-            $tugasTambahan = TugasTambahan::with(['pegawai', 'pemberiTugas', 'dokumenLampiran'])
+            $tugasTambahan = TugasTambahan::with(['pegawai', 'pemberiTugas', 'attachedFiles'])
                 ->findOrFail($id);
 
             // Return JSON response for AJAX request
