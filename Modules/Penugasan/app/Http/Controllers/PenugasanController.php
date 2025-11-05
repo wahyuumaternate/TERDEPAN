@@ -377,33 +377,6 @@ class PenugasanController extends Controller
     }
 
     /**
-     * Berikan catatan monitoring
-     */
-    public function catatanMonitoring(Request $request)
-    {
-        $validated = $request->validate([
-            'pegawai_id' => 'required|exists:master_pegawai,id',
-            'tugas_id' => 'nullable|integer',
-            'tugas_type' => 'nullable|in:tugas_pokok,tugas_harian,tugas_tambahan',
-            'jenis_catatan' => 'required|in:monitoring,revisi,feedback',
-            'isi_catatan' => 'required|string',
-        ]);
-
-        // Simpan ke tabel catatan monitoring
-        \Modules\Penugasan\Models\CatatanMonitoring::create([
-            'pegawai_id' => $validated['pegawai_id'],
-            'tugas_id' => $validated['tugas_id'],
-            'tugas_type' => $validated['tugas_type'],
-            'catatan_oleh' => Auth::id(),
-            'tanggal_catatan' => now(),
-            'jenis_catatan' => $validated['jenis_catatan'],
-            'isi_catatan' => $validated['isi_catatan'],
-        ]);
-
-        return response()->json(['success' => true, 'message' => 'Catatan berhasil disimpan']);
-    }
-
-    /**
      * Dashboard monitoring untuk Kaban
      */
     public function dashboardMonitoring(Request $request)

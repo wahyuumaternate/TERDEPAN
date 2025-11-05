@@ -5,6 +5,7 @@ namespace Modules\TerminalData\Http\Controllers\Api;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Http\Requests\StoreTdFolderRequest;
@@ -24,7 +25,7 @@ class TdFolderController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $parentId = $request->get('parent_id');
 
         try {
