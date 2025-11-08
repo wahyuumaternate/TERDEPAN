@@ -1870,7 +1870,7 @@
             $('#modalUploadProgress').modal('show');
 
             $.ajax({
-                url: '{{ route('dokumen.store') }}',
+                url: '{{ route('terminaldata.filesData.upload') }}',
                 type: 'POST',
                 data: formData,
                 processData: false,

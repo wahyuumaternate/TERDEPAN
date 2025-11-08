@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knj_nilai_tahunan', function (Blueprint $table) {
-            $table->uuid()->primary();
+            $table->uuid('id')->primary();
             
             // Period & Employee
             $table->foreignId('pegawai_id')->constrained('master_pegawai');

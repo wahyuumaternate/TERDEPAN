@@ -12,14 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knj_histori_revisi', function (Blueprint $table) {
-            $table->uuid()->primary();
+            $table->uuid('id')->primary();
 
             // Polymorphic relation (to tugas_harian, tugas_tambahan)
             // Note: tugas_pokok tidak bisa revisi (read-only from PK)
             $table->string('tipe_revisi')
                 ->comment('TugasHarian, TugasTambahan');
             $table->foreignUuid('tipe_revisi_id');
-            
+
             // Informasi Revisi
             $table->integer('revisi_ke')->default(1)->comment('Nomor revisi ke berapa');
             $table->timestamp('tanggal_revisi')->comment('Tanggal revisi dilakukan');
@@ -40,7 +40,7 @@ return new class extends Migration
 
             // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
             // No direct foreign key needed - files will reference this table via polymorphic
-            
+
             $table->timestamps();
 
             $table->index(['pegawai_id', 'status']);

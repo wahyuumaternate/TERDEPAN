@@ -187,7 +187,7 @@ class TugasHarianController extends Controller
                 'nama_tugas' => 'required|string|max:500',
                 'deskripsi' => 'nullable|string',
                 'tanggal_mulai' => 'required|date',
-                'deadline' => 'required|date|after_or_equal:tanggal_mulai',
+                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
                 'target_value' => 'required|numeric|min:0',
                 'satuan' => 'required|string|max:100',
             ]);

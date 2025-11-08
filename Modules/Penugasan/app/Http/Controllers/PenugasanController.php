@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Modules\Penugasan\Models\TugasHarian;
 use Modules\Penugasan\Models\TugasTambahan;
+use Modules\Penugasan\Helpers\PenilaianHelper;
 
 class PenugasanController extends Controller
 {
@@ -32,7 +33,7 @@ class PenugasanController extends Controller
             'nama_tugas' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'tanggal_mulai' => 'required|date',
-            'deadline' => 'required|date|after_or_equal:tanggal_mulai',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             // Ganti bobot_persen dengan target penilaian
             'target_penilaian' => 'nullable|numeric|min:0|max:100',
             'target_value' => 'required|numeric|min:0',
@@ -75,7 +76,7 @@ class PenugasanController extends Controller
                     'nama_tugas' => $validated['nama_tugas'],
                     'deskripsi' => $validated['deskripsi'] ?? null,
                     'tanggal_mulai' => $validated['tanggal_mulai'],
-                    'deadline' => $validated['deadline'],
+                    'tanggal_selesai' => $validated['tanggal_selesai'],
                     'target_penilaian' => $validated['target_penilaian'] ?? null,
                     'target_value' => $validated['target_value'],
                     'satuan' => $validated['satuan'],
@@ -91,7 +92,7 @@ class PenugasanController extends Controller
                     'nama_tugas' => $validated['nama_tugas'],
                     'deskripsi' => $validated['deskripsi'] ?? null,
                     'tanggal_mulai' => $validated['tanggal_mulai'],
-                    'deadline' => $validated['deadline'],
+                    'tanggal_selesai' => $validated['tanggal_selesai'],
                     'target_penilaian' => $validated['target_penilaian'] ?? null,
                     'status' => 'pending', // Sesuai dengan enum di migrasi
                 ]);
@@ -122,14 +123,26 @@ class PenugasanController extends Controller
     public function uploadBukti(Request $request)
     {
         $validated = $request->validate([
-            'tugas_id' => 'required|integer',
+            'tugas_id' => 'required|string|uuid',
             'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-            'files' => 'required|array|min:1',
+            'files' => 'nullable|array',
             'files.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,xls|max:10240',
-            'folder_ids' => 'required|array|min:1',
+            'folder_ids' => 'nullable|array',
             'folder_ids.*' => 'required|uuid|exists:td_folders,id',
+            'replacements' => 'nullable|array',
+            'replacements.*.old_file_id' => 'required|uuid|exists:td_files,id',
+            'replacements.*.file' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,xls|max:10240',
+            'replacements.*.folder_id' => 'required|uuid|exists:td_folders,id',
             'keterangan' => 'nullable|string|max:1000',
         ]);
+
+        // At least one file or replacement is required
+        if (empty($validated['files']) && empty($validated['replacements'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Minimal harus ada file baru atau file pengganti',
+            ], 422);
+        }
 
         DB::beginTransaction();
         try {
@@ -150,40 +163,106 @@ class PenugasanController extends Controller
 
             $isRevision = $tugas->status === 'revisi';
             $uploadedFiles = [];
+            $replacedFiles = [];
 
-            // Process each uploaded file
-            foreach ($request->file('files') as $index => $file) {
-                $folderId = $validated['folder_ids'][$index] ?? $validated['folder_ids'][0];
+            // Process file replacements first
+            if (!empty($validated['replacements'])) {
+                foreach ($validated['replacements'] as $replacement) {
+                    $oldFile = \Modules\TerminalData\Models\TdFile::findOrFail($replacement['old_file_id']);
 
-                // Upload file ke storage
-                $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
-                $filePath = $file->store('terminal-data', 'public');
+                    // Verify file belongs to this tugas
+                    if ($oldFile->attachable_id !== $tugas->id || $oldFile->attachable_type !== $modelClass) {
+                        throw new \Exception('File tidak terkait dengan tugas ini');
+                    }
 
-                // Create TdFile record (polymorphic ke tugas)
-                $tdFile = \Modules\TerminalData\Models\TdFile::create([
-                    'folder_id' => $folderId,
-                    'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-                    'original_name' => $file->getClientOriginalName(),
-                    'description' => $validated['keterangan'],
-                    'storage_path' => $filePath,
-                    'extension' => $file->getClientOriginalExtension(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                    'hash' => hash_file('sha256', $file->getRealPath()),
-                    'version' => $isRevision ? 2 : 1,
-                    'is_latest_version' => true,
-                    'version_notes' => $isRevision ? 'Revisi: ' . $validated['keterangan'] : null,
-                    'created_by' => Auth::id(),
-                    // Polymorphic relation
-                    'attachable_type' => $modelClass,
-                    'attachable_id' => $tugas->id,
-                ]);
+                    $file = $replacement['file'];
+                    $folderId = $replacement['folder_id'];
 
-                $uploadedFiles[] = $tdFile;
+                    // Upload new version file
+                    $fileName = time() . '_v' . ($oldFile->version + 1) . '_' . $file->getClientOriginalName();
+                    $filePath = $file->store('terminal-data', 'public');
+
+                    // Mark old file as not latest
+                    $oldFile->update(['is_latest_version' => false]);
+
+                    // Create new version
+                    $newVersion = \Modules\TerminalData\Models\TdFile::create([
+                        'folder_id' => $folderId,
+                        'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                        'original_name' => $file->getClientOriginalName(),
+                        'description' => 'Revisi: ' . ($validated['keterangan'] ?? 'File diperbarui'),
+                        'storage_path' => $filePath,
+                        'extension' => $file->getClientOriginalExtension(),
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                        'hash' => hash_file('sha256', $file->getRealPath()),
+                        'version' => $oldFile->version + 1,
+                        'original_file_id' => $oldFile->original_file_id ?? $oldFile->id,
+                        'is_latest_version' => true,
+                        'version_notes' => 'Revisi dari versi ' . $oldFile->version . ': ' . ($validated['keterangan'] ?? ''),
+                        'created_by' => Auth::id(),
+                        // Polymorphic relation - same as parent
+                        'attachable_type' => $oldFile->attachable_type,
+                        'attachable_id' => $oldFile->attachable_id,
+                    ]);
+
+                    $replacedFiles[] = [
+                        'old' => $oldFile->original_name,
+                        'new' => $newVersion->original_name,
+                        'version' => $newVersion->version,
+                    ];
+                    $uploadedFiles[] = $newVersion;
+                }
+            }
+
+            // Process new files
+            if (!empty($request->file('files'))) {
+                foreach ($request->file('files') as $index => $file) {
+                    $folderId = $validated['folder_ids'][$index] ?? $validated['folder_ids'][0];
+
+                    // Upload file ke storage
+                    $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                    $filePath = $file->store('terminal-data', 'public');
+
+                    // Create TdFile record (polymorphic ke tugas)
+                    $tdFile = \Modules\TerminalData\Models\TdFile::create([
+                        'folder_id' => $folderId,
+                        'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                        'original_name' => $file->getClientOriginalName(),
+                        'description' => $validated['keterangan'],
+                        'storage_path' => $filePath,
+                        'extension' => $file->getClientOriginalExtension(),
+                        'mime_type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                        'hash' => hash_file('sha256', $file->getRealPath()),
+                        'version' => 1,
+                        'is_latest_version' => true,
+                        'version_notes' => $isRevision ? 'File tambahan saat revisi: ' . $validated['keterangan'] : null,
+                        'created_by' => Auth::id(),
+                        // Polymorphic relation
+                        'attachable_type' => $modelClass,
+                        'attachable_id' => $tugas->id,
+                    ]);
+
+                    $uploadedFiles[] = $tdFile;
+                }
             }
 
             // Update status tugas
             $tugas->update(['status' => 'validasi']);
+
+            // Build description message
+            $progressDesc = [];
+            if (count($replacedFiles) > 0) {
+                $progressDesc[] = count($replacedFiles) . " file diperbarui";
+            }
+            if (count($uploadedFiles) - count($replacedFiles) > 0) {
+                $progressDesc[] = (count($uploadedFiles) - count($replacedFiles)) . " file baru";
+            }
+            $descMessage = "Upload bukti: " . implode(", ", $progressDesc);
+            if ($validated['keterangan']) {
+                $descMessage .= " - " . $validated['keterangan'];
+            }
 
             // Buat record progress dengan polymorphic relation
             \Modules\Penugasan\Models\Progress::create([
@@ -192,7 +271,7 @@ class PenugasanController extends Controller
                 'pegawai_id' => $tugas->pegawai_id,
                 'tanggal' => now(),
                 'progress_persen' => 100.00,
-                'deskripsi_kegiatan' => "Upload bukti: {$validated['keterangan']} (" . count($uploadedFiles) . " file)",
+                'deskripsi_kegiatan' => $descMessage,
             ]);
 
             // Simpan history revisi jika ini revisi
@@ -202,10 +281,16 @@ class PenugasanController extends Controller
 
             DB::commit();
 
+            $message = 'Bukti berhasil diupload. Status tugas diubah menjadi menunggu validasi.';
+            if (count($replacedFiles) > 0) {
+                $message .= ' ' . count($replacedFiles) . ' file telah diperbarui dengan versi baru.';
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Bukti berhasil diupload. Status tugas diubah menjadi menunggu validasi.',
+                'message' => $message,
                 'files' => $uploadedFiles,
+                'replaced_files' => $replacedFiles,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -225,7 +310,7 @@ class PenugasanController extends Controller
         $validated = $request->validate([
             'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
             'status_validasi' => 'required|in:diterima,revisi',
-            'penilaian' => 'required_if:status_validasi,diterima|nullable|numeric|min:0|max:100',
+            'penilaian_kualitas' => 'required_if:status_validasi,diterima|nullable|numeric|min:0|max:100',
             'catatan_validasi' => 'nullable|string|max:1000',
             'catatan_revisi' => 'required_if:status_validasi,revisi|nullable|string|max:1000',
             'progress_update_type' => 'required_if:status_validasi,diterima|nullable|in:otomatis,manual',
@@ -251,15 +336,27 @@ class PenugasanController extends Controller
             }
 
             if ($validated['status_validasi'] === 'diterima') {
+                // ========================================
+                // HITUNG PENILAIAN DENGAN HELPER
+                // ========================================
+                $nilaiKualitas = $validated['penilaian_kualitas'];
+                $tanggalSelesai = now(); // Tanggal validasi = tanggal selesai
+
+                // Gunakan PenilaianHelper untuk hitung nilai
+                $hasilPenilaian = PenilaianHelper::hitungDanSimpanPenilaian(
+                    $tugas,
+                    $nilaiKualitas,
+                    $tanggalSelesai
+                );
+
                 // VALIDASI DITERIMA - Status jadi selesai
                 $tugas->update([
                     'status' => 'selesai',
                     'validator_id' => Auth::id(),
-                    'validated_at' => now(),
+                    'validated_at' => $tanggalSelesai,
                     'hasil_validasi' => 'diterima',
-                    'penilaian_kualitas' => $validated['penilaian'], // Score 1-5 atau bisa mapping dari 0-100
-                    'nilai_akhir' => $validated['penilaian'],
                     'catatan_validasi' => $validated['catatan_validasi'] ?? 'Tugas diterima dan selesai',
+                    // penilaian_kualitas dan nilai_akhir sudah di-update oleh helper
                 ]);
 
                 // Update progress tugas pokok jika tugas harian
@@ -267,7 +364,13 @@ class PenugasanController extends Controller
                     $this->updateProgressTugasPokok($tugas, $validated);
                 }
 
-                $message = 'Tugas berhasil divalidasi dan diselesaikan dengan nilai: ' . $validated['penilaian'];
+                $message = sprintf(
+                    'Tugas berhasil divalidasi! Nilai Waktu: %.2f, Nilai Kualitas: %.2f, Nilai Akhir: %.2f (%s)',
+                    $hasilPenilaian['waktu']['nilai'],
+                    $nilaiKualitas,
+                    $hasilPenilaian['nilai_akhir'],
+                    $hasilPenilaian['grade']['kategori']
+                );
             } else {
                 // VALIDASI REVISI - Status jadi revisi
                 $tugas->update([
@@ -279,10 +382,10 @@ class PenugasanController extends Controller
                 ]);
 
                 // Simpan history revisi dengan model class
-                $jenisTugas = $validated['jenis_tugas'] === 'tugas_harian' 
-                    ? TugasHarian::class 
+                $jenisTugas = $validated['jenis_tugas'] === 'tugas_harian'
+                    ? TugasHarian::class
                     : TugasTambahan::class;
-                
+
                 $this->saveRevisionHistory($tugas, $validated, $jenisTugas);
 
                 $message = 'Tugas dikembalikan untuk revisi';
@@ -292,7 +395,14 @@ class PenugasanController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'status' => $tugas->status
+                'status' => $tugas->status,
+                'penilaian' => $validated['status_validasi'] === 'diterima' ? [
+                    'nilai_waktu' => $hasilPenilaian['waktu']['nilai'],
+                    'nilai_kualitas' => $nilaiKualitas,
+                    'nilai_akhir' => $hasilPenilaian['nilai_akhir'],
+                    'grade' => $hasilPenilaian['grade'],
+                    'keterlambatan' => $hasilPenilaian['waktu']['status'],
+                ] : null
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -382,6 +492,45 @@ class PenugasanController extends Controller
             ->max('revisi_ke');
 
         return ($lastRevision ?? 0) + 1;
+    }
+
+    /**
+     * Preview penilaian sebelum validasi (untuk modal)
+     */
+    public function previewPenilaian(Request $request)
+    {
+        $request->validate([
+            'tugas_id' => 'required|uuid',
+            'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
+            'nilai_kualitas' => 'required|numeric|min:0|max:100',
+        ]);
+
+        try {
+            $modelClass = $request->jenis_tugas === 'tugas_harian'
+                ? TugasHarian::class
+                : TugasTambahan::class;
+
+            $tugas = $modelClass::findOrFail($request->tugas_id);
+
+            // Preview penilaian menggunakan helper
+            $preview = PenilaianHelper::previewPenilaian(
+                \Carbon\Carbon::parse($tugas->tanggal_selesai),
+                $request->nilai_kualitas,
+                now()
+            );
+
+            return response()->json([
+                'success' => true,
+                'preview' => $preview,
+                'tanggal_deadline' => $tugas->tanggal_selesai->format('d/m/Y'),
+                'tanggal_selesai' => now()->format('d/m/Y H:i'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal preview penilaian: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

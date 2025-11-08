@@ -5,8 +5,7 @@
         <h1>Upload Eviden Kinerja</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-harian.index') }}">Penugasan</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-harian.index') }}">Tugas Harian</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
                 <li class="breadcrumb-item active">Upload Eviden</li>
             </ol>
         </nav>
@@ -31,6 +30,109 @@
 
                     <!-- Card Body -->
                     <div class="card-body p-4">
+                        <!-- Alert untuk status revisi -->
+                        @if ($tugas->status === 'revisi')
+                            <div class="alert alert-warning border-0 mb-4">
+                                <div class="d-flex">
+                                    <i class="bi bi-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
+                                    <div class="flex-grow-1">
+                                        <h6 class="alert-heading mb-2">Perlu Revisi</h6>
+                                        <p class="mb-1"><strong>Catatan Revisi:</strong></p>
+                                        <p class="mb-0">{{ $tugas->catatan_validasi ?? 'Tidak ada catatan' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- File yang Sudah Diupload -->
+                        @if ($tugas->attachedFiles && $tugas->attachedFiles->count() > 0)
+                            <div class="card bg-light mb-4">
+                                <div class="card-header bg-transparent">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-paperclip text-primary me-2"></i>
+                                            File yang Sudah Diupload ({{ $tugas->attachedFiles->count() }})
+                                        </h6>
+                                        @if ($tugas->status === 'revisi')
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Pilih file yang perlu direvisi
+                                            </small>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th width="40">#</th>
+                                                    <th>Nama File</th>
+                                                    <th width="100">Ukuran</th>
+                                                    <th width="80">Versi</th>
+                                                    <th width="150">Tanggal Upload</th>
+                                                    <th width="150" class="text-center">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($tugas->attachedFiles as $index => $file)
+                                                    <tr id="file-row-{{ $file->id }}">
+                                                        <td>{{ $index + 1 }}</td>
+                                                        <td>
+                                                            <i
+                                                                class="bi bi-file-earmark-{{ $file->extension === 'pdf' ? 'pdf' : 'text' }} text-danger me-2"></i>
+                                                            {{ $file->original_name }}
+                                                            <span class="badge bg-secondary ms-2"
+                                                                id="status-badge-{{ $file->id }}">
+                                                                Current
+                                                            </span>
+                                                        </td>
+                                                        <td>{{ number_format($file->size / 1024, 2) }} KB</td>
+                                                        <td>
+                                                            <span class="badge bg-info">v{{ $file->version ?? 1 }}</span>
+                                                        </td>
+                                                        <td>{{ $file->created_at->format('d M Y H:i') }}</td>
+                                                        <td class="text-center">
+                                                            <div class="btn-group" role="group">
+                                                                <a href="{{ Storage::url($file->storage_path) }}"
+                                                                    class="btn btn-sm btn-outline-primary" target="_blank"
+                                                                    title="Lihat File">
+                                                                    <i class="bi bi-eye"></i>
+                                                                </a>
+                                                                @if ($tugas->status === 'revisi')
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-outline-warning"
+                                                                        onclick="pilihFilePengganti('{{ $file->id }}', {{ json_encode($file->original_name) }}, '{{ $file->folder_id }}')"
+                                                                        title="Pilih File Pengganti">
+                                                                        <i class="bi bi-arrow-repeat"></i> Ganti
+                                                                    </button>
+                                                                    <input type="file"
+                                                                        id="file-input-{{ $file->id }}"
+                                                                        class="d-none file-replacement-input"
+                                                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
+                                                                        data-file-id="{{ $file->id }}"
+                                                                        data-file-name="{{ $file->original_name }}"
+                                                                        data-folder-id="{{ $file->folder_id }}">
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    @if ($tugas->status === 'revisi')
+                                        <div class="alert alert-warning border-0 mt-3 mb-0 small">
+                                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                            <strong>Mode Revisi:</strong> Klik tombol <strong>"Ganti"</strong> <i
+                                                class="bi bi-arrow-repeat"></i> pada file yang ingin diperbarui dengan versi
+                                            baru, atau upload file tambahan di bagian bawah.
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+
                         <!-- Informasi Tugas -->
                         <div class="alert alert-info border-0 mb-4">
                             <div class="d-flex">
@@ -39,7 +141,8 @@
                                     <h6 class="alert-heading mb-2">Informasi Tugas</h6>
                                     <div class="row small">
                                         <div class="col-md-6 mb-2">
-                                            <strong>Deadline:</strong> {{ date('d F Y', strtotime($tugas->deadline)) }}
+                                            <strong>Tanggal Selesai:</strong>
+                                            {{ date('d F Y', strtotime($tugas->tanggal_selesai)) }}
                                         </div>
                                         <div class="col-md-6 mb-2">
                                             <strong>Target:</strong> {{ number_format($tugas->target_value, 0) }}
@@ -58,47 +161,72 @@
                             <input type="hidden" name="tugas_id" value="{{ $tugas->id }}">
                             <input type="hidden" name="jenis_tugas" value="tugas_harian">
 
-                            <!-- Drag and Drop Zone -->
+                            <!-- Drag and Drop Zone / Simple File Selection -->
                             <div class="mb-4" id="fileSelectionArea">
-                                <label class="form-label fw-semibold">
-                                    <i class="bi bi-file-earmark-plus text-primary me-2"></i>
-                                    Pilih Eviden Kinerja <span class="text-danger">*</span>
-                                </label>
-
-                                <!-- Drop Zone (Hidden when files exist) -->
-                                <div id="dropZone" class="drop-zone">
-                                    <input type="file" class="d-none" id="fileInput" name="files[]" multiple
-                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls">
-
-                                    <div class="drop-zone-content">
-                                        <i class="bi bi-cloud-arrow-up drop-zone-icon"></i>
-                                        <h5 class="drop-zone-title">Drag & Drop file di sini</h5>
-                                        <p class="drop-zone-text mb-3">atau</p>
+                                @if ($tugas->status === 'revisi' && $tugas->attachedFiles->count() > 0)
+                                    <!-- Simple button for revision mode -->
+                                    <label class="form-label fw-semibold">
+                                        <i class="bi bi-file-earmark-plus text-primary me-2"></i>
+                                        Tambah File Baru (Opsional)
+                                    </label>
+                                    <div class="text-center p-4 border-2 border-dashed rounded bg-light">
+                                        <input type="file" class="d-none" id="fileInput" name="files[]" multiple
+                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls">
+                                        <i class="bi bi-plus-circle text-primary mb-3" style="font-size: 3rem;"></i>
+                                        <p class="mb-3">Anda dapat menambahkan file baru selain mengganti file yang sudah
+                                            ada</p>
                                         <button type="button" class="btn btn-primary"
                                             onclick="document.getElementById('fileInput').click()">
-                                            <i class="bi bi-folder2-open me-2"></i>Pilih File
+                                            <i class="bi bi-folder2-open me-2"></i>Pilih File Baru
                                         </button>
-                                        <p class="drop-zone-info mt-3 mb-0">
+                                        <p class="text-muted small mt-3 mb-0">
                                             Format: PDF, DOC, DOCX, JPG, JPEG, PNG, XLSX, XLS
                                             <br>
-                                            <small class="text-muted">Maksimal 10MB per file</small>
+                                            Maksimal 10MB per file
                                         </p>
                                     </div>
+                                @else
+                                    <!-- Full drag & drop zone for first upload -->
+                                    <label class="form-label fw-semibold">
+                                        <i class="bi bi-file-earmark-plus text-primary me-2"></i>
+                                        Pilih Eviden Kinerja <span class="text-danger">*</span>
+                                    </label>
 
-                                    <!-- Drop Zone Active State -->
-                                    <div class="drop-zone-overlay">
-                                        <i class="bi bi-cloud-arrow-up-fill drop-zone-overlay-icon"></i>
-                                        <p class="drop-zone-overlay-text">Lepaskan file di sini</p>
+                                    <!-- Drop Zone (Hidden when files exist) -->
+                                    <div id="dropZone" class="drop-zone">
+                                        <input type="file" class="d-none" id="fileInput" name="files[]" multiple
+                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls">
+
+                                        <div class="drop-zone-content">
+                                            <i class="bi bi-cloud-arrow-up drop-zone-icon"></i>
+                                            <h5 class="drop-zone-title">Drag & Drop file di sini</h5>
+                                            <p class="drop-zone-text mb-3">atau</p>
+                                            <button type="button" class="btn btn-primary"
+                                                onclick="document.getElementById('fileInput').click()">
+                                                <i class="bi bi-folder2-open me-2"></i>Pilih File
+                                            </button>
+                                            <p class="drop-zone-info mt-3 mb-0">
+                                                Format: PDF, DOC, DOCX, JPG, JPEG, PNG, XLSX, XLS
+                                                <br>
+                                                <small class="text-muted">Maksimal 10MB per file</small>
+                                            </p>
+                                        </div>
+
+                                        <!-- Drop Zone Active State -->
+                                        <div class="drop-zone-overlay">
+                                            <i class="bi bi-cloud-arrow-up-fill drop-zone-overlay-icon"></i>
+                                            <p class="drop-zone-overlay-text">Lepaskan file di sini</p>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <!-- Simple Add More Button (Shown when files exist) -->
-                                <div id="addMoreButton" style="display: none;">
-                                    <button type="button" class="btn btn-outline-primary"
-                                        onclick="document.getElementById('fileInput').click()">
-                                        <i class="bi bi-plus-circle me-2"></i>Tambah File Lainnya
-                                    </button>
-                                </div>
+                                    <!-- Simple Add More Button (Shown when files exist) -->
+                                    <div id="addMoreButton" style="display: none;">
+                                        <button type="button" class="btn btn-outline-primary"
+                                            onclick="document.getElementById('fileInput').click()">
+                                            <i class="bi bi-plus-circle me-2"></i>Tambah File Lainnya
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
 
                             <!-- Tabel File yang Dipilih -->
@@ -146,7 +274,8 @@
                     <!-- Card Footer -->
                     <div class="card-footer bg-light py-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ route('penugasan.tugas-pokok.show', $tugas->id) }}" class="btn btn-outline-secondary">
+                            <a href="{{ route('penugasan.tugas-pokok.show', $tugas->pegawai_id) }}"
+                                class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i> Kembali
                             </a>
                             <div class="d-flex gap-2">
@@ -234,6 +363,21 @@
             justify-content: center;
             width: 48px;
             height: 48px;
+        }
+
+        /* Uploaded Files Table Styles */
+        .bg-light .card-header {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .table-sm th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
         }
 
         /* Drag and Drop Zone Styles */
@@ -478,6 +622,37 @@
         .folder-list::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* File Replacement Styles */
+        .btn-group .btn-sm {
+            font-size: 0.8125rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        #status-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .folder-select-item {
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .folder-select-item:hover {
+            background-color: #f8f9fa !important;
+        }
+
+        .folder-select-item.active {
+            background-color: #e7f1ff !important;
+            border-color: #0d6efd !important;
+        }
+
+        .list-group-item-action {
+            border: 1px solid #dee2e6;
+        }
     </style>
 @endpush
 
@@ -705,23 +880,290 @@
 
         // Function to update upload button state
         function updateUploadButton() {
-            // Check if all files have folderId (location selected)
-            const allHaveLocation = selectedFiles.every(fileObj => fileObj.folderId);
-            $('#btnUpload').prop('disabled', !allHaveLocation || selectedFiles.length === 0);
+            // Check if there are new files or file replacements
+            const hasNewFiles = selectedFiles.length > 0;
+            const hasReplacements = Object.keys(fileReplacements).length > 0;
+
+            // Check if all new files have folderId (location selected)
+            const allNewFilesHaveLocation = hasNewFiles ? selectedFiles.every(fileObj => fileObj.folderId) : true;
+
+            // Check if all replacements have folderId
+            const allReplacementsHaveLocation = hasReplacements ?
+                Object.values(fileReplacements).every(rep => rep.folderId) : true;
+
+            // Enable button if:
+            // 1. Has new files and all have location, OR
+            // 2. Has replacements and all have location
+            const canUpload = (hasNewFiles || hasReplacements) &&
+                allNewFilesHaveLocation &&
+                allReplacementsHaveLocation;
+
+            $('#btnUpload').prop('disabled', !canUpload);
+
+            console.log('Upload button state:', {
+                hasNewFiles,
+                hasReplacements,
+                allNewFilesHaveLocation,
+                allReplacementsHaveLocation,
+                canUpload
+            });
+        }
+
+        // ============================================
+        // FILE REPLACEMENT FUNCTIONS (FOR REVISION MODE)
+        // ============================================
+        let fileReplacements = {}; // Object to store file replacements: {oldFileId: {file: File, folderId: string}}
+
+        // Function to trigger file selection for replacement
+        function pilihFilePengganti(fileId, fileName, oldFolderId) {
+            console.log('Selecting replacement for file:', fileId, fileName, 'Old folder:', oldFolderId);
+
+            // Store old folder ID for later use
+            const fileInput = document.getElementById(`file-input-${fileId}`);
+            fileInput.setAttribute('data-old-folder-id', oldFolderId);
+
+            // Langsung buka file input tanpa konfirmasi
+            fileInput.click();
+        }
+
+        // Handle file input change for replacement files
+        $(document).on('change', '.file-replacement-input', function() {
+            const fileInput = this;
+            const fileId = $(this).data('file-id');
+            const oldFileName = $(this).data('file-name');
+            const oldFolderId = $(this).data('old-folder-id') || $(this).attr('data-old-folder-id');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            console.log('File selected for replacement:', file.name, 'for file ID:', fileId, 'Old folder:',
+                oldFolderId);
+
+            // Validate file
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ];
+
+            if (file.size > maxSize) {
+                Swal.fire('Peringatan', 'Ukuran file tidak boleh lebih dari 10MB', 'warning');
+                fileInput.value = '';
+                return;
+            }
+
+            if (!allowedTypes.includes(file.type)) {
+                Swal.fire('Peringatan', 'Format file tidak didukung', 'warning');
+                fileInput.value = '';
+                return;
+            }
+
+            // Store the replacement temporarily
+            fileReplacements[fileId] = {
+                file: file,
+                oldFileName: oldFileName,
+                oldFolderId: oldFolderId,
+                folderId: null // Will be set when user selects folder
+            };
+
+            // Update UI to show replacement is ready
+            $(`#status-badge-${fileId}`).removeClass('bg-secondary').addClass('bg-warning').text('Akan Diganti');
+
+            // Show folder location choice
+            showFolderLocationChoice(fileId, file.name, oldFolderId);
+        });
+
+        // Show choice: use same folder or select new folder
+        function showFolderLocationChoice(fileId, fileName, oldFolderId) {
+            Swal.fire({
+                title: 'Pilih Lokasi Penyimpanan',
+                html: `
+                    <p class="mb-3">File baru: <strong>${fileName}</strong></p>
+                    <p class="text-muted small mb-3">Pilih lokasi penyimpanan untuk file pengganti:</p>
+                `,
+                icon: 'question',
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-folder-check me-1"></i> Lokasi yang Sama',
+                denyButtonText: '<i class="bi bi-folder2-open me-1"></i> Pilih Lokasi Baru',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#0d6efd',
+                denyButtonColor: '#6c757d',
+                cancelButtonColor: '#dc3545',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Use same folder as old file
+                    fileReplacements[fileId].folderId = oldFolderId;
+                    $(`#status-badge-${fileId}`).removeClass('bg-warning').addClass('bg-success').text(
+                        'Siap Upload');
+                    console.log('Using same folder:', oldFolderId);
+
+                    // Update upload button state
+                    updateUploadButton();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Lokasi Dipilih',
+                        text: 'File akan disimpan di lokasi yang sama dengan file lama',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else if (result.isDenied) {
+                    // Select new folder
+                    selectFolderForReplacement(fileId, fileName);
+                } else {
+                    // Cancelled - remove replacement
+                    delete fileReplacements[fileId];
+                    $(`#status-badge-${fileId}`).removeClass('bg-warning bg-success').addClass('bg-secondary').text(
+                        'Current');
+                    $(`#file-input-${fileId}`).val('');
+
+                    // Update upload button state
+                    updateUploadButton();
+                }
+            });
+        }
+
+        // Select folder for replacement file
+        function selectFolderForReplacement(fileId, fileName) {
+            // Show folder selection modal for this replacement
+            currentReplacementFileId = fileId;
+
+            Swal.fire({
+                title: 'Pilih Lokasi Penyimpanan',
+                html: `<p class="mb-3">Pilih folder untuk menyimpan file pengganti: <strong>${fileName}</strong></p>
+                       <div id="folder-selector-replacement" class="text-start">
+                           <div class="spinner-border text-primary" role="status">
+                               <span class="visually-hidden">Loading...</span>
+                           </div>
+                       </div>`,
+                showCancelButton: true,
+                confirmButtonText: 'Konfirmasi',
+                cancelButtonText: 'Batal',
+                didOpen: () => {
+                    loadFoldersForReplacement();
+                },
+                preConfirm: () => {
+                    if (!fileReplacements[fileId].folderId) {
+                        Swal.showValidationMessage('Pilih folder terlebih dahulu');
+                        return false;
+                    }
+                    return true;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    console.log('Folder selected for replacement file:', fileReplacements[fileId].folderId);
+                    // Replacement is ready - show success badge
+                    $(`#status-badge-${fileId}`).removeClass('bg-warning').addClass('bg-success').text(
+                        'Siap Upload');
+
+                    // Update upload button state
+                    updateUploadButton();
+                } else {
+                    // Cancelled - remove replacement
+                    delete fileReplacements[fileId];
+                    $(`#status-badge-${fileId}`).removeClass('bg-warning bg-success').addClass('bg-secondary').text(
+                        'Current');
+                    $(`#file-input-${fileId}`).val('');
+
+                    // Update upload button state
+                    updateUploadButton();
+                }
+            });
+        }
+
+        let currentReplacementFileId = null;
+
+        // Load folders for replacement file selection
+        function loadFoldersForReplacement() {
+            $.ajax({
+                url: '{{ route('terminaldata.foldersData.index') }}',
+                type: 'GET',
+                success: function(response) {
+                    let folders = [];
+                    if (Array.isArray(response)) {
+                        folders = response;
+                    } else if (response.data) {
+                        folders = response.data;
+                    }
+
+                    renderFoldersForReplacement(folders);
+                },
+                error: function() {
+                    $('#folder-selector-replacement').html('<p class="text-danger">Gagal memuat folder</p>');
+                }
+            });
+        }
+
+        // Render folders for replacement selection
+        function renderFoldersForReplacement(folders) {
+            let html = '<div class="list-group" style="max-height: 300px; overflow-y: auto;">';
+
+            if (folders.length === 0) {
+                html += '<p class="text-muted text-center py-3">Tidak ada folder tersedia</p>';
+            } else {
+                folders.forEach(folder => {
+                    const folderName = folder.nama || folder.name || 'Unnamed';
+                    html += `
+                        <a href="javascript:void(0)" 
+                           class="list-group-item list-group-item-action folder-select-item"
+                           onclick="selectReplacementFolder('${folder.id}', '${folderName.replace(/'/g, "\\'")}')">
+                            <i class="bi bi-folder-fill text-warning me-2"></i>${folderName}
+                        </a>
+                    `;
+                });
+            }
+
+            html += '</div>';
+            $('#folder-selector-replacement').html(html);
+        }
+
+        // Select folder for replacement file
+        function selectReplacementFolder(folderId, folderName) {
+            if (currentReplacementFileId && fileReplacements[currentReplacementFileId]) {
+                fileReplacements[currentReplacementFileId].folderId = folderId;
+
+                // Update UI to show selected folder
+                $('.folder-select-item').removeClass('active');
+                event.target.closest('.folder-select-item').classList.add('active');
+
+                console.log('Folder selected:', folderId, folderName);
+            }
         }
 
         // Function to upload files
         function uploadFiles() {
-            // Validate
-            if (selectedFiles.length === 0) {
-                Swal.fire('Peringatan', 'Belum ada file yang dipilih', 'warning');
+            // Check if there are new files or file replacements
+            const hasNewFiles = selectedFiles.length > 0;
+            const hasReplacements = Object.keys(fileReplacements).length > 0;
+
+            if (!hasNewFiles && !hasReplacements) {
+                Swal.fire('Peringatan', 'Belum ada file yang dipilih atau diganti', 'warning');
                 return;
             }
 
-            const allHaveLocation = selectedFiles.every(fileObj => fileObj.folderId);
-            if (!allHaveLocation) {
-                Swal.fire('Peringatan', 'Semua file harus memiliki folder tujuan', 'warning');
-                return;
+            // Validate new files
+            if (hasNewFiles) {
+                const allHaveLocation = selectedFiles.every(fileObj => fileObj.folderId);
+                if (!allHaveLocation) {
+                    Swal.fire('Peringatan', 'Semua file harus memiliki folder tujuan', 'warning');
+                    return;
+                }
+            }
+
+            // Validate replacement files
+            if (hasReplacements) {
+                const allReplacementsHaveFolder = Object.values(fileReplacements).every(rep => rep.folderId);
+                if (!allReplacementsHaveFolder) {
+                    Swal.fire('Peringatan', 'Semua file pengganti harus memiliki folder tujuan', 'warning');
+                    return;
+                }
             }
 
             // Prepare FormData
@@ -731,13 +1173,23 @@
             formData.append('jenis_tugas', 'tugas_harian');
             formData.append('keterangan', $('#keterangan').val());
 
-            // Add files and folder IDs
+            // Add new files and folder IDs
             selectedFiles.forEach((fileObj, index) => {
                 formData.append(`files[${index}]`, fileObj.file);
                 formData.append(`folder_ids[${index}]`, fileObj.folderId);
             });
 
+            // Add file replacements
+            let replacementIndex = 0;
+            for (const [oldFileId, replacement] of Object.entries(fileReplacements)) {
+                formData.append(`replacements[${replacementIndex}][old_file_id]`, oldFileId);
+                formData.append(`replacements[${replacementIndex}][file]`, replacement.file);
+                formData.append(`replacements[${replacementIndex}][folder_id]`, replacement.folderId);
+                replacementIndex++;
+            }
+
             // Show upload progress
+            const totalFiles = selectedFiles.length + Object.keys(fileReplacements).length;
             Swal.fire({
                 title: 'Mengupload File...',
                 html: `
@@ -745,7 +1197,8 @@
                         <div class="spinner-border text-primary mb-3" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mb-0">Sedang mengupload ${selectedFiles.length} file</p>
+                        <p class="mb-0">Sedang mengupload ${totalFiles} file</p>
+                        ${hasReplacements ? `<small class="text-warning">${Object.keys(fileReplacements).length} file akan diganti</small><br>` : ''}
                         <small class="text-muted">Mohon tunggu...</small>
                     </div>
                 `,
@@ -774,15 +1227,24 @@
                 success: function(response) {
                     uploadedFiles = response.files || [];
 
+                    let successMessage = `${totalFiles} file berhasil diupload`;
+                    if (hasReplacements) {
+                        successMessage +=
+                            ` (${Object.keys(fileReplacements).length} file diganti dengan versi baru)`;
+                    }
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Upload Berhasil!',
                         html: `
-                            <p class="mb-2">${selectedFiles.length} file berhasil diupload</p>
+                            <p class="mb-2">${successMessage}</p>
                             <small class="text-muted">Sekarang Anda dapat meminta validasi dari atasan</small>
                         `,
                         timer: 3000,
                         showConfirmButton: false
+                    }).then(() => {
+                        // Reload page to show updated file list
+                        window.location.reload();
                     });
 
                     // Enable validasi button
@@ -863,7 +1325,7 @@
                                 showConfirmButton: false
                             }).then(() => {
                                 window.location.href =
-                                    '{{ route('penugasan.tugas-harian.index') }}';
+                                    '{{ route('penugasan.tugas-pokok.index') }}';
                             });
                         },
                         error: function(xhr) {

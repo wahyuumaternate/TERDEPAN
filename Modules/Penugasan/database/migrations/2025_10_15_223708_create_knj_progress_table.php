@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knj_progress', function (Blueprint $table) {
-            $table->uuid()->primary();
+            $table->uuid('id')->primary();
 
             $table->string('tipe_progress')->comment('TugasPokok, TugasHarian, TugasTambahan');
             $table->foreignUuid('tipe_progress_id');
@@ -20,7 +20,7 @@ return new class extends Migration
             // Who and When
             $table->foreignId('pegawai_id')->constrained('master_pegawai');
             $table->date('tanggal')->comment('Tanggal progress');
-            
+
             // Progress Details
             $table->decimal('progress_persen', 5, 2)
                 ->comment('Cumulative progress 0-100%');

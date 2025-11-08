@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knj_nilai_bulanan', function (Blueprint $table) {
-            $table->uuid()->primary();
-            
+            $table->uuid('id')->primary();
+
             // Period & Employee
             $table->foreignId('pegawai_id')->constrained('master_pegawai');
             $table->year('tahun');
             $table->tinyInteger('bulan')->comment('1-12');
-            
+
             // Scores (calculated from tasks)
             $table->decimal('nilai_tugas_pokok', 5, 2)->default(0)
                 ->comment('60-70% weight');
@@ -26,11 +26,11 @@ return new class extends Migration
                 ->comment('20-30% weight');
             $table->decimal('nilai_tugas_tambahan', 5, 2)->default(0)
                 ->comment('Bonus max 20%');
-            
+
             // Adjustments
             $table->decimal('total_penalty', 5, 2)->default(0);
             $table->decimal('total_bonus', 5, 2)->default(0);
-            
+
             // Final Score
             $table->decimal('nilai_total', 5, 2)->default(0)
                 ->comment('Final score 0-120 (with bonus)');
@@ -41,7 +41,7 @@ return new class extends Migration
                 'Kurang',         // 60-70
                 'Sangat_Kurang'   // < 60
             ])->nullable();
-            
+
             // Approval
             $table->boolean('is_approved')->default(false);
             $table->boolean('is_finalized')->default(false)
@@ -50,13 +50,13 @@ return new class extends Migration
             $table->text('catatan_atasan')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('finalized_at')->nullable();
-            
+
             // Calculation Metadata (for audit trail)
             $table->json('breakdown')->nullable()
                 ->comment('Detail perhitungan nilai');
-            
+
             $table->timestamps();
-            
+
             // Constraints
             $table->unique(['pegawai_id', 'tahun', 'bulan'], 'unique_monthly_score');
             $table->index('kategori_nilai');

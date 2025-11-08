@@ -32,7 +32,7 @@ class TugasHarian extends Model
         'nama_tugas',
         'deskripsi',
         'tanggal_mulai',
-        'deadline',
+        'tanggal_selesai',
         'target_value',
         'satuan',
         'status',
@@ -48,7 +48,7 @@ class TugasHarian extends Model
     protected $casts = [
         'is_mandiri' => 'boolean',
         'tanggal_mulai' => 'date',
-        'deadline' => 'date',
+        'tanggal_selesai' => 'date',
         'validated_at' => 'datetime',
         'target_penilaian' => 'decimal:2',
         'nilai_akhir' => 'decimal:2',

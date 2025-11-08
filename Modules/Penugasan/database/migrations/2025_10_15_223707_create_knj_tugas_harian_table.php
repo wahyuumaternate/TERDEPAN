@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knj_tugas_harian', function (Blueprint $table) {
-            $table->uuid()->primary()->comment('Primary key UUID');
+            $table->uuid('id')->primary()->comment('Primary key UUID');
 
             // Relasi
             $table->foreignUuid('tugas_pokok_id')->constrained('knj_tugas_pokok')

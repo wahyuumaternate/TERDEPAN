@@ -77,7 +77,7 @@ class TugasTambahanController extends Controller
                 'deskripsi' => 'nullable|string',
                 'alasan_penugasan' => 'nullable|string',
                 'tanggal_mulai' => 'required|date',
-                'deadline' => 'required|date|after_or_equal:tanggal_mulai',
+                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
                 'target_penilaian' => 'nullable|numeric|min:0|max:100',
             ]);
 
