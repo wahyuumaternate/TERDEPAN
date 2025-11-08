@@ -61,10 +61,11 @@ class TugasHarianController extends Controller
     {
         try {
             $tugasHarian = \Modules\Penugasan\Models\TugasHarian::with([
-                'tugasPokok.bidang',
+                'tugasPokok',
                 'pegawai.bidang',
                 'pegawai.jabatan',
                 'pemberiTugas',
+                'validator',
                 'attachedFiles',
                 'historyRevisi.direvisiOleh',
                 'historyRevisi.attachedFiles'
@@ -85,8 +86,8 @@ class TugasHarianController extends Controller
             $tugasHarianList = \Modules\Penugasan\Models\TugasHarian::with([
                 'tugasPokok',
                 'pemberiTugas',
-                'attachedFiles',
-                'validasiOleh'
+                'validator',
+                'attachedFiles'
             ])->where('pegawai_id', $pegawai->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -268,18 +269,22 @@ class TugasHarianController extends Controller
     public function updateProgress(Request $request, $id)
     {
         $validated = $request->validate([
-            'persentase_progress' => 'required|numeric|min:0|max:100',
-            'keterangan' => 'nullable|string',
+            'progress_persen' => 'required|numeric|min:0|max:100',
+            'deskripsi_kegiatan' => 'required|string',
+            'kendala' => 'nullable|string',
         ]);
 
         $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
 
-        // Create progress record
-        $tugasHarian->progress()->create([
-            'tanggal_update' => now(),
-            'persentase_progress' => $validated['persentase_progress'],
-            'keterangan' => $validated['keterangan'],
-            'updated_by' => \Illuminate\Support\Facades\Auth::id(),
+        // Create progress record dengan polymorphic
+        \Modules\Penugasan\Models\Progress::create([
+            'tipe_progress' => \Modules\Penugasan\Models\TugasHarian::class,
+            'tipe_progress_id' => $tugasHarian->id,
+            'pegawai_id' => $tugasHarian->pegawai_id,
+            'tanggal' => now(),
+            'progress_persen' => $validated['progress_persen'],
+            'deskripsi_kegiatan' => $validated['deskripsi_kegiatan'],
+            'kendala' => $validated['kendala'] ?? null,
         ]);
 
         return response()->json([
@@ -296,11 +301,12 @@ class TugasHarianController extends Controller
         try {
             $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
 
-            // Get history revisi jika model ada
+            // Get history revisi dengan polymorphic relation
             $history = [];
             if (class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
                 $history = \Modules\Penugasan\Models\HistoriRevisi::with(['direvisiOleh', 'attachedFiles'])
-                    ->where('tugas_harian_id', $id)
+                    ->where('tipe_revisi', \Modules\Penugasan\Models\TugasHarian::class)
+                    ->where('tipe_revisi_id', $id)
                     ->orderBy('revisi_ke', 'desc')
                     ->get()
                     ->map(function ($item) {
@@ -309,6 +315,8 @@ class TugasHarianController extends Controller
                             'revisi_ke' => $item->revisi_ke,
                             'tanggal_revisi' => $item->tanggal_revisi,
                             'catatan_revisi' => $item->catatan_revisi,
+                            'deadline_revisi' => $item->deadline_revisi,
+                            'status' => $item->status,
                             'direvisi_oleh' => $item->direvisiOleh ? [
                                 'id' => $item->direvisiOleh->id,
                                 'nama' => $item->direvisiOleh->nama

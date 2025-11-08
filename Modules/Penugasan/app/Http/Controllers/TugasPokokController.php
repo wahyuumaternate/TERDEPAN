@@ -18,7 +18,7 @@ class TugasPokokController extends Controller
      */
     public function index(Request $request)
     {
-        // Default filter tahun sekarang berdasarkan periode_mulai
+        // Default filter tahun sekarang berdasarkan tanggal_mulai
         $tahun = $request->get('tahun', date('Y'));
 
         // Query untuk mendapatkan daftar pegawai dengan statistik tugas pokok
@@ -30,31 +30,27 @@ class TugasPokokController extends Controller
             ->withCount([
                 // Count tugas pokok
                 'tugasPokok as tugas_pokok_count' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun]);
+                    $q->whereYear('tanggal_mulai', $tahun);
                 },
                 // Count tugas harian
                 'tugasHarian as tugas_harian_count' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM tanggal_mulai) = ?', [$tahun]);
+                    $q->whereYear('tanggal_mulai', $tahun);
                 },
                 // Count tugas tambahan
                 'tugasTambahan as tugas_tambahan_count' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM tanggal_mulai) = ?', [$tahun]);
+                    $q->whereYear('tanggal_mulai', $tahun);
                 },
-                // Keep these for backward compatibility
+                // Status tugas pokok: pending, dikerjakan, selesai
                 'tugasPokok as pending_tugas' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                    $q->whereYear('tanggal_mulai', $tahun)
                         ->where('status', 'pending');
                 },
-                'tugasPokok as diterima_tugas' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
-                        ->where('status', 'diterima');
-                },
                 'tugasPokok as dikerjakan_tugas' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                    $q->whereYear('tanggal_mulai', $tahun)
                         ->where('status', 'dikerjakan');
                 },
                 'tugasPokok as selesai_tugas' => function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                    $q->whereYear('tanggal_mulai', $tahun)
                         ->where('status', 'selesai');
                 }
             ]);
@@ -104,7 +100,7 @@ class TugasPokokController extends Controller
         });
 
         // Get filter options
-        $tahuns = TugasPokok::selectRaw('EXTRACT(YEAR FROM periode_mulai) as tahun')
+        $tahuns = TugasPokok::selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
             ->distinct()
             ->orderBy('tahun', 'desc')
             ->pluck('tahun')
@@ -123,14 +119,14 @@ class TugasPokokController extends Controller
             'total_pegawai' => MasterPegawai::where('status_aktif', 'Aktif')->count(),
             'pegawai_dengan_tugas' => MasterPegawai::where('status_aktif', 'Aktif')
                 ->whereHas('tugasPokok', function ($q) use ($tahun) {
-                    $q->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun]);
+                    $q->whereYear('tanggal_mulai', $tahun);
                 })->count(),
-            'total_tugas' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])->count(),
-            'pending' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+            'total_tugas' => TugasPokok::whereYear('tanggal_mulai', $tahun)->count(),
+            'pending' => TugasPokok::whereYear('tanggal_mulai', $tahun)
                 ->where('status', 'pending')->count(),
-            'dikerjakan' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+            'dikerjakan' => TugasPokok::whereYear('tanggal_mulai', $tahun)
                 ->where('status', 'dikerjakan')->count(),
-            'selesai' => TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+            'selesai' => TugasPokok::whereYear('tanggal_mulai', $tahun)
                 ->where('status', 'selesai')->count(),
         ];
 
@@ -161,7 +157,7 @@ class TugasPokokController extends Controller
                 'attachedFiles',
                 'progress'
             ])
-            ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun]);
+            ->whereYear('tanggal_mulai', $tahun);
 
         // Filter by status
         if ($request->filled('status')) {
@@ -177,7 +173,7 @@ class TugasPokokController extends Controller
         }
 
         // Sort
-        $sortBy = $request->get('sort_by', 'periode_mulai');
+        $sortBy = $request->get('sort_by', 'tanggal_mulai');
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 
@@ -185,7 +181,7 @@ class TugasPokokController extends Controller
 
         // Get tahun options untuk pegawai ini
         $tahuns = TugasPokok::where('pegawai_id', $id)
-            ->selectRaw('EXTRACT(YEAR FROM periode_mulai) as tahun')
+            ->selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
             ->distinct()
             ->orderBy('tahun', 'desc')
             ->pluck('tahun')
@@ -209,18 +205,18 @@ class TugasPokokController extends Controller
         // Statistics untuk pegawai ini
         $stats = [
             'total' => TugasPokok::where('pegawai_id', $id)
-                ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])->count(),
+                ->whereYear('tanggal_mulai', $tahun)->count(),
             'pending' => TugasPokok::where('pegawai_id', $id)
-                ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                ->whereYear('tanggal_mulai', $tahun)
                 ->where('status', 'pending')->count(),
             'dikerjakan' => TugasPokok::where('pegawai_id', $id)
-                ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                ->whereYear('tanggal_mulai', $tahun)
                 ->where('status', 'dikerjakan')->count(),
             'selesai' => TugasPokok::where('pegawai_id', $id)
-                ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                ->whereYear('tanggal_mulai', $tahun)
                 ->where('status', 'selesai')->count(),
             'total_bobot' => TugasPokok::where('pegawai_id', $id)
-                ->whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+                ->whereYear('tanggal_mulai', $tahun)
                 ->sum('bobot_persen'),
         ];
 
@@ -275,8 +271,8 @@ class TugasPokokController extends Controller
                     'nama_tugas' => $r->indikator_nama ?? 'Tugas indikator ' . $r->indikator_id,
                     'deskripsi' => $r->indikator_deskripsi ?? '',
                     'bobot_persen' => 60, // Default bobot, bisa disesuaikan
-                    'periode_mulai' => $periode_mulai,
-                    'periode_selesai' => $periode_selesai,
+                    'tanggal_mulai' => $periode_mulai,
+                    'tanggal_selesai' => $periode_selesai,
                     'target_value' => $r->indikator_target ?? 0,
                     'satuan' => $r->indikator_satuan ?? '-',
                 ]);
@@ -308,7 +304,7 @@ class TugasPokokController extends Controller
     private function getAverageProgress($tahun)
     {
         try {
-            $tugasWithProgress = TugasPokok::whereRaw('EXTRACT(YEAR FROM periode_mulai) = ?', [$tahun])
+            $tugasWithProgress = TugasPokok::whereYear('tanggal_mulai', $tahun)
                 ->whereHas('progress')
                 ->with(['progress' => function ($query) {
                     $query->latest();
@@ -320,7 +316,7 @@ class TugasPokokController extends Controller
             }
 
             $totalProgress = $tugasWithProgress->sum(function ($tugas) {
-                return $tugas->progress->first()->persentase_progress ?? 0;
+                return $tugas->progress->first()->progress_persen ?? 0;
             });
 
             return round($totalProgress / $tugasWithProgress->count(), 2);

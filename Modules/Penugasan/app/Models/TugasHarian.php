@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
+
 // use Modules\Penugasan\Database\Factories\TugasHarianFactory;
 
 class TugasHarian extends Model
@@ -16,6 +16,8 @@ class TugasHarian extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'knj_tugas_harian';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -58,6 +60,17 @@ class TugasHarian extends Model
         'is_mandiri' => false,
         'status' => 'pending',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     // Status constants (sesuai migration - Bahasa Indonesia)
     public const STATUS_PENDING = 'pending';

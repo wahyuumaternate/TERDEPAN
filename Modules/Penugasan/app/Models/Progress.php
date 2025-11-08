@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
+
 // use Modules\Penugasan\Database\Factories\ProgressFactory;
 
 class Progress extends Model
@@ -14,6 +16,8 @@ class Progress extends Model
     use HasFactory;
 
     protected $table = 'knj_progress';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -32,6 +36,17 @@ class Progress extends Model
         'tanggal' => 'date',
         'progress_persen' => 'decimal:2',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     // Relationships
     

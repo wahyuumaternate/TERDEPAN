@@ -38,7 +38,7 @@ return new class extends Migration
             $table->decimal('progress_persen', 5, 2)->default(0)->comment('Progress 0-100%, auto-calculated dari tugas harian');
 
             // Nilai
-            $table->decimal('nilai_akhir', 5, 2)->comment('auto-calculated rate-rata dari tugas harian');
+            $table->decimal('nilai_akhir', 5, 2)->nullable()->comment('auto-calculated rata-rata dari tugas harian');
 
             // Acceptance
             $table->timestamp('diterima_at')->nullable()->comment('Waktu pegawai terima');

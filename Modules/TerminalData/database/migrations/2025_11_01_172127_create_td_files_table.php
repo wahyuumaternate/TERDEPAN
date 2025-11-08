@@ -41,9 +41,9 @@ return new class extends Migration
             $table->boolean('is_latest_version')->default(true);
             $table->text('version_notes')->nullable();
 
-            // Relations (Polymorphic)
+            // Relations (Polymorphic) - Support both UUID and BigInt
             $table->string('attachable_type')->nullable()->index();
-            $table->unsignedBigInteger('attachable_id')->nullable()->index();
+            $table->string('attachable_id')->nullable()->index()->comment('Support UUID and BigInt');
 
             // Permissions & Status
             $table->boolean('is_public')->default(false);

@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
+
 // use Modules\Penugasan\Database\Factories\TugasTambahanFactory;
 
 class TugasTambahan extends Model
@@ -16,6 +16,8 @@ class TugasTambahan extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'knj_tugas_tambahan';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -27,7 +29,7 @@ class TugasTambahan extends Model
         'deskripsi',
         'alasan_penugasan',
         'tanggal_mulai',
-        'deadline',
+        'tanggal_selesai',
         'status',
         'validator_id',
         'hasil_validasi',
@@ -40,7 +42,7 @@ class TugasTambahan extends Model
 
     protected $casts = [
         'tanggal_mulai' => 'date',
-        'deadline' => 'date',
+        'tanggal_selesai' => 'date',
         'validated_at' => 'datetime',
         'target_penilaian' => 'decimal:2',
         'nilai_akhir' => 'decimal:2',
@@ -50,6 +52,17 @@ class TugasTambahan extends Model
     protected $attributes = [
         'status' => 'pending',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     // Status constants (sesuai migration - Bahasa Indonesia)
     public const STATUS_PENDING = 'pending';

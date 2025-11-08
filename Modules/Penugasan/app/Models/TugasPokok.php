@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Modules\PerjanjianKinerja\Models\PkIndikator;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
+use Illuminate\Support\Str;
 
 // use Modules\Penugasan\Database\Factories\TugasPokokFactory;
 
@@ -19,6 +19,8 @@ class TugasPokok extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'knj_tugas_pokok';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -41,19 +43,30 @@ class TugasPokok extends Model
     ];
 
     protected $casts = [
-        'periode_mulai' => 'date',
-        'periode_selesai' => 'date',
+        'tanggal_mulai' => 'date',
+        'tanggal_selesai' => 'date',
         'diterima_at' => 'datetime',
         'bobot_persen' => 'decimal:2',
         'progress_persen' => 'decimal:2',
         'target_value' => 'decimal:2',
-        'deleted_at' => 'datetime',
+        'nilai_akhir' => 'decimal:2',
     ];
 
     protected $attributes = [
         'status' => 'pending',
         'progress_persen' => 0,
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     // Status constants (sama dengan migrasi)
     public const STATUS_PENDING = 'pending';
@@ -94,9 +107,9 @@ class TugasPokok extends Model
         return $this->hasMany(TugasHarian::class, 'tugas_pokok_id');
     }
 
-    public function progress(): HasMany
+    public function progress(): MorphMany
     {
-        return $this->hasMany(Progress::class, 'tugas_pokok_id');
+        return $this->morphMany(Progress::class, 'progressable', 'tipe_progress', 'tipe_progress_id');
     }
 
     // Scopes

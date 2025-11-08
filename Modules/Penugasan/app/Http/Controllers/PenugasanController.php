@@ -71,9 +71,9 @@ class PenugasanController extends Controller
                     'tugas_pokok_id' => $validated['tugas_pokok_id'],
                     'pegawai_id' => $validated['pegawai_id'],
                     'pemberi_tugas_id' => $pemberiTugasId,
+                    'is_mandiri' => false, // Tugas dari atasan
                     'nama_tugas' => $validated['nama_tugas'],
                     'deskripsi' => $validated['deskripsi'] ?? null,
-                    'periode_type' => 'Harian',
                     'tanggal_mulai' => $validated['tanggal_mulai'],
                     'deadline' => $validated['deadline'],
                     'target_penilaian' => $validated['target_penilaian'] ?? null,
@@ -185,10 +185,10 @@ class PenugasanController extends Controller
             // Update status tugas
             $tugas->update(['status' => 'validasi']);
 
-            // Buat record progress
+            // Buat record progress dengan polymorphic relation
             \Modules\Penugasan\Models\Progress::create([
-                'tugas_harian_id' => $validated['jenis_tugas'] === 'tugas_harian' ? $tugas->id : null,
-                'tugas_tambahan_id' => $validated['jenis_tugas'] === 'tugas_tambahan' ? $tugas->id : null,
+                'tipe_progress' => $modelClass,
+                'tipe_progress_id' => $tugas->id,
                 'pegawai_id' => $tugas->pegawai_id,
                 'tanggal' => now(),
                 'progress_persen' => 100.00,
@@ -197,7 +197,7 @@ class PenugasanController extends Controller
 
             // Simpan history revisi jika ini revisi
             if ($isRevision) {
-                $this->saveRevisionHistory($tugas, $validated);
+                $this->saveRevisionHistory($tugas, $validated, $modelClass);
             }
 
             DB::commit();
@@ -254,11 +254,11 @@ class PenugasanController extends Controller
                 // VALIDASI DITERIMA - Status jadi selesai
                 $tugas->update([
                     'status' => 'selesai',
-                    'validasi_oleh' => Auth::id(),
-                    'tanggal_validasi' => now(),
-                    'penilaian' => $validated['penilaian'],
+                    'validator_id' => Auth::id(),
+                    'validated_at' => now(),
+                    'hasil_validasi' => 'diterima',
+                    'penilaian_kualitas' => $validated['penilaian'], // Score 1-5 atau bisa mapping dari 0-100
                     'nilai_akhir' => $validated['penilaian'],
-                    'tanggal_penilaian' => now(),
                     'catatan_validasi' => $validated['catatan_validasi'] ?? 'Tugas diterima dan selesai',
                 ]);
 
@@ -272,13 +272,18 @@ class PenugasanController extends Controller
                 // VALIDASI REVISI - Status jadi revisi
                 $tugas->update([
                     'status' => 'revisi',
-                    'validasi_oleh' => Auth::id(),
-                    'tanggal_validasi' => now(),
+                    'validator_id' => Auth::id(),
+                    'validated_at' => now(),
+                    'hasil_validasi' => 'revisi',
                     'catatan_validasi' => $validated['catatan_revisi'] ?? 'Perlu revisi',
                 ]);
 
-                // Simpan history revisi
-                $this->saveRevisionHistory($tugas, $validated);
+                // Simpan history revisi dengan model class
+                $jenisTugas = $validated['jenis_tugas'] === 'tugas_harian' 
+                    ? TugasHarian::class 
+                    : TugasTambahan::class;
+                
+                $this->saveRevisionHistory($tugas, $validated, $jenisTugas);
 
                 $message = 'Tugas dikembalikan untuk revisi';
             }
@@ -310,13 +315,14 @@ class PenugasanController extends Controller
             $progressValue = $validated['progress_value'];
         }
 
-        // Update atau create progress tugas pokok
+        // Update atau create progress tugas pokok dengan polymorphic
         \Modules\Penugasan\Models\Progress::create([
-            'tugas_pokok_id' => $tugasPokok->id,
+            'tipe_progress' => \Modules\Penugasan\Models\TugasPokok::class,
+            'tipe_progress_id' => $tugasPokok->id,
             'pegawai_id' => $tugasHarian->pegawai_id,
             'tanggal' => now(),
             'progress_persen' => 100.00,
-            'deskripsi_kegiatan' => "Penyelesaian tugas harian: {$tugasHarian->nama_tugas} (Nilai: {$tugasHarian->penilaian})",
+            'deskripsi_kegiatan' => "Penyelesaian tugas harian: {$tugasHarian->nama_tugas} (Nilai: {$tugasHarian->nilai_akhir})",
         ]);
 
         // Update total progress tugas pokok
@@ -343,18 +349,21 @@ class PenugasanController extends Controller
     }
 
     /**
-     * Simpan history revisi
+     * Simpan history revisi dengan polymorphic relation
      */
-    private function saveRevisionHistory($tugas, $validated)
+    private function saveRevisionHistory($tugas, $validated, $modelClass)
     {
         if (class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
             \Modules\Penugasan\Models\HistoriRevisi::create([
-                'tugas_harian_id' => $validated['jenis_tugas'] === 'tugas_harian' ? $tugas->id : null,
-                'tugas_tambahan_id' => $validated['jenis_tugas'] === 'tugas_tambahan' ? $tugas->id : null,
-                'revisi_ke' => $this->getNextRevisionNumber($tugas, $validated['jenis_tugas']),
+                'tipe_revisi' => $modelClass,
+                'tipe_revisi_id' => $tugas->id,
+                'revisi_ke' => $this->getNextRevisionNumber($tugas, $modelClass),
                 'tanggal_revisi' => now(),
                 'catatan_revisi' => $validated['catatan_revisi'] ?? $validated['catatan_validasi'] ?? 'Revisi',
+                'deadline_revisi' => now()->addDays(3), // Default 3 hari untuk revisi
                 'direvisi_oleh' => Auth::id(),
+                'pegawai_id' => $tugas->pegawai_id,
+                'status' => 'pending',
             ]);
         }
     }
@@ -362,15 +371,14 @@ class PenugasanController extends Controller
     /**
      * Get next revision number
      */
-    private function getNextRevisionNumber($tugas, $jenisTugas)
+    private function getNextRevisionNumber($tugas, $modelClass)
     {
         if (!class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
             return 1;
         }
 
-        $field = $jenisTugas === 'tugas_harian' ? 'tugas_harian_id' : 'tugas_tambahan_id';
-
-        $lastRevision = \Modules\Penugasan\Models\HistoriRevisi::where($field, $tugas->id)
+        $lastRevision = \Modules\Penugasan\Models\HistoriRevisi::where('tipe_revisi', $modelClass)
+            ->where('tipe_revisi_id', $tugas->id)
             ->max('revisi_ke');
 
         return ($lastRevision ?? 0) + 1;
@@ -389,8 +397,8 @@ class PenugasanController extends Controller
             'total_pegawai' => \App\Models\MasterPegawai::where('status_aktif', 'Aktif')->count(),
             'tugas_harian_total' => TugasHarian::whereYear('tanggal_mulai', $tahun)->count(),
             'tugas_tambahan_total' => TugasTambahan::whereYear('tanggal_mulai', $tahun)->count(),
-            'menunggu_validasi' => TugasHarian::where('status_validasi', 'menunggu')->count() +
-                TugasTambahan::where('status_validasi', 'menunggu')->count(),
+            'menunggu_validasi' => TugasHarian::where('status', 'validasi')->count() +
+                TugasTambahan::where('status', 'validasi')->count(),
         ];
 
         // Penilaian bulanan pegawai
@@ -398,17 +406,17 @@ class PenugasanController extends Controller
             ->where('status_aktif', 'Aktif')
             ->get()
             ->map(function ($pegawai) use ($tahun, $bulan) {
-                $tugasHarian = $pegawai->tugasHarian()
+                $tugasHarian = TugasHarian::where('pegawai_id', $pegawai->id)
                     ->whereYear('tanggal_mulai', $tahun)
                     ->whereMonth('tanggal_mulai', $bulan)
-                    ->whereNotNull('penilaian')
-                    ->avg('penilaian');
+                    ->whereNotNull('nilai_akhir')
+                    ->avg('nilai_akhir');
 
-                $tugasTambahan = $pegawai->tugasTambahan()
+                $tugasTambahan = TugasTambahan::where('pegawai_id', $pegawai->id)
                     ->whereYear('tanggal_mulai', $tahun)
                     ->whereMonth('tanggal_mulai', $bulan)
-                    ->whereNotNull('penilaian')
-                    ->avg('penilaian');
+                    ->whereNotNull('nilai_akhir')
+                    ->avg('nilai_akhir');
 
                 return [
                     'pegawai' => $pegawai,

@@ -14,7 +14,7 @@ class TugasTambahanController extends Controller
      */
     public function index(Request $request)
     {
-        $query = TugasTambahan::with(['pegawai', 'pemberiTugas', 'attachedFiles'])
+        $query = TugasTambahan::with(['pegawai', 'pemberiTugas', 'validator', 'attachedFiles'])
             ->orderBy('tanggal_mulai', 'desc');
 
         // Filter berdasarkan status
@@ -22,9 +22,9 @@ class TugasTambahanController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Filter berdasarkan status validasi
-        if ($request->filled('status_validasi')) {
-            $query->where('status_validasi', $request->status_validasi);
+        // Filter berdasarkan hasil validasi
+        if ($request->filled('hasil_validasi')) {
+            $query->where('hasil_validasi', $request->hasil_validasi);
         }
 
         // Search
@@ -46,7 +46,7 @@ class TugasTambahanController extends Controller
     public function edit($id)
     {
         try {
-            $tugasTambahan = TugasTambahan::with(['pegawai', 'pemberiTugas', 'attachedFiles'])
+            $tugasTambahan = TugasTambahan::with(['pegawai', 'pemberiTugas', 'validator', 'attachedFiles'])
                 ->findOrFail($id);
 
             // Return JSON response for AJAX request
@@ -75,13 +75,10 @@ class TugasTambahanController extends Controller
             $validated = $request->validate([
                 'nama_tugas' => 'required|string|max:500',
                 'deskripsi' => 'nullable|string',
+                'alasan_penugasan' => 'nullable|string',
                 'tanggal_mulai' => 'required|date',
                 'deadline' => 'required|date|after_or_equal:tanggal_mulai',
                 'target_penilaian' => 'nullable|numeric|min:0|max:100',
-                'target_value' => 'required|numeric|min:0',
-                'satuan' => 'required|string|max:100',
-                'prioritas' => 'required|in:Rendah,Normal,Tinggi,Urgent',
-                'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled',
             ]);
 
             $tugasTambahan = TugasTambahan::findOrFail($id);
@@ -142,7 +139,7 @@ class TugasTambahanController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:Assigned,In_Progress,Completed,Overdue,Cancelled'
+            'status' => 'required|in:pending,dikerjakan,validasi,revisi,selesai'
         ]);
 
         $tugasTambahan = TugasTambahan::findOrFail($id);
@@ -160,18 +157,22 @@ class TugasTambahanController extends Controller
     public function updateProgress(Request $request, $id)
     {
         $validated = $request->validate([
-            'persentase_progress' => 'required|numeric|min:0|max:100',
-            'keterangan' => 'nullable|string',
+            'progress_persen' => 'required|numeric|min:0|max:100',
+            'deskripsi_kegiatan' => 'required|string',
+            'kendala' => 'nullable|string',
         ]);
 
         $tugasTambahan = TugasTambahan::findOrFail($id);
 
-        // Create progress record
-        $tugasTambahan->progress()->create([
-            'tanggal_update' => now(),
-            'persentase_progress' => $validated['persentase_progress'],
-            'keterangan' => $validated['keterangan'],
-            'updated_by' => Auth::id(),
+        // Create progress record dengan polymorphic
+        \Modules\Penugasan\Models\Progress::create([
+            'tipe_progress' => TugasTambahan::class,
+            'tipe_progress_id' => $tugasTambahan->id,
+            'pegawai_id' => $tugasTambahan->pegawai_id,
+            'tanggal' => now(),
+            'progress_persen' => $validated['progress_persen'],
+            'deskripsi_kegiatan' => $validated['deskripsi_kegiatan'],
+            'kendala' => $validated['kendala'] ?? null,
         ]);
 
         return response()->json([

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 use App\Models\MasterPegawai;
 
 class HistoriRevisi extends Model
@@ -14,6 +15,8 @@ class HistoriRevisi extends Model
     use HasFactory;
 
     protected $table = 'knj_histori_revisi';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'tipe_revisi',
@@ -38,6 +41,17 @@ class HistoriRevisi extends Model
         'is_terlambat' => 'boolean',
         'penalty_nilai' => 'decimal:2',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     // Status constants
     public const STATUS_PENDING = 'pending';
