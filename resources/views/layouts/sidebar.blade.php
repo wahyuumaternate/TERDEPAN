@@ -205,19 +205,4 @@
 
      </ul>
 
-     <div class="sidebar-storage mt-auto p-3">
-         <div class="text-center mb-3">
-             <i class="bi bi-folder2-open text-primary" style="font-size: 3rem;"></i>
-         </div>
-         <h6 class="text-center mb-2">{{ $percentage }}% In-use</h6>
-         <div class="progress mb-2" style="height: 8px;">
-             <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentage }}%"
-                 aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
-         </div>
-         <div class="d-flex justify-content-between">
-             <small class="text-muted">{{ $used }}</small>
-             <small class="text-muted">{{ $total }}</small>
-         </div>
-     </div>
-
  </aside><!-- End Sidebar-->

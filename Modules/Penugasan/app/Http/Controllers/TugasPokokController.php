@@ -202,25 +202,58 @@ class TugasPokokController extends Controller
 
         $tugasHarian = $tugasHarianQuery->paginate($request->get('per_page_harian', 10), ['*'], 'page_harian');
 
-        // Statistics untuk pegawai ini
-        $stats = [
-            'total' => TugasPokok::where('pegawai_id', $id)
-                ->whereYear('tanggal_mulai', $tahun)->count(),
-            'pending' => TugasPokok::where('pegawai_id', $id)
-                ->whereYear('tanggal_mulai', $tahun)
-                ->where('status', 'pending')->count(),
-            'dikerjakan' => TugasPokok::where('pegawai_id', $id)
-                ->whereYear('tanggal_mulai', $tahun)
-                ->where('status', 'dikerjakan')->count(),
-            'selesai' => TugasPokok::where('pegawai_id', $id)
-                ->whereYear('tanggal_mulai', $tahun)
-                ->where('status', 'selesai')->count(),
-            'total_bobot' => TugasPokok::where('pegawai_id', $id)
-                ->whereYear('tanggal_mulai', $tahun)
-                ->sum('bobot_persen'),
-        ];
+        // Get tugas tambahan list for this pegawai
+        $tugasTambahanList = \Modules\Penugasan\Models\TugasTambahan::with([
+            'pemberiTugas',
+            'validator',
+            'attachedFiles'
+        ])->where('pegawai_id', $pegawai->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        return view('penugasan::penugasan.detail', compact('pegawai', 'tugasPokok', 'tugasHarian', 'tahuns', 'tahun', 'stats'));
+        // Statistics untuk pegawai ini
+        // Total Tugas Pokok
+        $totalTugasPokok = TugasPokok::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->count();
+
+        // Total Tugas Harian
+        $totalTugasHarian = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->count();
+
+        // Tugas Harian Selesai
+        $tugasSelesai = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->where('status', 'selesai')
+            ->count();
+
+        // Tugas Harian Berjalan (dikerjakan + revisi)
+        $tugasBerjalan = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->whereIn('status', ['dikerjakan', 'revisi'])
+            ->count();
+
+        // Tugas Tambahan Stats
+        $totalTugasTambahan = $tugasTambahanList->count();
+        $tugasTambahanSelesai = $tugasTambahanList->where('status', 'selesai')->count();
+        $tugasTambahanProgress = $tugasTambahanList->whereIn('status', ['dikerjakan', 'revisi', 'validasi'])->count();
+
+        return view('penugasan::penugasan.detail', compact(
+            'pegawai',
+            'tugasPokok',
+            'tugasHarian',
+            'tahuns',
+            'tahun',
+            'tugasTambahanList',
+            'totalTugasPokok',
+            'totalTugasHarian',
+            'tugasSelesai',
+            'tugasBerjalan',
+            'totalTugasTambahan',
+            'tugasTambahanSelesai',
+            'tugasTambahanProgress'
+        ));
     }
 
     public function sinkronData()

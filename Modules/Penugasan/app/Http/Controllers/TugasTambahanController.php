@@ -41,6 +41,25 @@ class TugasTambahanController extends Controller
     }
 
     /**
+     * Show upload eviden page
+     */
+    public function uploadEviden($id)
+    {
+        try {
+            $tugas = TugasTambahan::with([
+                'pegawai',
+                'attachedFiles'
+            ])->findOrFail($id);
+
+            $jenisTugas = 'tugas_tambahan';
+
+            return view('penugasan::penugasan.upload-eviden', compact('tugas', 'jenisTugas'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Tugas tidak ditemukan');
+        }
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit($id)
@@ -75,10 +94,10 @@ class TugasTambahanController extends Controller
             $validated = $request->validate([
                 'nama_tugas' => 'required|string|max:500',
                 'deskripsi' => 'nullable|string',
-                'alasan_penugasan' => 'nullable|string',
                 'tanggal_mulai' => 'required|date',
-                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-                'target_penilaian' => 'nullable|numeric|min:0|max:100',
+                'deadline' => 'required|date|after_or_equal:tanggal_mulai',
+                'target_value' => 'required|numeric|min:1',
+                'satuan' => 'required|string|max:50',
             ]);
 
             $tugasTambahan = TugasTambahan::findOrFail($id);

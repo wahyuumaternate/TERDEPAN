@@ -2,114 +2,84 @@
 
 @section('main')
     <div class="pagetitle">
-        <h1>Tugas Pokok - {{ $pegawai->nama }}</h1>
+        <h1>Daftar Tugas</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
-                <li class="breadcrumb-item">Penugasan</li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Tugas Pokok</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">E-Kinerja</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
                 <li class="breadcrumb-item active">{{ $pegawai->nama }}</li>
             </ol>
         </nav>
     </div>
 
     <section class="section">
-        <!-- Pegawai Info -->
-        <div class="row mb-4">
+        <!-- Tombol Kembali -->
+        <div class="mb-3">
+            <a href="{{ route('penugasan.tugas-pokok.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Kembali
+            </a>
+        </div>
+
+        <!-- Pegawai Info with Stats -->
+        <div class="row">
             <div class="col-lg-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-body pt-3">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar-circle-xl me-3">
-                                {{ strtoupper(substr($pegawai->nama, 0, 2)) }}
-                            </div>
-                            <div class="flex-grow-1">
-                                <h4 class="mb-1 fw-bold">{{ $pegawai->nama }}</h4>
-                                <p class="text-muted mb-1">NIP: {{ $pegawai->nomor_identitas ?? '-' }}</p>
-                                <div class="d-flex gap-2">
-                                    <span class="badge bg-primary">{{ $pegawai->jabatan->nama ?? '-' }}</span>
-                                    <span class="badge bg-info">{{ $pegawai->bidang->nama ?? '-' }}</span>
+                        <div class="row align-items-center">
+                            <!-- Info Pegawai (Kiri) -->
+                            <div class="col-lg-6 col-md-12 mb-3 mb-lg-0">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle-xl me-3">
+                                        {{ strtoupper(substr($pegawai->nama, 0, 2)) }}
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-1 fw-bold">{{ $pegawai->nama }}</h4>
+                                        <p class="text-muted mb-1 small">NIP: {{ $pegawai->nomor_identitas ?? '-' }}</p>
+                                        <div class="d-flex gap-2">
+                                            <span class="badge bg-primary">{{ $pegawai->jabatan->nama ?? '-' }}</span>
+                                            <span class="badge bg-info">{{ $pegawai->bidang->nama ?? '-' }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <a href="{{ route('penugasan.tugas-pokok.index') }}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-arrow-left me-1"></i> Kembali
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Dashboard Stats -->
-        <div class="row mb-4">
-            <div class="col-lg-3 col-md-6">
-                <div class="card info-card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Tugas Pokok <span>| {{ $tahun }}</span></h5>
-                        <div class="d-flex align-items-center">
-                            <div
-                                class="card-icon rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10">
-                                <i class="bi bi-file-earmark-text text-primary"></i>
-                            </div>
-                            <div class="ps-3">
-                                <h6 class="mb-0 fw-bold">{{ $stats['total'] }}</h6>
-                                <span class="text-muted small pt-1">tugas</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                            <!-- Stats (Kanan) -->
+                            <div class="col-lg-6 col-md-12">
+                                <div class="row g-3">
+                                    <!-- Tugas Pokok -->
+                                    <div class="col-4">
+                                        <div class="border-start border-primary border-3 ps-3 text-start">
+                                            <div class="text-primary fw-bold h3 mb-0">{{ $totalTugasPokok }}</div>
+                                            <div class="text-muted small">Tugas Pokok</div>
+                                        </div>
+                                    </div>
 
-            <div class="col-lg-3 col-md-6">
-                <div class="card info-card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Pending <span>| {{ $tahun }}</span></h5>
-                        <div class="d-flex align-items-center">
-                            <div
-                                class="card-icon rounded-circle d-flex align-items-center justify-content-center bg-secondary bg-opacity-10">
-                                <i class="bi bi-clock text-secondary"></i>
-                            </div>
-                            <div class="ps-3">
-                                <h6 class="mb-0 fw-bold">{{ $stats['pending'] }}</h6>
-                                <span class="text-muted small pt-1">tugas</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                                    <!-- Tugas Harian -->
+                                    <div class="col-4">
+                                        <div class="border-start border-success border-3 ps-3 text-start">
+                                            <div class="text-success fw-bold h3 mb-0">{{ $totalTugasHarian }}</div>
+                                            <div class="text-muted small">Tugas Harian</div>
+                                            <div class="small mt-1">
+                                                <span class="text-success fw-semibold">✓{{ $tugasSelesai }}</span>
+                                                <span class="text-muted mx-1">|</span>
+                                                <span class="text-warning fw-semibold">⟳{{ $tugasBerjalan }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
 
-            <div class="col-lg-3 col-md-6">
-                <div class="card info-card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Dikerjakan <span>| {{ $tahun }}</span></h5>
-                        <div class="d-flex align-items-center">
-                            <div
-                                class="card-icon rounded-circle d-flex align-items-center justify-content-center bg-warning bg-opacity-10">
-                                <i class="bi bi-gear text-warning"></i>
-                            </div>
-                            <div class="ps-3">
-                                <h6 class="mb-0 fw-bold">{{ $stats['dikerjakan'] }}</h6>
-                                <span class="text-muted small pt-1">tugas</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6">
-                <div class="card info-card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Selesai <span>| {{ $tahun }}</span></h5>
-                        <div class="d-flex align-items-center">
-                            <div
-                                class="card-icon rounded-circle d-flex align-items-center justify-content-center bg-success bg-opacity-10">
-                                <i class="bi bi-check-circle text-success"></i>
-                            </div>
-                            <div class="ps-3">
-                                <h6 class="mb-0 fw-bold">{{ $stats['selesai'] }}</h6>
-                                <span class="text-muted small pt-1">tugas</span>
+                                    <!-- Tugas Tambahan -->
+                                    <div class="col-4">
+                                        <div class="border-start border-info border-3 ps-3 text-start">
+                                            <div class="text-info fw-bold h3 mb-0">{{ $totalTugasTambahan }}</div>
+                                            <div class="text-muted small">Tugas Tambahan</div>
+                                            <div class="small mt-1">
+                                                <span class="text-success fw-semibold">✓{{ $tugasTambahanSelesai }}</span>
+                                                <span class="text-muted mx-1">|</span>
+                                                <span class="text-warning fw-semibold">⟳{{ $tugasTambahanProgress }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -123,6 +93,7 @@
                     <div class="card-body p-4">
                         <!-- Header with Tabs -->
                         <div class="mb-4">
+                            <!-- Header dengan Action Buttons -->
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div>
                                     <h5 class="card-title mb-1 d-flex align-items-center">
@@ -135,42 +106,41 @@
                                         </div>
                                     </h5>
                                 </div>
-                            </div>
-
-                            <!-- Tab Navigation with Action Buttons -->
-                            <div class="d-flex justify-content-between align-items-center">
-                                <ul class="nav nav-tabs nav-tabs-bordered flex-grow-1" id="tugasTab" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="tugas-pokok-tab" data-bs-toggle="tab"
-                                            data-bs-target="#tugas-pokok-content" type="button" role="tab"
-                                            aria-controls="tugas-pokok-content" aria-selected="true">
-                                            <i class="bi bi-file-earmark-text me-2"></i>Tugas Pokok
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="tugas-harian-tab" data-bs-toggle="tab"
-                                            data-bs-target="#tugas-harian-content" type="button" role="tab"
-                                            aria-controls="tugas-harian-content" aria-selected="false">
-                                            <i class="bi bi-calendar-day me-2"></i>Tugas Harian
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="tugas-tambahan-tab" data-bs-toggle="tab"
-                                            data-bs-target="#tugas-tambahan-content" type="button" role="tab"
-                                            aria-controls="tugas-tambahan-content" aria-selected="false">
-                                            <i class="bi bi-plus-circle me-2"></i>Tugas Tambahan
-                                        </button>
-                                    </li>
-                                </ul>
-                                <div class="d-flex gap-2 ms-3 mb-2">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-primary" onclick="showBuatTugasModal()"
+                                        id="btnBuatTugas">
+                                        <i class="bi bi-plus-lg me-1"></i> Buat Tugas
+                                    </button>
                                     <button type="button" class="btn btn-success" onclick="showBerikanTugasModal()">
                                         <i class="bi bi-send me-1"></i> Berikan Tugas
                                     </button>
-                                    <button type="button" class="btn btn-primary" onclick="showBuatTugasModal()">
-                                        <i class="bi bi-plus-lg me-1"></i> Buat Tugas
-                                    </button>
                                 </div>
                             </div>
+
+                            <!-- Tab Navigation Full Width -->
+                            <ul class="nav nav-tabs nav-tabs-bordered nav-justified" id="tugasTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tugas-pokok-tab" data-bs-toggle="tab"
+                                        data-bs-target="#tugas-pokok-content" type="button" role="tab"
+                                        aria-controls="tugas-pokok-content" aria-selected="true">
+                                        <i class="bi bi-file-earmark-text me-2"></i>Tugas Pokok
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tugas-harian-tab" data-bs-toggle="tab"
+                                        data-bs-target="#tugas-harian-content" type="button" role="tab"
+                                        aria-controls="tugas-harian-content" aria-selected="false">
+                                        <i class="bi bi-calendar-day me-2"></i>Tugas Harian
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tugas-tambahan-tab" data-bs-toggle="tab"
+                                        data-bs-target="#tugas-tambahan-content" type="button" role="tab"
+                                        aria-controls="tugas-tambahan-content" aria-selected="false">
+                                        <i class="bi bi-plus-circle me-2"></i>Tugas Tambahan
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
 
                         <!-- Tab Content -->
@@ -783,10 +753,290 @@
                             <!-- Tugas Tambahan Tab -->
                             <div class="tab-pane fade" id="tugas-tambahan-content" role="tabpanel"
                                 aria-labelledby="tugas-tambahan-tab">
-                                <div class="text-center py-5">
-                                    <i class="bi bi-plus-circle" style="font-size: 4rem; color: #ccc;"></i>
-                                    <h5 class="text-muted mt-3">Tugas Tambahan</h5>
-                                    <p class="text-muted">Fitur tugas tambahan akan segera hadir</p>
+
+                                <!-- View Toggle for Tugas Tambahan -->
+                                <div class="mb-4">
+                                    <div class="btn-group shadow-sm" role="group">
+                                        <input type="radio" class="btn-check" name="viewModeTambahan"
+                                            id="viewTableTambahan" checked>
+                                        <label class="btn btn-outline-primary px-4" for="viewTableTambahan">
+                                            <i class="bi bi-table me-2"></i>Tampilan Tabel
+                                        </label>
+                                        <input type="radio" class="btn-check" name="viewModeTambahan"
+                                            id="viewGridTambahan">
+                                        <label class="btn btn-outline-primary px-4" for="viewGridTambahan">
+                                            <i class="bi bi-grid-3x3-gap me-2"></i>Tampilan Kartu
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Table View -->
+                                <div id="tableViewTambahan" class="mb-3">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-striped" id="tugasTambahanTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-center" width="50">#</th>
+                                                    <th width="250">Nama Tugas</th>
+                                                    <th width="180">Periode</th>
+                                                    <th class="text-center" width="120">Target</th>
+                                                    <th class="text-center" width="120">Status</th>
+                                                    <th class="text-center" width="100">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse($tugasTambahanList as $index => $tugas)
+                                                    <tr class="tugas-row" data-tugas-id="{{ $tugas->id }}">
+                                                        <td class="text-center align-middle">
+                                                            {{ $index + 1 }}
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            <div>
+                                                                <span class="fw-semibold">{{ $tugas->nama_tugas }}</span>
+                                                                @if ($tugas->deskripsi)
+                                                                    <br>
+                                                                    <small
+                                                                        class="text-muted">{{ Str::limit($tugas->deskripsi, 60) }}</small>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            <small>
+                                                                <i class="bi bi-calendar-range text-info me-1"></i>
+                                                                {{ date('d/m/Y', strtotime($tugas->tanggal_mulai)) }}<br>
+                                                                <i class="bi bi-calendar-check text-success me-1"></i>
+                                                                {{ date('d/m/Y', strtotime($tugas->deadline)) }}
+                                                            </small>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <small>
+                                                                <strong>{{ number_format($tugas->target_value, 0) }}</strong><br>
+                                                                {{ $tugas->satuan }}
+                                                            </small>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            @php
+                                                                $statusClass = [
+                                                                    'pending' => 'bg-secondary',
+                                                                    'dikerjakan' => 'bg-warning',
+                                                                    'validasi' => 'bg-info',
+                                                                    'revisi' => 'bg-danger',
+                                                                    'selesai' => 'bg-success',
+                                                                ];
+                                                            @endphp
+                                                            <span
+                                                                class="badge {{ $statusClass[$tugas->status] ?? 'bg-secondary' }}">
+                                                                {{ ucfirst($tugas->status) }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <div class="dropdown">
+                                                                <button
+                                                                    class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                                    type="button" data-bs-toggle="dropdown"
+                                                                    aria-expanded="false">
+                                                                    <i class="bi bi-gear"></i>
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                                    <!-- Validasi -->
+                                                                    <li>
+                                                                        <a href="javascript:void(0)"
+                                                                            onclick="validasiTugas('{{ $tugas->id }}', 'tugas_tambahan')"
+                                                                            class="dropdown-item {{ $tugas->status === 'selesai' ? 'disabled' : '' }}">
+                                                                            <i
+                                                                                class="bi bi-check-circle text-success me-2"></i>
+                                                                            Validasi
+                                                                        </a>
+                                                                    </li>
+
+                                                                    <!-- Kerjakan (jika status pending) atau Upload Bukti (jika status dikerjakan/revisi) -->
+                                                                    @if ($tugas->status === 'pending')
+                                                                        <li>
+                                                                            <a href="javascript:void(0)"
+                                                                                onclick="kerjakanTugas('{{ $tugas->id }}', 'tugas_tambahan')"
+                                                                                class="dropdown-item">
+                                                                                <i
+                                                                                    class="bi bi-play-circle text-info me-2"></i>
+                                                                                Kerjakan
+                                                                            </a>
+                                                                        </li>
+                                                                    @elseif($tugas->status === 'dikerjakan')
+                                                                        <li>
+                                                                            <a href="{{ route('penugasan.tugas-tambahan.upload-eviden', $tugas->id) }}"
+                                                                                class="dropdown-item">
+                                                                                <i
+                                                                                    class="bi bi-cloud-upload text-primary me-2"></i>
+                                                                                Upload Bukti
+                                                                            </a>
+                                                                        </li>
+                                                                    @elseif($tugas->status === 'revisi')
+                                                                        <li>
+                                                                            <a href="{{ route('penugasan.tugas-tambahan.upload-eviden', $tugas->id) }}"
+                                                                                class="dropdown-item">
+                                                                                <i
+                                                                                    class="bi bi-arrow-repeat text-warning me-2"></i>
+                                                                                Upload Ulang Bukti
+                                                                            </a>
+                                                                        </li>
+                                                                    @endif
+
+                                                                    <li>
+                                                                        <hr class="dropdown-divider">
+                                                                    </li>
+
+                                                                    <!-- Edit -->
+                                                                    <li>
+                                                                        <a href="javascript:void(0)"
+                                                                            onclick="editTugasTambahan('{{ $tugas->id }}')"
+                                                                            class="dropdown-item">
+                                                                            <i
+                                                                                class="bi bi-pencil-square text-warning me-2"></i>
+                                                                            Edit
+                                                                        </a>
+                                                                    </li>
+
+                                                                    <!-- Hapus -->
+                                                                    <li>
+                                                                        <a href="javascript:void(0)"
+                                                                            onclick="deleteTugasTambahan('{{ $tugas->id }}', '{{ $tugas->nama_tugas }}')"
+                                                                            class="dropdown-item">
+                                                                            <i class="bi bi-trash text-danger me-2"></i>
+                                                                            Hapus
+                                                                        </a>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="6" class="text-center py-5">
+                                                            <i class="bi bi-inbox"
+                                                                style="font-size: 3rem; color: #ccc;"></i>
+                                                            <p class="text-muted mt-2">Belum ada tugas tambahan</p>
+                                                        </td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Grid View -->
+                                <div id="gridViewTambahan" style="display: none;">
+                                    <div class="row">
+                                        @forelse($tugasTambahanList as $tugas)
+                                            @php
+                                                $statusClassTambahan = [
+                                                    'pending' => 'bg-secondary',
+                                                    'dikerjakan' => 'bg-warning',
+                                                    'validasi' => 'bg-info',
+                                                    'revisi' => 'bg-danger',
+                                                    'selesai' => 'bg-success',
+                                                ];
+                                            @endphp
+                                            <div class="col-md-6 col-lg-4 mb-4">
+                                                <div class="card tugas-card h-100 shadow-sm">
+                                                    <div class="card-header bg-transparent">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <h6 class="card-title mb-0 text-primary fw-bold">
+                                                                {{ Str::limit($tugas->nama_tugas, 40) }}
+                                                            </h6>
+                                                            <span
+                                                                class="badge {{ $statusClassTambahan[$tugas->status] ?? 'bg-secondary' }}">
+                                                                {{ ucfirst($tugas->status) }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <!-- Catatan Revisi Alert -->
+                                                        @if ($tugas->status === 'revisi')
+                                                            <div class="alert alert-warning alert-dismissible fade show mb-3"
+                                                                role="alert">
+                                                                <h6 class="alert-heading mb-2">
+                                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                                    Perlu Revisi
+                                                                </h6>
+                                                                <p class="mb-1 small"><strong>Catatan:</strong>
+                                                                    {{ $tugas->catatan_validasi ?? 'Tidak ada catatan' }}
+                                                                </p>
+                                                                @if ($tugas->validator)
+                                                                    <small class="text-muted">
+                                                                        <i class="bi bi-person me-1"></i>
+                                                                        {{ $tugas->validator->nama ?? 'Unknown' }}
+                                                                    </small>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+
+                                                        <p class="card-text small d-flex align-items-center mb-2">
+                                                            <i class="bi bi-calendar-range text-info me-2"></i>
+                                                            <span>
+                                                                <strong>Mulai:</strong>
+                                                                {{ date('d M Y', strtotime($tugas->tanggal_mulai)) }}
+                                                            </span>
+                                                        </p>
+
+                                                        <p class="card-text small d-flex align-items-center mb-2">
+                                                            <i class="bi bi-calendar-x text-danger me-2"></i>
+                                                            <span>
+                                                                <strong>Deadline:</strong>
+                                                                {{ date('d M Y', strtotime($tugas->deadline)) }}
+                                                            </span>
+                                                        </p>
+
+                                                        <p class="card-text small d-flex align-items-center mb-2">
+                                                            <i class="bi bi-bullseye text-success me-2"></i>
+                                                            <span><strong>Target:</strong>
+                                                                {{ number_format($tugas->target_value, 0) }}
+                                                                {{ $tugas->satuan }}</span>
+                                                        </p>
+
+                                                        @if ($tugas->deskripsi)
+                                                            <p class="card-text small text-muted mt-3">
+                                                                {{ Str::limit($tugas->deskripsi, 100) }}
+                                                            </p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="card-footer bg-transparent">
+                                                        <div class="btn-group btn-group-sm w-100">
+                                                            @if ($tugas->status === 'pending')
+                                                                <button
+                                                                    onclick="kerjakanTugas('{{ $tugas->id }}', 'tugas_tambahan')"
+                                                                    class="btn btn-info" title="Kerjakan">
+                                                                    <i class="bi bi-play-circle me-1"></i> Kerjakan
+                                                                </button>
+                                                            @elseif($tugas->status === 'dikerjakan')
+                                                                <a href="{{ route('penugasan.tugas-tambahan.upload-eviden', $tugas->id) }}"
+                                                                    class="btn btn-primary" title="Upload Bukti">
+                                                                    <i class="bi bi-cloud-upload me-1"></i> Upload Bukti
+                                                                </a>
+                                                            @elseif($tugas->status === 'revisi')
+                                                                <a href="{{ route('penugasan.tugas-tambahan.upload-eviden', $tugas->id) }}"
+                                                                    class="btn btn-warning" title="Upload Ulang">
+                                                                    <i class="bi bi-arrow-repeat me-1"></i> Upload Ulang
+                                                                </a>
+                                                            @endif
+                                                            <button onclick="editTugasTambahan('{{ $tugas->id }}')"
+                                                                class="btn btn-outline-warning" title="Edit">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </button>
+                                                            <button
+                                                                onclick="deleteTugasTambahan('{{ $tugas->id }}', '{{ $tugas->nama_tugas }}')"
+                                                                class="btn btn-outline-danger" title="Hapus">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="col-12 text-center py-5">
+                                                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                                                <p class="text-muted mt-2">Belum ada tugas tambahan</p>
+                                            </div>
+                                        @endforelse
+                                    </div>
                                 </div>
                             </div>
                             <!-- End Tugas Tambahan Tab -->
@@ -1139,139 +1389,7 @@
 @endsection
 
 @push('styles')
-    <style>
-        /* Tab Styles */
-        .nav-tabs-bordered {
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        .nav-tabs-bordered .nav-link {
-            border: none;
-            color: #6c757d;
-            font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .nav-tabs-bordered .nav-link:hover {
-            color: #0d6efd;
-            border-bottom-color: #0d6efd;
-            background-color: rgba(13, 110, 253, 0.05);
-        }
-
-        .nav-tabs-bordered .nav-link.active {
-            color: #0d6efd;
-            border-bottom-color: #0d6efd;
-            background-color: rgba(13, 110, 253, 0.05);
-        }
-
-        /* Card Styles */
-        .tugas-card {
-            position: relative;
-            overflow: hidden;
-            border-radius: 12px !important;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(0, 0, 0, 0.08) !important;
-        }
-
-        .tugas-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        /* Table Styles */
-        #tugasTable thead th {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        #tugasTable tbody tr:hover {
-            background-color: rgba(0, 123, 255, 0.03);
-        }
-
-        /* Fix dropdown menu overflow */
-        .table-responsive {
-            overflow: visible !important;
-        }
-
-        .table-responsive table {
-            overflow: visible !important;
-        }
-
-        /* Ensure dropdown shows properly */
-        .dropdown-menu {
-            position: absolute !important;
-            z-index: 1050;
-        }
-
-        /* Avatar Styles */
-        .avatar-circle-xl {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 28px;
-        }
-
-        /* Card Icon */
-        .card-icon {
-            width: 50px;
-            height: 50px;
-            font-size: 1.5rem;
-        }
-
-        /* Progress Bar */
-        .progress {
-            background-color: #e9ecef;
-        }
-
-        .progress-bar {
-            background-color: #0d6efd;
-        }
-
-        /* Icon Box */
-        .icon-box {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-        }
-
-        /* Dashboard cards */
-        .info-card {
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .info-card .card-body {
-            padding: 1.25rem;
-        }
-
-        .info-card h6 {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        /* Responsive buttons */
-        @media (max-width: 768px) {
-            .d-flex.gap-2.ms-3.mb-2 {
-                margin-left: 0 !important;
-                margin-top: 0.5rem;
-                width: 100%;
-            }
-
-            .d-flex.gap-2.ms-3.mb-2 button {
-                flex: 1;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('assets/css/detail-tugas.css') }}">
 @endpush
 
 @push('scripts')
@@ -1371,7 +1489,7 @@
             $('#formBerikanTugas')[0].reset();
             $('#tugasHarianFields').hide();
             $('#tugas_pokok_id').prop('required', false);
-            $('#satuan_berikan').prop('readonly', true); // Selalu readonly, diisi dari tugas pokok
+            $('#satuan_berikan').prop('readonly', true); // Default readonly
             $('#satuan_berikan').val('');
 
             $('#modalBerikanTugas').modal('show');
@@ -1389,13 +1507,17 @@
             if (jenisTugas === 'tugas_harian') {
                 $('#tugasHarianFields').show();
                 $('#tugas_pokok_id').prop('required', true);
+                $('#satuan_berikan').prop('readonly', true);
+                $('#satuan_berikan').val('');
             } else if (jenisTugas === 'tugas_tambahan') {
                 $('#tugasHarianFields').hide();
                 $('#tugas_pokok_id').prop('required', false);
+                $('#satuan_berikan').prop('readonly', false); // Manual input untuk tugas tambahan
                 $('#satuan_berikan').val('');
             } else {
                 $('#tugasHarianFields').hide();
                 $('#tugas_pokok_id').prop('required', false);
+                $('#satuan_berikan').prop('readonly', true);
                 $('#satuan_berikan').val('');
             }
         });
@@ -1510,7 +1632,7 @@
                     $('#modalBerikanTugas').modal('hide');
                     $('#formBerikanTugas')[0].reset();
                     $('#tugasHarianFields').hide();
-                    $('#satuan_berikan').prop('readonly', false);
+                    $('#satuan_berikan').prop('readonly', true); // Reset to readonly
                     $('#satuan_berikan').val('');
 
                     Swal.fire({
@@ -2228,10 +2350,10 @@
                                             <i class="bi bi-person"></i> ${item.direvisi_oleh ? item.direvisi_oleh.nama : 'Unknown'}
                                         </small>
                                         ${item.dokumen_lama ? `
-                                                                                    <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
-                                                                                        <i class="bi bi-download"></i> File Lama
-                                                                                    </a>
-                                                                                ` : ''}
+                                                                                                            <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
+                                                                                                                <i class="bi bi-download"></i> File Lama
+                                                                                                            </a>
+                                                                                                        ` : ''}
                                     </div>
                                 </div>
                             `;
@@ -2419,6 +2541,230 @@
                                 icon: 'error',
                                 title: 'Gagal!',
                                 html: errorMessage
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // ===== TUGAS TAMBAHAN FUNCTIONS =====
+
+        // View mode toggle for Tugas Tambahan
+        $('input[name="viewModeTambahan"]').change(function() {
+            let viewMode = $(this).attr('id');
+            if (viewMode === 'viewGridTambahan') {
+                $('#gridViewTambahan').show();
+                $('#tableViewTambahan').hide();
+                localStorage.setItem('tugas_tambahan_view_mode', 'grid');
+            } else {
+                $('#tableViewTambahan').show();
+                $('#gridViewTambahan').hide();
+                localStorage.setItem('tugas_tambahan_view_mode', 'table');
+            }
+        });
+
+        // Restore view mode from localStorage for Tugas Tambahan
+        const savedViewModeTambahan = localStorage.getItem('tugas_tambahan_view_mode');
+        if (savedViewModeTambahan === 'grid') {
+            $('#viewGridTambahan').prop('checked', true).trigger('change');
+        }
+
+        // Function to edit Tugas Tambahan
+        function editTugasTambahan(id) {
+            // Fetch tugas tambahan data via AJAX
+            $.ajax({
+                url: "{{ url('penugasan/tugas-tambahan') }}/" + id + "/edit",
+                type: 'GET',
+                success: function(response) {
+                    // Show edit modal with SweetAlert
+                    Swal.fire({
+                        title: 'Edit Tugas Tambahan',
+                        html: `
+                            <form id="formEditTugasTambahan">
+                                <div class="mb-3 text-start">
+                                    <label class="form-label">Nama Tugas <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="edit_nama_tugas_tambahan" value="${response.nama_tugas}" required>
+                                </div>
+                                <div class="mb-3 text-start">
+                                    <label class="form-label">Deskripsi</label>
+                                    <textarea class="form-control" id="edit_deskripsi_tambahan" rows="3">${response.deskripsi || ''}</textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3 text-start">
+                                        <label class="form-label">Tanggal Mulai <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="edit_tanggal_mulai_tambahan" value="${response.tanggal_mulai}" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3 text-start">
+                                        <label class="form-label">Deadline <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="edit_deadline_tambahan" value="${response.deadline}" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3 text-start">
+                                        <label class="form-label">Target <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="edit_target_value_tambahan" value="${response.target_value}" min="1" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3 text-start">
+                                        <label class="form-label">Satuan <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="edit_satuan_tambahan" value="${response.satuan}" required>
+                                    </div>
+                                </div>
+                            </form>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonText: 'Update Tugas',
+                        cancelButtonText: 'Batal',
+                        width: '600px',
+                        preConfirm: () => {
+                            const namaTugas = document.getElementById('edit_nama_tugas_tambahan')
+                                .value;
+                            const deskripsi = document.getElementById('edit_deskripsi_tambahan')
+                                .value;
+                            const tanggalMulai = document.getElementById(
+                                'edit_tanggal_mulai_tambahan').value;
+                            const deadline = document.getElementById('edit_deadline_tambahan')
+                                .value;
+                            const targetValue = document.getElementById(
+                                'edit_target_value_tambahan').value;
+                            const satuan = document.getElementById('edit_satuan_tambahan').value;
+
+                            if (!namaTugas) {
+                                Swal.showValidationMessage('Nama tugas harus diisi');
+                                return false;
+                            }
+                            if (!tanggalMulai) {
+                                Swal.showValidationMessage('Tanggal mulai harus diisi');
+                                return false;
+                            }
+                            if (!deadline) {
+                                Swal.showValidationMessage('Deadline harus diisi');
+                                return false;
+                            }
+                            if (!targetValue || targetValue < 1) {
+                                Swal.showValidationMessage('Target minimal 1');
+                                return false;
+                            }
+                            if (!satuan) {
+                                Swal.showValidationMessage('Satuan harus diisi');
+                                return false;
+                            }
+
+                            return {
+                                nama_tugas: namaTugas,
+                                deskripsi: deskripsi,
+                                tanggal_mulai: tanggalMulai,
+                                deadline: deadline,
+                                target_value: targetValue,
+                                satuan: satuan
+                            };
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const formData = {
+                                _token: '{{ csrf_token() }}',
+                                _method: 'PUT',
+                                ...result.value
+                            };
+
+                            $.ajax({
+                                url: "{{ url('penugasan/tugas-tambahan') }}/" + id,
+                                type: 'POST',
+                                data: formData,
+                                beforeSend: function() {
+                                    Swal.fire({
+                                        title: 'Memproses...',
+                                        text: 'Sedang memperbarui tugas tambahan',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
+                                        }
+                                    });
+                                },
+                                success: function(response) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Berhasil!',
+                                        text: response.message ||
+                                            'Tugas tambahan berhasil diperbarui',
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                },
+                                error: function(xhr) {
+                                    let errorMessage =
+                                        'Terjadi kesalahan saat memperbarui tugas';
+                                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                                        errorMessage = xhr.responseJSON.message;
+                                    } else if (xhr.responseJSON && xhr.responseJSON
+                                        .errors) {
+                                        const errors = xhr.responseJSON.errors;
+                                        errorMessage = Object.values(errors).flat().join(
+                                            '<br>');
+                                    }
+
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Gagal!',
+                                        html: errorMessage
+                                    });
+                                }
+                            });
+                        }
+                    });
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: 'Tidak dapat memuat data tugas tambahan'
+                    });
+                }
+            });
+        }
+
+        // Function to delete Tugas Tambahan
+        function deleteTugasTambahan(id, namaTugas) {
+            Swal.fire({
+                title: 'Konfirmasi Hapus',
+                html: `Apakah Anda yakin ingin menghapus tugas tambahan:<br><strong>${namaTugas}</strong>?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ url('penugasan/tugas-tambahan') }}/" + id,
+                        type: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Terhapus!',
+                                text: response.message || 'Tugas tambahan berhasil dihapus',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Terjadi kesalahan saat menghapus tugas';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: errorMessage
                             });
                         }
                     });

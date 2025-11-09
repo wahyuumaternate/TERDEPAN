@@ -144,7 +144,9 @@ class TugasHarianController extends Controller
                 'attachedFiles'
             ])->findOrFail($id);
 
-            return view('penugasan::penugasan.upload-eviden', compact('tugas'));
+            $jenisTugas = 'tugas_harian';
+
+            return view('penugasan::penugasan.upload-eviden', compact('tugas', 'jenisTugas'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Tugas tidak ditemukan');
         }

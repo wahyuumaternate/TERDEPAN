@@ -23,7 +23,15 @@
                             </div>
                             <div>
                                 <h5 class="mb-0 fw-bold">{{ $tugas->nama_tugas }}</h5>
-                                <small class="opacity-90">{{ $tugas->tugasPokok->nama_tugas ?? 'Tugas Mandiri' }}</small>
+                                <small class="opacity-90">
+                                    @if (isset($tugas->tugasPokok))
+                                        {{ $tugas->tugasPokok->nama_tugas }}
+                                    @elseif(isset($jenisTugas) && $jenisTugas === 'tugas_tambahan')
+                                        Tugas Tambahan
+                                    @else
+                                        Tugas Mandiri
+                                    @endif
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -144,10 +152,12 @@
                                             <strong>Tanggal Selesai:</strong>
                                             {{ date('d F Y', strtotime($tugas->tanggal_selesai)) }}
                                         </div>
-                                        <div class="col-md-6 mb-2">
-                                            <strong>Target:</strong> {{ number_format($tugas->target_value, 0) }}
-                                            {{ $tugas->satuan }}
-                                        </div>
+                                        @if (isset($tugas->target_value) && isset($tugas->satuan))
+                                            <div class="col-md-6 mb-2">
+                                                <strong>Target:</strong> {{ number_format($tugas->target_value, 0) }}
+                                                {{ $tugas->satuan }}
+                                            </div>
+                                        @endif
                                         <div class="col-12">
                                             <strong>Deskripsi:</strong> {{ $tugas->deskripsi ?? '-' }}
                                         </div>
@@ -159,7 +169,7 @@
                         <form id="formUploadEviden" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="tugas_id" value="{{ $tugas->id }}">
-                            <input type="hidden" name="jenis_tugas" value="tugas_harian">
+                            <input type="hidden" name="jenis_tugas" value="{{ $jenisTugas ?? 'tugas_harian' }}">
 
                             <!-- Drag and Drop Zone / Simple File Selection -->
                             <div class="mb-4" id="fileSelectionArea">
@@ -1170,7 +1180,7 @@
             const formData = new FormData();
             formData.append('_token', '{{ csrf_token() }}');
             formData.append('tugas_id', '{{ $tugas->id }}');
-            formData.append('jenis_tugas', 'tugas_harian');
+            formData.append('jenis_tugas', '{{ $jenisTugas ?? 'tugas_harian' }}');
             formData.append('keterangan', $('#keterangan').val());
 
             // Add new files and folder IDs
@@ -1299,8 +1309,13 @@
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    const jenisTugas = '{{ $jenisTugas ?? 'tugas_harian' }}';
+                    const updateStatusUrl = jenisTugas === 'tugas_harian' ?
+                        `/penugasan/tugas-harian/{{ $tugas->id }}/update-status` :
+                        `/penugasan/tugas-tambahan/{{ $tugas->id }}/update-status`;
+
                     $.ajax({
-                        url: `/penugasan/tugas-harian/{{ $tugas->id }}/update-status`,
+                        url: updateStatusUrl,
                         type: 'POST',
                         data: {
                             _token: '{{ csrf_token() }}',

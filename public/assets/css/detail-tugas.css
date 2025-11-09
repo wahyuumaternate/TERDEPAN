@@ -1,0 +1,200 @@
+/* Tab Styles */
+.nav-tabs-bordered {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs-bordered .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs-bordered .nav-link:hover {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.nav-tabs-bordered .nav-link.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Tab justified - bagi rata 3 kolom */
+.nav-justified .nav-item {
+    flex-basis: 0;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.nav-justified .nav-link {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Card Styles */
+.tugas-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px !important;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.tugas-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Table Styles */
+#tugasTable thead th {
+    font-weight: 600;
+    color: #495057;
+}
+
+#tugasTable tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+/* Fix dropdown menu overflow */
+.table-responsive {
+    overflow: visible !important;
+}
+
+.table-responsive table {
+    overflow: visible !important;
+}
+
+/* Ensure dropdown shows properly */
+.dropdown-menu {
+    position: absolute !important;
+    z-index: 1050;
+}
+
+/* Avatar Styles */
+.avatar-circle-xl {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 28px;
+}
+
+/* Stats Box */
+.stats-box {
+    transition: all 0.3s ease;
+}
+
+.stats-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stats-box h3 {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.stats-box .small {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* Card Icon */
+.card-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+}
+
+/* Progress Bar */
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    background-color: #0d6efd;
+}
+
+/* Icon Box */
+.icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+}
+
+/* Dashboard cards */
+.info-card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.info-card .card-body {
+    padding: 1.25rem;
+}
+
+.info-card h6 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Responsive buttons */
+@media (max-width: 768px) {
+    /* Stack buttons vertically on mobile */
+    .d-flex.gap-2 {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .d-flex.gap-2 button {
+        width: 100%;
+    }
+
+    /* Stack header content on mobile */
+    .d-flex.justify-content-between.align-items-center.mb-3 {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+
+    .d-flex.justify-content-between.align-items-center.mb-3 > .d-flex.gap-2 {
+        width: 100%;
+    }
+
+    /* Adjust tab text size on mobile */
+    .nav-tabs-bordered .nav-link {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .nav-tabs-bordered .nav-link i {
+        font-size: 0.875rem;
+    }
+
+    /* Stats box responsive */
+    .stats-box h3 {
+        font-size: 1.5rem;
+    }
+
+    .stats-box .small {
+        font-size: 0.75rem;
+    }
+
+    /* Pegawai info responsive */
+    .avatar-circle-xl {
+        width: 60px;
+        height: 60px;
+        font-size: 20px;
+    }
+}

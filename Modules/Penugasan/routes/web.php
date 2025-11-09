@@ -55,6 +55,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // ============================================
     Route::prefix('tugas-tambahan')->name('tugas-tambahan.')->group(function () {
         Route::get('/', [TugasTambahanController::class, 'index'])->name('index');
+        Route::get('/{id}/upload-eviden', [TugasTambahanController::class, 'uploadEviden'])->name('upload-eviden');
         Route::get('/{id}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
         Route::put('/{id}', [TugasTambahanController::class, 'update'])->name('update');
         Route::delete('/{id}', [TugasTambahanController::class, 'destroy'])->name('destroy');
