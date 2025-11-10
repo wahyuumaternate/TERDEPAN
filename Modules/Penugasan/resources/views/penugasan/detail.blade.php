@@ -6,7 +6,7 @@
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">E-Kinerja</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('penugasan.index') }}">Penugasan</a></li>
                 <li class="breadcrumb-item active">{{ $pegawai->nama }}</li>
             </ol>
         </nav>
@@ -15,7 +15,7 @@
     <section class="section">
         <!-- Tombol Kembali -->
         <div class="mb-3">
-            <a href="{{ route('penugasan.tugas-pokok.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('penugasan.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Kembali
             </a>
         </div>
@@ -149,7 +149,7 @@
                             <div class="tab-pane fade show active" id="tugas-pokok-content" role="tabpanel"
                                 aria-labelledby="tugas-pokok-tab">
                                 <!-- Filter Form -->
-                                <form id="filterForm" action="{{ route('penugasan.tugas-pokok.show', $pegawai->id) }}"
+                                <form id="filterForm" action="{{ route('penugasan.show', $pegawai->id) }}"
                                     method="GET">
                                     <div class="row mb-4">
                                         <div class="col-lg-2 col-md-3 mb-3">
@@ -194,7 +194,7 @@
                                                     <button type="submit" class="btn btn-primary px-4">
                                                         <i class="bi bi-filter me-1"></i> Filter
                                                     </button>
-                                                    <a href="{{ route('penugasan.tugas-pokok.show', ['id' => $pegawai->id, 'tahun' => $tahun]) }}"
+                                                    <a href="{{ route('penugasan.show', ['id' => $pegawai->id, 'tahun' => $tahun]) }}"
                                                         class="btn btn-outline-secondary px-3">
                                                         <i class="bi bi-arrow-clockwise me-1"></i> Reset
                                                     </a>

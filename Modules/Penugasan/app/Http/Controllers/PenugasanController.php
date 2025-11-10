@@ -3,6 +3,9 @@
 namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\MasterBidang;
+use App\Models\MasterJabatan;
+use App\Models\MasterPegawai;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -10,15 +13,251 @@ use Illuminate\Support\Facades\Storage;
 use Modules\Penugasan\Models\TugasHarian;
 use Modules\Penugasan\Models\TugasTambahan;
 use Modules\Penugasan\Helpers\PenilaianHelper;
+use Modules\Penugasan\Models\TugasPokok;
 
 class PenugasanController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('penugasan::index');
+        // Default filter tahun sekarang berdasarkan tanggal_mulai
+        $tahun = $request->get('tahun', date('Y'));
+
+        // Query untuk mendapatkan daftar pegawai dengan statistik tugas pokok
+        $pegawaiQuery = MasterPegawai::where('status_aktif', 'Aktif')
+            ->with(['jabatan', 'bidang'])
+            // Kecualikan admin utama (ID 1) dan user yang sedang login
+            ->where('id', '!=', 1) // Asumsikan ID 1 adalah admin utama
+            ->where('id', '!=', Auth::id()) // Kecualikan user yang sedang login
+            ->withCount([
+                // Count tugas pokok
+                'tugasPokok as tugas_pokok_count' => function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun);
+                },
+                // Count tugas harian
+                'tugasHarian as tugas_harian_count' => function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun);
+                },
+                // Count tugas tambahan
+                'tugasTambahan as tugas_tambahan_count' => function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun);
+                },
+                // Status tugas pokok: pending, dikerjakan, selesai
+                'tugasPokok as pending_tugas' => function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun)
+                        ->where('status', 'pending');
+                },
+                'tugasPokok as dikerjakan_tugas' => function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun)
+                        ->where('status', 'dikerjakan');
+                },
+                'tugasPokok as selesai_tugas' => function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun)
+                        ->where('status', 'selesai');
+                }
+            ]);
+
+        // Filter by jabatan
+        if ($request->filled('jabatan_id')) {
+            $pegawaiQuery->where('jabatan_id', $request->jabatan_id);
+        }
+
+        // Filter by bidang
+        if ($request->filled('bidang_id')) {
+            $pegawaiQuery->where('bidang_id', $request->bidang_id);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $pegawaiQuery->where(function ($q) use ($request) {
+                $q->where('nama', 'like', "%{$request->search}%")
+                    ->orWhere('nip', 'like', "%{$request->search}%");
+            });
+        }
+
+        // Only show pegawai yang punya tugas
+        if ($request->get('has_tugas', false)) {
+            $pegawaiQuery->has('tugasPokok');
+        }
+
+        // Sort - default by jabatan then nomor_identitas
+        if ($request->has('sort_by')) {
+            $sortBy = $request->get('sort_by');
+            $sortOrder = $request->get('sort_order', 'asc');
+            $pegawaiQuery->orderBy($sortBy, $sortOrder);
+        } else {
+            // Default sorting: jabatan_id ASC, then nomor_identitas ASC
+            $pegawaiQuery->orderBy('jabatan_id', 'asc')
+                ->orderBy('nomor_identitas', 'asc');
+        }
+
+        $pegawaiList = $pegawaiQuery->paginate($request->get('per_page', 15));
+
+        // Hitung total_tugas dari semua jenis tugas
+        $pegawaiList->getCollection()->transform(function ($pegawai) {
+            $pegawai->total_tugas = ($pegawai->tugas_pokok_count ?? 0) +
+                ($pegawai->tugas_harian_count ?? 0) +
+                ($pegawai->tugas_tambahan_count ?? 0);
+            return $pegawai;
+        });
+
+        // Get filter options
+        $tahuns = TugasPokok::selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun')
+            ->filter();
+
+        $jabatans = MasterJabatan::where('is_active', true)
+            ->orderBy('level')
+            ->get();
+
+        $bidangs = MasterBidang::where('is_active', true)
+            ->orderBy('nama')
+            ->get();
+
+        // Statistics
+        $stats = [
+            'total_pegawai' => MasterPegawai::where('status_aktif', 'Aktif')->count(),
+            'pegawai_dengan_tugas' => MasterPegawai::where('status_aktif', 'Aktif')
+                ->whereHas('tugasPokok', function ($q) use ($tahun) {
+                    $q->whereYear('tanggal_mulai', $tahun);
+                })->count(),
+            'total_tugas' => TugasPokok::whereYear('tanggal_mulai', $tahun)->count(),
+            'pending' => TugasPokok::whereYear('tanggal_mulai', $tahun)
+                ->where('status', 'pending')->count(),
+            'dikerjakan' => TugasPokok::whereYear('tanggal_mulai', $tahun)
+                ->where('status', 'dikerjakan')->count(),
+            'selesai' => TugasPokok::whereYear('tanggal_mulai', $tahun)
+                ->where('status', 'selesai')->count(),
+        ];
+
+        return view('penugasan::penugasan.daftar', compact(
+            'pegawaiList',
+            'tahuns',
+            'tahun',
+            'jabatans',
+            'bidangs',
+            'stats'
+        ));
+    }
+
+    /**
+     * Show the specified resource.
+     */
+    public function show(Request $request, $id)
+    {
+        $pegawai = MasterPegawai::with(['jabatan', 'bidang'])->findOrFail($id);
+
+        $tahun = $request->get('tahun', date('Y'));
+
+        // Query tugas pokok untuk pegawai ini
+        $query = TugasPokok::where('pegawai_id', $id)
+            ->with([
+                'perjanjianKinerja',
+                'indikatorPK',
+                'attachedFiles',
+                'progress'
+            ])
+            ->whereYear('tanggal_mulai', $tahun);
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('nama_tugas', 'like', "%{$request->search}%")
+                    ->orWhere('deskripsi', 'like', "%{$request->search}%");
+            });
+        }
+
+        // Sort
+        $sortBy = $request->get('sort_by', 'tanggal_mulai');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $tugasPokok = $query->paginate($request->get('per_page', 10));
+
+        // Get tahun options untuk pegawai ini
+        $tahuns = TugasPokok::where('pegawai_id', $id)
+            ->selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun')
+            ->filter();
+
+        // Query tugas harian untuk pegawai ini
+        $tugasHarianQuery = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->with([
+                'tugasPokok',
+                'pemberiTugas',
+                'attachedFiles',
+                'progress'
+            ])
+            ->whereYear('tanggal_mulai', $tahun);
+
+        // Sort tugas harian
+        $tugasHarianQuery->orderBy('tanggal_mulai', 'desc');
+
+        $tugasHarian = $tugasHarianQuery->paginate($request->get('per_page_harian', 10), ['*'], 'page_harian');
+
+        // Get tugas tambahan list for this pegawai
+        $tugasTambahanList = \Modules\Penugasan\Models\TugasTambahan::with([
+            'pemberiTugas',
+            'validator',
+            'attachedFiles'
+        ])->where('pegawai_id', $pegawai->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Statistics untuk pegawai ini
+        // Total Tugas Pokok
+        $totalTugasPokok = TugasPokok::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->count();
+
+        // Total Tugas Harian
+        $totalTugasHarian = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->count();
+
+        // Tugas Harian Selesai
+        $tugasSelesai = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->where('status', 'selesai')
+            ->count();
+
+        // Tugas Harian Berjalan (dikerjakan + revisi)
+        $tugasBerjalan = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
+            ->whereYear('tanggal_mulai', $tahun)
+            ->whereIn('status', ['dikerjakan', 'revisi'])
+            ->count();
+
+        // Tugas Tambahan Stats
+        $totalTugasTambahan = $tugasTambahanList->count();
+        $tugasTambahanSelesai = $tugasTambahanList->where('status', 'selesai')->count();
+        $tugasTambahanProgress = $tugasTambahanList->whereIn('status', ['dikerjakan', 'revisi', 'validasi'])->count();
+
+        return view('penugasan::penugasan.detail', compact(
+            'pegawai',
+            'tugasPokok',
+            'tugasHarian',
+            'tahuns',
+            'tahun',
+            'tugasTambahanList',
+            'totalTugasPokok',
+            'totalTugasHarian',
+            'tugasSelesai',
+            'tugasBerjalan',
+            'totalTugasTambahan',
+            'tugasTambahanSelesai',
+            'tugasTambahanProgress'
+        ));
     }
 
     /**

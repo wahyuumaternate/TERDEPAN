@@ -5,9 +5,8 @@
         <h1>Daftar Penugasan Pegawai</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
-                <li class="breadcrumb-item active">Daftar Pegawai</li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">E-Kinerja</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('penugasan.index') }}">Penugasan</a></li>
             </ol>
         </nav>
     </div>
@@ -114,7 +113,7 @@
                         </div>
 
                         <!-- Filter Form -->
-                        <form id="filterForm" action="{{ route('penugasan.tugas-pokok.index') }}" method="GET">
+                        <form id="filterForm" action="{{ route('penugasan.index') }}" method="GET">
                             <div class="row mb-4">
                                 <div class="col-lg-2 col-md-3 mb-3">
                                     <label class="form-label">Tahun</label>
@@ -190,7 +189,7 @@
                                             <button type="submit" class="btn btn-primary px-4">
                                                 <i class="bi bi-filter me-1"></i> Filter
                                             </button>
-                                            <a href="{{ route('penugasan.tugas-pokok.index', ['tahun' => $tahun]) }}"
+                                            <a href="{{ route('penugasan.index', ['tahun' => $tahun]) }}"
                                                 class="btn btn-outline-secondary px-3">
                                                 <i class="bi bi-arrow-clockwise me-1"></i> Reset
                                             </a>
@@ -275,7 +274,7 @@
                                                         class="badge bg-warning rounded-pill">{{ $pegawai->tugas_tambahan_count ?? 0 }}</span>
                                                 </td>
                                                 <td class="text-center align-middle">
-                                                    <a href="{{ route('penugasan.tugas-pokok.show', $pegawai->id) }}"
+                                                    <a href="{{ route('penugasan.show', $pegawai->id) }}"
                                                         class="btn btn-sm btn-primary" title="Lihat Tugas Pokok">
                                                         <i class="bi bi-eye me-1"></i> Lihat Detail
                                                     </a>
@@ -351,7 +350,7 @@
                                                     </div>
                                                 </div>
 
-                                                <a href="{{ route('penugasan.tugas-pokok.show', $pegawai->id) }}"
+                                                <a href="{{ route('penugasan.show', $pegawai->id) }}"
                                                     class="btn btn-primary w-100">
                                                     <i class="bi bi-eye me-1"></i> Detail
                                                 </a>

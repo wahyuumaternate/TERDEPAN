@@ -18,6 +18,8 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // ============================================
     // PENUGASAN GENERAL ROUTES
     // ============================================
+    Route::get('/', [PenugasanController::class, 'index'])->name('index');
+    Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
     Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
     Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
     Route::post('/validasi-tugas/{id}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
@@ -29,9 +31,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // TUGAS POKOK ROUTES - /tugas-pokok
     // ============================================
     Route::prefix('tugas-pokok')->name('tugas-pokok.')->group(function () {
-        Route::get('/', [TugasPokokController::class, 'index'])->name('index');
         Route::post('/sinkron', [TugasPokokController::class, 'sinkronData'])->name('sinkron');
-        Route::get('/{id}', [TugasPokokController::class, 'show'])->name('show');
         Route::post('/{id}/update-status', [TugasPokokController::class, 'updateStatus'])->name('update-status');
     });
 

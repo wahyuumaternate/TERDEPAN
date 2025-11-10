@@ -51,7 +51,7 @@
 
          <!-- Penugasan Pegawai Nav (Kaban, Sekban, Kabid/kasubag, Jf, Pelaksana) -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::routeIs('penugasan.tugas-pokok.index') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.tugas-pokok.index') }}">
+             <a class="nav-link {{ Request::routeIs('penugasan.index') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.index') }}">
                  <i class="bi bi-person-lines-fill"></i>
                  <span>Penugasan Pegawai</span>
              </a>
@@ -59,7 +59,7 @@
 
          <!-- Penugasan Pegawai Nav (Semua role) -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::routeIs('penugasan.tugas-pokok.show') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.tugas-pokok.show', AUTH::user()->id) }}">
+             <a class="nav-link {{ Request::routeIs('penugasan.show') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.show', AUTH::user()->id) }}">
                  <i class="bi bi-list-task"></i>
                  <span>Tugas Saya</span>
              </a>
