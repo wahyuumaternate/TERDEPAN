@@ -3,21 +3,22 @@
      <ul class="sidebar-nav" id="sidebar-nav">
 
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }} bg-primary text-white" href="{{ url('/terminal-data') }}">
-                <i class="bi bi-arrow-left text-white"></i>
-                <span>Terminal Data</span>
-            </a>
-        </li><!-- End Dashboard Nav -->
-        
-        <hr>
+             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }} bg-primary text-white"
+                 href="{{ url('/terminal-data') }}">
+                 <i class="bi bi-arrow-left text-white"></i>
+                 <span>Terminal Data</span>
+             </a>
+         </li><!-- End Dashboard Nav -->
 
-        <!-- Beranda Nav -->
-        <li class="nav-item">
-            <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
-                <i class="bi bi-house"></i>
-                <span>Beranda</span>
-            </a>
-        </li><!-- End Beranda Nav -->
+         <hr>
+
+         <!-- Beranda Nav -->
+         <li class="nav-item">
+             <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
+                 <i class="bi bi-house"></i>
+                 <span>Beranda</span>
+             </a>
+         </li><!-- End Beranda Nav -->
 
          <!-- E-Kinerja -->
          <li class="nav-heading">E-Kinerja Perencana</li>
@@ -48,7 +49,23 @@
              </ul>
          </li><!-- End Perjanjian Kinerja Nav -->
 
-         <!-- Penugasan Nav -->
+         <!-- Penugasan Pegawai Nav (Kaban, Sekban, Kabid/kasubag, Jf, Pelaksana) -->
+         <li class="nav-item">
+             <a class="nav-link {{ Request::routeIs('penugasan.tugas-pokok.index') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.tugas-pokok.index') }}">
+                 <i class="bi bi-person-lines-fill"></i>
+                 <span>Penugasan Pegawai</span>
+             </a>
+         </li><!-- End Penugasan Pegawai Nav -->
+
+         <!-- Penugasan Pegawai Nav (Semua role) -->
+         <li class="nav-item">
+             <a class="nav-link {{ Request::routeIs('penugasan.tugas-pokok.show') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.tugas-pokok.show', AUTH::user()->id) }}">
+                 <i class="bi bi-list-task"></i>
+                 <span>Tugas Saya</span>
+             </a>
+         </li><!-- End Penugasan Pegawai Nav -->
+
+         {{-- <!-- Penugasan Nav -->
          <li class="nav-item">
              <a class="nav-link collapsed" data-bs-target="#tugas-nav" data-bs-toggle="collapse" href="#">
                  <i class="bi bi-list-task"></i><span>Penugasan</span><i class="bi bi-chevron-down ms-auto"></i>
@@ -64,18 +81,13 @@
                          <i class="bi bi-circle"></i><span>Tugas Saya</span>
                      </a>
                  </li>
-                 <li>
-                     <a href="{{ url('delegasi') }}">
-                         <i class="bi bi-circle"></i><span>Delegasi Tugas</span>
-                     </a>
-                 </li>
                  <li class="nav-item">
-                     <a href="{{ url('penilaian/laporan') }}">
+                     <a href="#">
                          <i class="bi bi-circle"></i><span>Penilaian Kinerja</span>
                      </a>
                  </li><!-- End Penilaian Nav -->
              </ul>
-         </li><!-- End Penugasan Nav -->
+         </li><!-- End Penugasan Nav --> --}}
 
          <!-- Progress & Validasi Nav -->
          {{-- <li class="nav-item">
@@ -173,11 +185,6 @@
                          <i class="bi bi-circle"></i><span>Jabatan</span>
                      </a>
                  </li>
-                 <li>
-                     <a href="{{ url('master/ttd-digital') }}">
-                         <i class="bi bi-circle"></i><span>TTD Digital</span>
-                     </a>
-                 </li>
              </ul>
          </li><!-- End Master Data Nav -->
 
@@ -191,12 +198,12 @@
              </a>
              <ul id="sistem-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('sistem/audit-log') }}">
+                     <a href="#">
                          <i class="bi bi-circle"></i><span>Audit Log</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('sistem/config') }}">
+                     <a href="#">
                          <i class="bi bi-circle"></i><span>Konfigurasi</span>
                      </a>
                  </li>

@@ -5,7 +5,7 @@
         <h1>Tambah Jabatan Baru</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">E-Kinerja</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('master.jabatan.index') }}">Master Data Jabatan</a></li>
                 <li class="breadcrumb-item active">Tambah Jabatan</li>
             </ol>

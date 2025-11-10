@@ -33,11 +33,6 @@
                  <i class="bi bi-folder2-open"></i><span>Penyimpanan</span>
              </a>
          </li>
-         <li class="nav-item">
-             <a class="nav-link collapsed" href="#">
-                 <i class="bi bi-files"></i><span>Eviden Kinerja</span>
-             </a>
-         </li>
 
          <li class="nav-item">
              <a class="nav-link {{ Request::is('terminal-data/sampah*') ? '' : 'collapsed' }}" href="{{ route('terminaldata.sampah.index') }}">
@@ -56,12 +51,12 @@
              </a>
              <ul id="sistem-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <li>
-                     <a href="{{ url('sistem/audit-log') }}">
+                     <a href="#">
                          <i class="bi bi-circle"></i><span>Audit Log</span>
                      </a>
                  </li>
                  <li>
-                     <a href="{{ url('sistem/config') }}">
+                     <a href="#">
                          <i class="bi bi-circle"></i><span>Konfigurasi</span>
                      </a>
                  </li>
