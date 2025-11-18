@@ -243,6 +243,11 @@ class PenugasanController extends Controller
         $tugasTambahanSelesai = $tugasTambahanList->where('status', 'selesai')->count();
         $tugasTambahanProgress = $tugasTambahanList->whereIn('status', ['dikerjakan', 'revisi', 'validasi'])->count();
 
+        // Get all tugas pokok for dropdown (not paginated)
+        $tugasPokokList = TugasPokok::where('pegawai_id', $id)
+            ->orderBy('nama_tugas')
+            ->get();
+
         return view('penugasan::penugasan.detail', compact(
             'pegawai',
             'tugasPokok',
@@ -256,7 +261,8 @@ class PenugasanController extends Controller
             'tugasBerjalan',
             'totalTugasTambahan',
             'tugasTambahanSelesai',
-            'tugasTambahanProgress'
+            'tugasTambahanProgress',
+            'tugasPokokList'
         ));
     }
 
@@ -815,5 +821,65 @@ class PenugasanController extends Controller
             });
 
         return view('penugasan::monitoring.dashboard', compact('stats', 'penilaianBulanan', 'tahun', 'bulan'));
+    }
+
+    /**
+     * Buat tugas mandiri (pegawai membuat tugas harian untuk diri sendiri)
+     */
+    public function buatTugas(Request $request)
+    {
+        $validated = $request->validate([
+            'tugas_pokok_id' => 'required|uuid|exists:knj_tugas_pokok,id',
+            'nama_tugas' => 'required|string|max:500',
+            'deskripsi' => 'nullable|string',
+            'tanggal_mulai' => 'required|date',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+            'target_value' => 'required|numeric|min:1',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $currentUserId = Auth::id();
+
+            // Ambil satuan dari tugas pokok yang dipilih
+            $tugasPokok = TugasPokok::findOrFail($validated['tugas_pokok_id']);
+
+            // Tugas Mandiri = Tugas Harian yang dibuat pegawai sendiri
+            $tugasHarian = TugasHarian::create([
+                'pegawai_id' => $currentUserId, // Pegawai adalah user yang login
+                'tugas_pokok_id' => $validated['tugas_pokok_id'],
+                'pemberi_tugas_id' => $currentUserId, // Pemberi tugas adalah diri sendiri
+                'is_mandiri' => true, // Penanda tugas mandiri
+                'nama_tugas' => $validated['nama_tugas'],
+                'deskripsi' => $validated['deskripsi'] ?? null,
+                'tanggal_mulai' => $validated['tanggal_mulai'],
+                'tanggal_selesai' => $validated['tanggal_selesai'],
+                'target_value' => $validated['target_value'],
+                'satuan' => $tugasPokok->satuan, // Ambil satuan dari tugas pokok
+                'status' => 'pending',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tugas harian mandiri berhasil dibuat',
+                'data' => $tugasHarian,
+                'tahun' => date('Y', strtotime($validated['tanggal_mulai'])) // Tahun dari tanggal mulai
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat tugas: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

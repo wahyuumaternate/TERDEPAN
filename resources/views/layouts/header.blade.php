@@ -78,8 +78,18 @@
 
                  <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#"
                      data-bs-toggle="dropdown">
-                     <img src="{{ asset(Auth::user()->jenis_kelamin == 'L' ? 'assets/img/avatar-laki-laki.webp' : 'assets/img/avatar-perempuan.webp') }}"
-                         alt="Profile" class="rounded-circle">
+                     @if (Auth::user() && Auth::user()->foto_profile_path)
+                         <img src="{{ asset('storage/' . Auth::user()->foto_profile_path) }}"
+                             alt="{{ Auth::user()->nama }}" class="rounded-circle">
+                     @else
+                         @if (Auth::user()->jenis_kelamin == 'L')
+                             <img src="{{ asset('assets/img/avatar-laki-laki.webp') }}" alt="{{ Auth::user()->nama }}"
+                                 class="rounded-circle">
+                         @else
+                             <img src="{{ asset('assets/img/avatar-perempuan.webp') }}" alt="{{ Auth::user()->nama }}"
+                                 class="rounded-circle">
+                         @endif
+                     @endif
 
                      <span class="d-none d-md-block dropdown-toggle ps-2">{{ Auth::user()->nama }}</span>
                  </a><!-- End Profile Iamge Icon -->
@@ -94,19 +104,9 @@
                      </li>
 
                      <li>
-                         <a class="dropdown-item d-flex align-items-center" href="{{ url('users-profile') }}">
+                         <a class="dropdown-item d-flex align-items-center" href="{{ route('profile.edit') }}">
                              <i class="bi bi-person"></i>
-                             <span>My Profile</span>
-                         </a>
-                     </li>
-                     <li>
-                         <hr class="dropdown-divider">
-                     </li>
-
-                     <li>
-                         <a class="dropdown-item d-flex align-items-center" href="{{ url('users-profile') }}">
-                             <i class="bi bi-gear"></i>
-                             <span>Account Settings</span>
+                             <span>Profil Saya</span>
                          </a>
                      </li>
                      <li>

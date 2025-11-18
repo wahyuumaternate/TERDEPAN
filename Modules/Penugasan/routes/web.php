@@ -21,6 +21,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     Route::get('/', [PenugasanController::class, 'index'])->name('index');
     Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
     Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
+    Route::post('/buat-tugas', [PenugasanController::class, 'buatTugas'])->name('buat-tugas');
     Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
     Route::post('/validasi-tugas/{id}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
     Route::post('/preview-penilaian', [PenugasanController::class, 'previewPenilaian'])->name('preview-penilaian');

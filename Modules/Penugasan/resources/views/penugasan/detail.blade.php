@@ -1189,71 +1189,72 @@
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-plus-lg me-2"></i>Buat Tugas Baru untuk {{ $pegawai->nama }}
+                        <i class="bi bi-plus-lg me-2"></i>Buat Tugas Mandiri
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formBuatTugas">
                         @csrf
-                        <input type="hidden" name="pegawai_id" value="{{ $pegawai->id }}">
+                        <input type="hidden" name="jenis_tugas" value="tugas_harian">
 
+                        <!-- Field untuk Tugas Pokok (required) -->
                         <div class="mb-3">
-                            <label for="jenis_tugas_baru" class="form-label">Jenis Tugas <span
+                            <label for="tugas_pokok_id_buat" class="form-label">Tugas Pokok <span
                                     class="text-danger">*</span></label>
-                            <select class="form-select" id="jenis_tugas_baru" name="jenis_tugas" required>
-                                <option value="">Pilih Jenis Tugas</option>
-                                <option value="tugas_pokok">Tugas Pokok</option>
-                                <option value="tugas_harian">Tugas Harian</option>
-                                <option value="tugas_tambahan">Tugas Tambahan</option>
+                            <select class="form-select" id="tugas_pokok_id_buat" name="tugas_pokok_id" required>
+                                <option value="">Pilih Tugas Pokok</option>
+                                @if (isset($tugasPokokList) && $tugasPokokList->count() > 0)
+                                    @foreach ($tugasPokokList as $tp)
+                                        <option value="{{ $tp->id }}" data-satuan="{{ $tp->satuan }}">
+                                            {{ $tp->nama_tugas }}</option>
+                                    @endforeach
+                                @endif
                             </select>
+                            <small class="text-muted">Tugas harian harus terkait dengan tugas pokok</small>
                         </div>
 
                         <div class="mb-3">
-                            <label for="nama_tugas" class="form-label">Nama Tugas <span
+                            <label for="nama_tugas_buat" class="form-label">Nama Tugas <span
                                     class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="nama_tugas" name="nama_tugas"
+                            <input type="text" class="form-control" id="nama_tugas_buat" name="nama_tugas"
                                 placeholder="Masukkan nama tugas" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="deskripsi_tugas" class="form-label">Deskripsi Tugas</label>
-                            <textarea class="form-control" id="deskripsi_tugas" name="deskripsi" rows="3"
+                            <label for="deskripsi_tugas_buat" class="form-label">Deskripsi Tugas</label>
+                            <textarea class="form-control" id="deskripsi_tugas_buat" name="deskripsi" rows="3"
                                 placeholder="Jelaskan detail tugas..."></textarea>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="periode_mulai" class="form-label">Periode Mulai <span
+                                <label for="tanggal_mulai_buat" class="form-label">Tanggal Mulai <span
                                         class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="periode_mulai" name="periode_mulai"
+                                <input type="date" class="form-control" id="tanggal_mulai_buat" name="tanggal_mulai"
                                     required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="periode_selesai" class="form-label">Periode Selesai <span
+                                <label for="tanggal_selesai_buat" class="form-label">Tanggal Selesai <span
                                         class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="periode_selesai" name="periode_selesai"
-                                    required>
+                                <input type="date" class="form-control" id="tanggal_selesai_buat"
+                                    name="tanggal_selesai" required>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="bobot_persen" class="form-label">Bobot (%)</label>
-                                <input type="number" class="form-control" id="bobot_persen" name="bobot_persen"
-                                    placeholder="0" min="0" max="100" step="0.1">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="target_value" class="form-label">Target <span
+                            <div class="col-md-6 mb-3">
+                                <label for="target_value_buat" class="form-label">Target <span
                                         class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="target_value" name="target_value"
-                                    placeholder="0" required>
+                                <input type="text" class="form-control" id="target_value_buat" name="target_value"
+                                    placeholder="0" min="1" required>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="satuan" class="form-label">Satuan <span
+                            <div class="col-md-6 mb-3">
+                                <label for="satuan_buat" class="form-label">Satuan <span
                                         class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="satuan" name="satuan"
-                                    placeholder="Dokumen, Laporan, dll" required>
+                                <input type="text" class="form-control" id="satuan_buat" name="satuan"
+                                    placeholder="Otomatis dari Tugas Pokok" readonly required>
+                                <small class="text-muted">Satuan akan mengikuti tugas pokok yang dipilih</small>
                             </div>
                         </div>
                     </form>
@@ -1262,7 +1263,7 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i> Batal
                     </button>
-                    <button type="button" class="btn btn-primary" id="btnBuatTugas">
+                    <button type="button" class="btn btn-primary" id="btnSubmitBuatTugas">
                         <i class="bi bi-plus-lg me-1"></i> Buat Tugas
                     </button>
                 </div>
@@ -1500,6 +1501,18 @@
             $('#modalBuatTugas').modal('show');
         }
 
+        // Handle tugas pokok change to set satuan (Buat Tugas Mandiri)
+        $('#tugas_pokok_id_buat').change(function() {
+            const selectedOption = $(this).find('option:selected');
+            const satuan = selectedOption.data('satuan');
+
+            if (satuan) {
+                $('#satuan_buat').val(satuan);
+            } else {
+                $('#satuan_buat').val('');
+            }
+        });
+
         // Handle jenis tugas change in Berikan Tugas modal
         $('#jenis_tugas_berikan').change(function() {
             const jenisTugas = $(this).val();
@@ -1668,31 +1681,78 @@
         });
 
         // Handle Buat Tugas submission
-        $('#btnBuatTugas').click(function() {
+        $('#btnSubmitBuatTugas').click(function() {
+            // Validation
+            const tugasPokokId = $('#tugas_pokok_id_buat').val();
+            const namaTugas = $('#nama_tugas_buat').val().trim();
+            const tanggalMulai = $('#tanggal_mulai_buat').val();
+            const tanggalSelesai = $('#tanggal_selesai_buat').val();
+            const targetValue = $('#target_value_buat').val();
+
+            if (!tugasPokokId) {
+                Swal.fire('Peringatan', 'Tugas pokok harus dipilih', 'warning');
+                return;
+            }
+
+            if (!namaTugas) {
+                Swal.fire('Peringatan', 'Nama tugas harus diisi', 'warning');
+                return;
+            }
+
+            if (!tanggalMulai) {
+                Swal.fire('Peringatan', 'Tanggal mulai harus diisi', 'warning');
+                return;
+            }
+
+            if (!tanggalSelesai) {
+                Swal.fire('Peringatan', 'Tanggal selesai harus diisi', 'warning');
+                return;
+            }
+
+            if (!targetValue || targetValue < 1) {
+                Swal.fire('Peringatan', 'Target minimal 1', 'warning');
+                return;
+            }
+
             const formData = $('#formBuatTugas').serialize();
 
             $.ajax({
-                url: "{{ url('penugasan/buat-tugas') }}",
+                url: "{{ route('penugasan.buat-tugas') }}",
                 type: 'POST',
                 data: formData,
                 beforeSend: function() {
-                    $('#btnBuatTugas').html(
+                    $('#btnSubmitBuatTugas').html(
                         '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memproses...'
                     );
-                    $('#btnBuatTugas').prop('disabled', true);
+                    $('#btnSubmitBuatTugas').prop('disabled', true);
                 },
                 success: function(response) {
                     $('#modalBuatTugas').modal('hide');
                     $('#formBuatTugas')[0].reset();
 
+                    // Tampilkan pesan yang lebih informatif
+                    let successMessage = response.message || 'Tugas harian mandiri berhasil dibuat';
+                    if (response.tahun && response.tahun != '{{ $tahun }}') {
+                        successMessage +=
+                            '<br><small class="text-muted">Halaman akan dimuat dengan filter tahun ' +
+                            response.tahun + '</small>';
+                    }
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
-                        text: response.message || 'Tugas baru berhasil dibuat',
-                        timer: 2000,
+                        html: successMessage,
+                        timer: 2500,
                         showConfirmButton: false
                     }).then(() => {
-                        window.location.reload();
+                        // Reload dengan tahun yang sesuai dengan tugas yang baru dibuat
+                        if (response.tahun) {
+                            window.location.href =
+                                "{{ route('penugasan.show', $pegawai->id) }}?tahun=" +
+                                response.tahun;
+                        } else {
+                            window.location.reload();
+                        }
                     });
                 },
                 error: function(xhr) {
@@ -1711,8 +1771,8 @@
                     });
                 },
                 complete: function() {
-                    $('#btnBuatTugas').html('<i class="bi bi-plus-lg me-1"></i> Buat Tugas');
-                    $('#btnBuatTugas').prop('disabled', false);
+                    $('#btnSubmitBuatTugas').html('<i class="bi bi-plus-lg me-1"></i> Buat Tugas');
+                    $('#btnSubmitBuatTugas').prop('disabled', false);
                 }
             });
         });
@@ -2350,10 +2410,10 @@
                                             <i class="bi bi-person"></i> ${item.direvisi_oleh ? item.direvisi_oleh.nama : 'Unknown'}
                                         </small>
                                         ${item.dokumen_lama ? `
-                                                                                                            <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
-                                                                                                                <i class="bi bi-download"></i> File Lama
-                                                                                                            </a>
-                                                                                                        ` : ''}
+                                                                                                                                <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
+                                                                                                                                    <i class="bi bi-download"></i> File Lama
+                                                                                                                                </a>
+                                                                                                                            ` : ''}
                                     </div>
                                 </div>
                             `;
