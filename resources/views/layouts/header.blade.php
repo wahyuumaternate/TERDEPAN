@@ -122,7 +122,7 @@
                                  style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;"
                                  onclick="confirmLogout()">
                                  <i class="bi bi-box-arrow-right"></i>
-                                 <span>Sign Out</span>
+                                 <span>Log Out</span>
                              </button>
                          </form>
                      </li>

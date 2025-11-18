@@ -177,8 +177,8 @@
                                             <td>{{ $index + 1 }}</td>
                                             <td class="text-center">
                                                 @if ($pegawai->foto_profile_path)
-                                                    <img src="{{ asset($pegawai->foto_profile_path) }}"
-                                                        alt="{{ $pegawai->nama }}" class="rounded-circle"
+                                                    <img src="{{ asset("storage/" . $pegawai->foto_profile_path) }}"
+                                                        alt="{{ $pegawai->nama }}" class="rounded-circle d-flex align-items-center justify-content-center"
                                                         style="width: 40px; height: 40px; object-fit: cover;">
                                                 @else
                                                     <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
