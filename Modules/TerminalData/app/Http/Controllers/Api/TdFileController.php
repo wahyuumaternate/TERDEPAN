@@ -278,7 +278,7 @@ class TdFileController extends Controller
             $file = TdFile::onlyTrashed()->findOrFail($fileId);
 
             // Authorize restore (using delete permission as proxy)
-            $this->authorize('delete', $file);
+            $this->authorize('restore', $file);
 
             // Restore file
             $file->restore();
@@ -292,6 +292,11 @@ class TdFileController extends Controller
                 'success' => true,
                 'message' => 'File berhasil dipulihkan'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk memulihkan file ini'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -309,7 +314,7 @@ class TdFileController extends Controller
             $file = TdFile::onlyTrashed()->findOrFail($fileId);
 
             // Authorize force delete (using delete permission as proxy)
-            $this->authorize('delete', $file);
+            $this->authorize('forceDelete', $file);
 
             // Delete physical file from storage
             if (Storage::exists($file->storage_path)) {
@@ -328,6 +333,11 @@ class TdFileController extends Controller
                 'success' => true,
                 'message' => 'File berhasil dihapus permanen'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk menghapus file ini secara permanen'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

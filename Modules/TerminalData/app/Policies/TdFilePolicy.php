@@ -155,4 +155,22 @@ class TdFilePolicy
 
         return false;
     }
+
+    /**
+     * Determine if user can restore file from trash
+     * Restore permission sama dengan delete permission
+     */
+    public function restore(MasterPegawai $user, TdFile $file): bool
+    {
+        return $this->delete($user, $file);
+    }
+
+    /**
+     * Determine if user can permanently delete file
+     * Force delete permission sama dengan delete permission
+     */
+    public function forceDelete(MasterPegawai $user, TdFile $file): bool
+    {
+        return $this->delete($user, $file);
+    }
 }

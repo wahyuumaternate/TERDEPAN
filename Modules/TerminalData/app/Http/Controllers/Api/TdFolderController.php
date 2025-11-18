@@ -340,6 +340,11 @@ class TdFolderController extends Controller
                 'success' => true,
                 'message' => 'Folder berhasil dipulihkan'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk memulihkan folder ini'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -366,6 +371,11 @@ class TdFolderController extends Controller
                 'success' => true,
                 'message' => 'Folder berhasil dihapus permanen'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk menghapus folder ini secara permanen'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
