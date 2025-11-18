@@ -2,6 +2,7 @@
 
 namespace Modules\TerminalData\Http\Controllers\Api;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -15,6 +16,8 @@ use Modules\TerminalData\Services\TdFolderService;
 
 class TdFolderController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected TdFolderService $folderService
     ) {
@@ -25,28 +28,39 @@ class TdFolderController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        /** @var \App\Models\MasterPegawai $user */
+        $user = $request->user();
         $parentId = $request->get('parent_id');
 
         try {
+            // Authorize viewAny folders
+            $this->authorize('viewAny', TdFolder::class);
             if ($parentId === null || $parentId === 'null') {
-                // Get root folders - TANPA whereUserHasAccess untuk sementara
+                // Get root folders with permission filtering
                 $folders = TdFolder::whereNull('parent_id')
+                    ->forUser($user)
                     ->withCount('subfolders')
                     ->orderBy('name')
                     ->get();
             } else {
-                // Get subfolders - TANPA whereUserHasAccess untuk sementara
+                // Get subfolders with permission filtering
                 $folders = TdFolder::where('parent_id', $parentId)
+                    ->forUser($user)
                     ->withCount('subfolders')
                     ->orderBy('name')
                     ->get();
             }
 
             return response()->json($folders);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
         } catch (\Exception $e) {
             Log::error('Error loading folders: ' . $e->getMessage());
             return response()->json([
+                'success' => false,
                 'message' => 'Gagal memuat folder',
                 'error' => $e->getMessage()
             ], 500);
@@ -137,8 +151,14 @@ class TdFolderController extends Controller
                 ], 404);
             }
 
-            // Get subfolders
-            $subfolders = $folder->subfolders()->with(['creator', 'bidang'])->get();
+            // Authorize view access
+            $this->authorize('view', $folder);
+
+            // Get subfolders with permission filtering
+            $subfolders = $folder->subfolders()
+                ->forUser($user)
+                ->with(['creator', 'bidang'])
+                ->get();
 
             return response()->json(TdFolderResource::collection($subfolders));
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -223,6 +243,9 @@ class TdFolderController extends Controller
      */
     public function breadcrumb(TdFolder $folder): JsonResponse
     {
+        // Authorize view
+        $this->authorize('view', $folder);
+
         $breadcrumb = $folder->getBreadcrumb();
 
         return response()->json([
@@ -261,6 +284,9 @@ class TdFolderController extends Controller
      */
     public function toggleStar(TdFolder $folder): JsonResponse
     {
+        // Authorize view (user must be able to see the folder to star it)
+        $this->authorize('view', $folder);
+
         $folder->update(['is_starred' => !$folder->is_starred]);
 
         return response()->json([
@@ -275,6 +301,9 @@ class TdFolderController extends Controller
      */
     public function stats(TdFolder $folder): JsonResponse
     {
+        // Authorize view
+        $this->authorize('view', $folder);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -294,6 +323,9 @@ class TdFolderController extends Controller
     {
         try {
             $folder = TdFolder::onlyTrashed()->findOrFail($folderId);
+
+            // Authorize restore
+            $this->authorize('restore', $folder);
 
             // Restore folder
             $folder->restore();
@@ -317,6 +349,9 @@ class TdFolderController extends Controller
     {
         try {
             $folder = TdFolder::onlyTrashed()->findOrFail($folderId);
+
+            // Authorize force delete
+            $this->authorize('forceDelete', $folder);
 
             // Permanently delete folder
             $folder->forceDelete();

@@ -56,6 +56,9 @@ class ProcessFileUpload implements ShouldQueue
             $fullPath = $storagePath . '/' . $filename;
             Storage::put($fullPath, file_get_contents($this->tempPath));
 
+            // Calculate file hash
+            $hash = hash_file('sha256', $this->tempPath);
+
             // Delete temp file
             if (file_exists($this->tempPath)) {
                 unlink($this->tempPath);
@@ -64,16 +67,17 @@ class ProcessFileUpload implements ShouldQueue
             // Create file record
             $file = TdFile::create([
                 'folder_id' => $this->folderId,
-                'name' => $this->originalName,
-                'filename' => $filename,
-                'path' => $fullPath,
+                'bidang_id' => $folder->bidang_id,
+                'sub_bidang_id' => $folder->sub_bidang_id,
+                'name' => pathinfo($this->originalName, PATHINFO_FILENAME),
+                'original_name' => $this->originalName,
+                'storage_path' => $fullPath,
                 'extension' => $extension,
                 'mime_type' => $this->mimeType,
                 'size' => $this->fileSize,
-                'size_kb' => round($this->fileSize / 1024, 2),
-                'is_current' => true,
+                'hash' => $hash,
                 'version' => 1,
-                'uploaded_by' => $this->userId,
+                'is_latest_version' => true,
                 'created_by' => $this->userId,
             ]);
 

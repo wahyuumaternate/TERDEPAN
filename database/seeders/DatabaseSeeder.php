@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Modules\Penugasan\Database\Seeders\PenugasanDatabaseSeeder;
+use Modules\PerjanjianKinerja\Database\Seeders\PerjanjianKinerjaDatabaseSeeder;
+use Modules\TerminalData\Database\Seeders\TerminalDataDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,6 +24,10 @@ class DatabaseSeeder extends Seeder
             // PegawaiWithAtasanSeeder::class,
             // PegawaiSeeder::class,
             TestPegawaiSeeder::class,
+
+            TerminalDataDatabaseSeeder::class,
+            PerjanjianKinerjaDatabaseSeeder::class,
+            PenugasanDatabaseSeeder::class,
         ]);
         // User::factory(10)->create();
 

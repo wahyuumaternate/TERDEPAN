@@ -17,7 +17,7 @@ class MasterPegawaiSeeder extends Seeder
             'bidang_id' => 1, // pastikan id bidang 1 ada
             'jenis_kelamin' => 'L',
             'email' => 'admin@gmail.com',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('password'),
             'status_kepegawaian' => 'Kontrak',
         ]);
     }

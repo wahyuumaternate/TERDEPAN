@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use App\Models\MasterPegawai;
 use App\Models\MasterBidang;
+use App\Models\MasterSubBidang;
 use Illuminate\Support\Facades\Auth;
 
 // use Modules\TerminalData\Database\Factories\TdFileFactory;
@@ -24,6 +25,7 @@ class TdFile extends Model
     protected $fillable = [
         'folder_id',
         'bidang_id',
+        'sub_bidang_id',
         'name',
         'original_name',
         'description',
@@ -152,9 +154,24 @@ class TdFile extends Model
         return $this->belongsTo(MasterBidang::class);
     }
 
+    public function subBidang()
+    {
+        return $this->belongsTo(MasterSubBidang::class, 'sub_bidang_id');
+    }
+
     public function shares()
     {
         return $this->morphMany(TdShare::class, 'shareable');
+    }
+
+    public function sharedWith()
+    {
+        return $this->belongsToMany(
+            MasterPegawai::class,
+            'td_file_shares',
+            'file_id',
+            'pegawai_id'
+        )->withPivot('access_level', 'expires_at')->withTimestamps();
     }
 
     public function activities()
@@ -227,6 +244,95 @@ class TdFile extends Model
     public function scopeRecentlyUploaded($query, $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    public function scopeInBidang($query, $bidangId)
+    {
+        return $query->where('bidang_id', $bidangId);
+    }
+
+    public function scopeInSubBidang($query, $subBidangId)
+    {
+        return $query->where('sub_bidang_id', $subBidangId);
+    }
+
+    /**
+     * Scope untuk filter file berdasarkan akses user
+     * Digunakan untuk permission-based filtering
+     */
+    public function scopeForUser($query, MasterPegawai $user)
+    {
+        // Semua user yang terautentikasi bisa melihat semua file
+        return $query;
+    }
+
+    /**
+     * Scope untuk file yang bisa diedit oleh user
+     */
+    public function scopeEditableBy($query, MasterPegawai $user)
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - edit semua
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return $query;
+        }
+
+        // KABID - edit file bidangnya
+        if ($kodeJabatan === 'KABID') {
+            return $query->where(function ($q) use ($user) {
+                $q->where('bidang_id', $user->bidang_id)
+                    ->orWhereHas('folder', function ($fq) use ($user) {
+                        $fq->where('bidang_id', $user->bidang_id);
+                    });
+            });
+        }
+
+        // KASUBAG, PELAKSANA, JAFUNG, GATEK - edit file sendiri
+        if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $query->where('created_by', $user->id);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * Scope untuk file yang bisa dihapus oleh user
+     */
+    public function scopeDeletableBy($query, MasterPegawai $user)
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - delete semua
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return $query;
+        }
+
+        // KABID - delete file bidangnya
+        if ($kodeJabatan === 'KABID') {
+            return $query->where(function ($q) use ($user) {
+                $q->where('bidang_id', $user->bidang_id)
+                    ->orWhereHas('folder', function ($fq) use ($user) {
+                        $fq->where('bidang_id', $user->bidang_id);
+                    });
+            });
+        }
+
+        // KASUBAG, PELAKSANA, JAFUNG, GATEK - delete file sendiri
+        if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $query->where('created_by', $user->id);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * Scope untuk file yang bisa didownload oleh user
+     */
+    public function scopeDownloadableBy($query, MasterPegawai $user)
+    {
+        // Semua user yang terautentikasi bisa download semua file
+        return $query;
     }
 
     // ==================== Helper Methods ====================
@@ -322,6 +428,7 @@ class TdFile extends Model
         $newFile = new static([
             'folder_id' => $this->folder_id,
             'bidang_id' => $this->bidang_id,
+            'sub_bidang_id' => $this->sub_bidang_id,
             'name' => $this->name,
             'original_name' => basename($newFilePath),
             'description' => $this->description,
@@ -347,42 +454,73 @@ class TdFile extends Model
         return $newFile;
     }
 
-    public function canAccess($user, $permission = 'viewer')
+    public function canAccess($user, $permission = 'view')
     {
-        // Owner always has access
+        // Owner always has full access
         if ($this->created_by === $user->id) {
             return true;
         }
 
-        // Check if public
-        if ($this->is_public && $permission === 'viewer') {
+        // Check if public for view/download only
+        if ($this->is_public && in_array($permission, ['view', 'download'])) {
             return true;
         }
 
-        // Check folder access
-        if ($this->folder->canAccess($user, $permission)) {
+        // Map permission to Spatie permission name
+        $permissionMap = [
+            'view' => 'td_file_view',
+            'download' => 'td_file_download',
+            'edit' => 'td_file_edit',
+            'delete' => 'td_file_delete',
+        ];
+
+        $basePermission = $permissionMap[$permission] ?? 'td_file_view';
+
+        // Check permissions hierarchy: all > bidang > sub_bidang > own
+        if ($user->hasPermissionTo($basePermission . '_all')) {
             return true;
         }
 
-        // Check direct shares
-        $share = $this->shares()
-            ->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhere('bidang_id', $user->bidang_id);
-            })
-            ->where(function ($q) use ($permission) {
-                $levels = ['viewer', 'commenter', 'editor', 'owner'];
-                $minIndex = array_search($permission, $levels);
-                $allowedLevels = array_slice($levels, $minIndex);
-                $q->whereIn('access_level', $allowedLevels);
-            })
-            ->where(function ($q) {
-                $q->whereNull('expires_at')
-                    ->orWhere('expires_at', '>', now());
-            })
+        if (
+            $user->hasPermissionTo($basePermission . '_bidang') &&
+            $this->bidang_id === $user->bidang_id
+        ) {
+            return true;
+        }
+
+        if (
+            $user->hasPermissionTo($basePermission . '_sub_bidang') &&
+            $this->sub_bidang_id === $user->sub_bidang_id
+        ) {
+            return true;
+        }
+
+        if (
+            $user->hasPermissionTo($basePermission . '_own') &&
+            $this->created_by === $user->id
+        ) {
+            return true;
+        }
+
+        // Check folder access if file doesn't have explicit permissions
+        if ($this->folder && $this->folder->canAccess($user, $permission)) {
+            return true;
+        }
+
+        // Check direct shares for staff who don't have role-based permissions
+        $share = $this->sharedWith()
+            ->where('pegawai_id', $user->id)
             ->first();
 
-        return $share !== null;
+        if ($share) {
+            // Share allows view/download by default
+            if (in_array($permission, ['view', 'download'])) {
+                return true;
+            }
+            // Check if share has edit rights (if we add a permission column to pivot later)
+        }
+
+        return false;
     }
 
     public function duplicate($newFolderId = null, $newName = null)
@@ -399,6 +537,15 @@ class TdFile extends Model
         $newFile->created_by = Auth::user()->id;
         $newFile->created_at = now();
 
+        // If duplicating to a different folder, inherit that folder's bidang and sub_bidang
+        if ($newFolderId && $newFolderId != $this->folder_id) {
+            $targetFolder = TdFolder::find($newFolderId);
+            if ($targetFolder) {
+                $newFile->bidang_id = $targetFolder->bidang_id;
+                $newFile->sub_bidang_id = $targetFolder->sub_bidang_id;
+            }
+        }
+
         // Copy physical file
         $newPath = str_replace($this->id, $newFile->id, $this->storage_path);
         Storage::copy($this->storage_path, $newPath);
@@ -407,5 +554,21 @@ class TdFile extends Model
         $newFile->save();
 
         return $newFile;
+    }
+
+    // Helper methods for access control
+    public function isOwnedBy($user)
+    {
+        return $this->created_by === $user->id;
+    }
+
+    public function belongsToUserBidang($user)
+    {
+        return $this->bidang_id && $this->bidang_id === $user->bidang_id;
+    }
+
+    public function belongsToUserSubBidang($user)
+    {
+        return $this->sub_bidang_id && $this->sub_bidang_id === $user->sub_bidang_id;
     }
 }

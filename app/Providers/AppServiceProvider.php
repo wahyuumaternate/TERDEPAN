@@ -5,9 +5,13 @@ namespace App\Providers;
 use App\Helpers\StorageHelper;
 use App\Services\NomorDokumenService;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
-
 use Illuminate\Support\ServiceProvider;
+use Modules\TerminalData\Models\TdFolder;
+use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Policies\TdFolderPolicy;
+use Modules\TerminalData\Policies\TdFilePolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +34,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrap();
+
+        // Register policies
+        Gate::policy(TdFolder::class, TdFolderPolicy::class);
+        Gate::policy(TdFile::class, TdFilePolicy::class);
 
         // Hitung total & penggunaan storage di disk 'public'
         $used = StorageHelper::getFolderSize(); // tanpa argumen, default ke public

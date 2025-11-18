@@ -15,6 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('folder_id')->index();
             $table->foreignId('bidang_id')->nullable()->constrained('master_bidang')->nullOnDelete();
+            $table->foreignId('sub_bidang_id')->nullable()->constrained('master_sub')->nullOnDelete();
 
             // File Basic Info
             $table->string('name');

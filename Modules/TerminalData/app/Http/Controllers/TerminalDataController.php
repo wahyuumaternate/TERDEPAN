@@ -3,14 +3,17 @@
 namespace Modules\TerminalData\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Modules\TerminalData\Http\Requests\GetFoldersRequest;
 use Modules\TerminalData\Http\Resources\TdFolderResource;
+use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Services\TdFolderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class TerminalDataController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct(
         protected TdFolderService $folderService
     ) {}
@@ -31,6 +34,9 @@ class TerminalDataController extends Controller
         try {
             /** @var \App\Models\MasterPegawai $user */
             $user = $request->user();
+
+            // Authorize viewAny folders
+            $this->authorize('viewAny', TdFolder::class);
 
             // Get validated filters
             $filters = $request->validated();
@@ -83,9 +89,18 @@ class TerminalDataController extends Controller
                 abort(404, 'Folder tidak ditemukan');
             }
 
-            // Get subfolders and files
-            $subfolders = $folder->subfolders()->with(['creator', 'bidang'])->get();
-            $files = $folder->files()->with(['creator'])->get();
+            // Authorize view
+            $this->authorize('view', $folder);
+
+            // Get subfolders and files with permission filtering
+            $subfolders = $folder->subfolders()
+                ->forUser($user)
+                ->with(['creator', 'bidang'])
+                ->get();
+            $files = $folder->files()
+                ->forUser($user)
+                ->with(['creator'])
+                ->get();
 
             return view('terminaldata::folder.detail', compact('folder', 'subfolders', 'files'));
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -114,8 +129,14 @@ class TerminalDataController extends Controller
                 ], 404);
             }
 
-            // Get subfolders
-            $subfolders = $folder->subfolders()->with(['creator', 'bidang'])->get();
+            // Authorize view
+            $this->authorize('view', $folder);
+
+            // Get subfolders with permission filtering
+            $subfolders = $folder->subfolders()
+                ->forUser($user)
+                ->with(['creator', 'bidang'])
+                ->get();
 
             return response()->json(TdFolderResource::collection($subfolders));
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -142,13 +163,15 @@ class TerminalDataController extends Controller
             /** @var \App\Models\MasterPegawai $user */
             $user = request()->user();
 
-            // Get trashed folders and files
+            // Get trashed folders and files with permission filtering
             $trashedFolders = \Modules\TerminalData\Models\TdFolder::onlyTrashed()
+                ->deletableBy($user)
                 ->with(['creator', 'bidang', 'parent'])
                 ->orderBy('deleted_at', 'desc')
                 ->get();
 
             $trashedFiles = \Modules\TerminalData\Models\TdFile::onlyTrashed()
+                ->deletableBy($user)
                 ->with(['creator', 'folder'])
                 ->orderBy('deleted_at', 'desc')
                 ->get();

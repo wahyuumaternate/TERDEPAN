@@ -2,6 +2,7 @@
 
 namespace Modules\TerminalData\Http\Controllers\Api;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -14,6 +15,8 @@ use Modules\TerminalData\Models\TdFolder;
 
 class TdFileController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct()
     {
         $this->middleware('auth:sanctum');
@@ -41,6 +44,9 @@ class TdFileController extends Controller
             /** @var \App\Models\MasterPegawai $user */
             $user = $request->user();
 
+            // Check upload permission
+            $this->authorize('upload', TdFile::class);
+
             // Check if folder exists and user has access
             $folder = TdFolder::findOrFail($request->folder_id);
 
@@ -62,20 +68,23 @@ class TdFileController extends Controller
             // Store file directly
             $path = $uploadedFile->storeAs($storagePath, $filename);
 
+            // Calculate file hash
+            $hash = hash_file('sha256', $uploadedFile->getRealPath());
+
             // Create file record
             $file = TdFile::create([
                 'folder_id' => $folder->id,
+                'bidang_id' => $folder->bidang_id,
+                'sub_bidang_id' => $folder->sub_bidang_id,
+                'name' => pathinfo($originalName, PATHINFO_FILENAME),
                 'original_name' => $originalName,
-                'name' => $originalName,
-                'filename' => $filename,
                 'storage_path' => $path,
                 'extension' => $extension,
                 'mime_type' => $mimeType,
                 'size' => $fileSize,
-                'size_kb' => round($fileSize / 1024, 2),
-                'is_current' => true,
+                'hash' => $hash,
                 'version' => 1,
-                'uploaded_by' => $user->id,
+                'is_latest_version' => true,
                 'created_by' => $user->id,
             ]);
 
@@ -88,7 +97,7 @@ class TdFileController extends Controller
                 'data' => [
                     'id' => $file->id,
                     'name' => $file->name,
-                    'size' => $file->size_kb,
+                    'size' => round($file->size / 1024, 2) . ' KB',
                 ]
             ]);
         } catch (\Exception $e) {
@@ -106,6 +115,9 @@ class TdFileController extends Controller
     {
         try {
             $file = TdFile::findOrFail($fileId);
+
+            // Authorize download
+            $this->authorize('download', $file);
 
             // Check if file exists in storage
             if (!$file->storage_path || !Storage::exists($file->storage_path)) {
@@ -129,6 +141,9 @@ class TdFileController extends Controller
 
         try {
             $file = TdFile::findOrFail($fileId);
+
+            // Authorize update
+            $this->authorize('update', $file);
 
             // Update file name
             $file->name = $request->name;
@@ -157,6 +172,9 @@ class TdFileController extends Controller
     {
         try {
             $file = TdFile::findOrFail($fileId);
+
+            // Authorize view
+            $this->authorize('view', $file);
 
             // Check if file exists in storage (local disk = storage/app/private)
             if (!Storage::exists($file->storage_path)) {
@@ -211,6 +229,9 @@ class TdFileController extends Controller
         try {
             $file = TdFile::findOrFail($fileId);
 
+            // Authorize delete
+            $this->authorize('delete', $file);
+
             // Soft delete (move to trash)
             $file->delete();
 
@@ -239,6 +260,9 @@ class TdFileController extends Controller
         try {
             $file = TdFile::onlyTrashed()->findOrFail($fileId);
 
+            // Authorize restore (using delete permission as proxy)
+            $this->authorize('delete', $file);
+
             // Restore file
             $file->restore();
 
@@ -266,6 +290,9 @@ class TdFileController extends Controller
     {
         try {
             $file = TdFile::onlyTrashed()->findOrFail($fileId);
+
+            // Authorize force delete (using delete permission as proxy)
+            $this->authorize('delete', $file);
 
             // Delete physical file from storage
             if (Storage::exists($file->storage_path)) {

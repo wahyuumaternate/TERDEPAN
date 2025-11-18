@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use App\Models\MasterPegawai;
 use App\Models\MasterBidang;
+use App\Models\MasterSubBidang;
 // use Modules\TerminalData\Database\Factories\TdFolderFactory;
 
 class TdFolder extends Model
@@ -21,6 +22,7 @@ class TdFolder extends Model
     protected $fillable = [
         'parent_id',
         'bidang_id',
+        'sub_bidang_id',
         'name',
         'description',
         'path',
@@ -129,10 +131,15 @@ class TdFolder extends Model
         return $this->belongsTo(MasterBidang::class);
     }
 
-    // public function shares()
-    // {
-    //     return $this->morphMany(TdShare::class, 'shareable');
-    // }
+    public function subBidang()
+    {
+        return $this->belongsTo(MasterSubBidang::class, 'sub_bidang_id');
+    }
+
+    public function shares()
+    {
+        return $this->morphMany(TdShare::class, 'shareable');
+    }
 
     public function activities()
     {
@@ -189,6 +196,87 @@ class TdFolder extends Model
         });
     }
 
+    public function scopeInSubBidang($query, $subBidangId)
+    {
+        return $query->where('sub_bidang_id', $subBidangId);
+    }
+
+    /**
+     * Scope untuk filter folder berdasarkan akses user
+     * Menggunakan master_jabatan kode
+     */
+    public function scopeForUser($query, MasterPegawai $user)
+    {
+        // Semua user yang terautentikasi bisa melihat semua folder
+        return $query;
+    }
+
+    /**
+     * Scope untuk folder yang bisa diedit oleh user
+     */
+    public function scopeEditableBy($query, MasterPegawai $user)
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - edit semua
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return $query;
+        }
+
+        // KABID - edit folder bidangnya
+        if ($kodeJabatan === 'KABID') {
+            return $query->where('bidang_id', $user->bidang_id);
+        }
+
+        // KASUBAG, PELAKSANA, JAFUNG, GATEK - edit folder sendiri
+        if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $query->where('created_by', $user->id);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * Scope untuk folder yang bisa dihapus oleh user
+     */
+    public function scopeDeletableBy($query, MasterPegawai $user)
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - delete semua
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return $query;
+        }
+
+        // KABID - delete folder bidangnya
+        if ($kodeJabatan === 'KABID') {
+            return $query->where('bidang_id', $user->bidang_id);
+        }
+
+        // KASUBAG, PELAKSANA, JAFUNG, GATEK - delete folder sendiri
+        if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $query->where('created_by', $user->id);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * Scope untuk folder public atau yang dimiliki user
+     */
+    public function scopePublicOrOwned($query, MasterPegawai $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where('is_public', true)
+                ->orWhere('created_by', $user->id)
+                ->orWhere(function ($sq) use ($user) {
+                    if ($user->bidang_id) {
+                        $sq->where('bidang_id', $user->bidang_id);
+                    }
+                });
+        });
+    }
+
     // ==================== Helper Methods ====================
 
     public function getBreadcrumb()
@@ -235,37 +323,115 @@ class TdFolder extends Model
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
-    public function canAccess($user, $permission = 'viewer')
+    /**
+     * Check if user can access this folder
+     * Menggunakan Spatie Permission untuk checking
+     */
+    public function canAccess(MasterPegawai $user, $permission = 'view')
     {
         // Owner always has access
         if ($this->created_by === $user->id) {
             return true;
         }
 
-        // Check if public
-        if ($this->is_public && $permission === 'viewer') {
+        // Check if public and only viewing
+        if ($this->is_public && $permission === 'view') {
             return true;
         }
 
-        // Check shares
-        $share = $this->shares()
-            ->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhere('bidang_id', $user->bidang_id);
-            })
-            ->where(function ($q) use ($permission) {
-                $levels = ['viewer', 'commenter', 'editor', 'owner'];
-                $minIndex = array_search($permission, $levels);
-                $allowedLevels = array_slice($levels, $minIndex);
-                $q->whereIn('access_level', $allowedLevels);
-            })
-            ->where(function ($q) {
-                $q->whereNull('expires_at')
-                    ->orWhere('expires_at', '>', now());
-            })
-            ->first();
+        // Check permission based access
+        if ($permission === 'view') {
+            // View all permission
+            if ($user->hasPermissionTo('td_folder_view_all')) {
+                return true;
+            }
 
-        return $share !== null;
+            // View bidang permission
+            if ($user->hasPermissionTo('td_folder_view_bidang') && $this->bidang_id === $user->bidang_id) {
+                return true;
+            }
+
+            // View sub bidang permission
+            if ($user->hasPermissionTo('td_folder_view_sub_bidang') && $this->sub_bidang_id === $user->sub_bidang_id) {
+                return true;
+            }
+        }
+
+        if ($permission === 'edit') {
+            // Edit bidang permission
+            if ($user->hasPermissionTo('td_folder_edit_bidang') && $this->bidang_id === $user->bidang_id) {
+                return true;
+            }
+
+            // Edit own permission
+            if ($user->hasPermissionTo('td_folder_edit_own') && $this->created_by === $user->id) {
+                return true;
+            }
+        }
+
+        if ($permission === 'delete') {
+            // Delete bidang permission
+            if ($user->hasPermissionTo('td_folder_delete_bidang') && $this->bidang_id === $user->bidang_id) {
+                return true;
+            }
+
+            // Delete own permission
+            if ($user->hasPermissionTo('td_folder_delete_own') && $this->created_by === $user->id) {
+                return true;
+            }
+        }
+
+        // Check shares jika ada
+        if (method_exists($this, 'shares') && $this->shares()->exists()) {
+            $share = $this->shares()
+                ->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhere('bidang_id', $user->bidang_id);
+                })
+                ->where(function ($q) use ($permission) {
+                    $levels = ['viewer', 'commenter', 'editor', 'owner'];
+                    $minIndex = array_search($permission === 'view' ? 'viewer' : $permission, $levels);
+                    if ($minIndex !== false) {
+                        $allowedLevels = array_slice($levels, $minIndex);
+                        $q->whereIn('access_level', $allowedLevels);
+                    }
+                })
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now());
+                })
+                ->first();
+
+            if ($share) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user is owner of this folder
+     */
+    public function isOwnedBy(MasterPegawai $user): bool
+    {
+        return $this->created_by === $user->id;
+    }
+
+    /**
+     * Check if folder belongs to user's bidang
+     */
+    public function belongsToUserBidang(MasterPegawai $user): bool
+    {
+        return $this->bidang_id === $user->bidang_id;
+    }
+
+    /**
+     * Check if folder belongs to user's sub bidang
+     */
+    public function belongsToUserSubBidang(MasterPegawai $user): bool
+    {
+        return $this->sub_bidang_id === $user->sub_bidang_id;
     }
 
     public function getAllDescendants()

@@ -12,6 +12,7 @@ class TerminalDataDatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            // TdPermissionSeeder::class,
             TdFolderSeeder::class,
         ]);
     }

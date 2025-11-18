@@ -16,8 +16,15 @@ class TdFolderSeeder extends Seeder
             return;
         }
 
-        // Get all bidang
-        $bidangList = DB::table('master_bidang')->get();
+        // Get only Bappeda and Sekretariat bidang
+        $bidangList = DB::table('master_bidang')
+            ->whereIn('nama', ['Bappeda', 'Sekretariat'])
+            ->get();
+
+        if ($bidangList->isEmpty()) {
+            $this->command->warn('Bidang Bappeda atau Sekretariat tidak ditemukan!');
+            return;
+        }
 
         // Get admin/system user (ID=1, atau bisa diganti sesuai kebutuhan)
         $systemUserId = 1;
@@ -28,9 +35,6 @@ class TdFolderSeeder extends Seeder
             'Bahan Tayang',
             'Laporan',
             'Surat',
-            'Data Spasial',
-            'Perjanjian',
-            'Arsip Lainnya'
         ];
 
         $now = Carbon::now();
