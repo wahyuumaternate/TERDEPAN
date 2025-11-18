@@ -63,8 +63,14 @@ class TdFilePolicy
         }
 
         // KASUBAG - hanya bisa upload di folder sub bidangnya
+        // Jika KASUBAG punya sub_bidang_id, harus match dengan folder
+        // Jika tidak punya sub_bidang_id, fallback ke bidang_id check
         if ($kodeJabatan === 'KASUBAG') {
-            return $folder->sub_bidang_id === $user->sub_bidang_id;
+            if ($user->sub_bidang_id && $folder->sub_bidang_id) {
+                return $folder->sub_bidang_id === $user->sub_bidang_id;
+            }
+            // Fallback: bisa upload di folder bidangnya
+            return $folder->bidang_id === $user->bidang_id;
         }
 
         // PELAKSANA, JAFUNG, GATEK - hanya bisa upload di folder bidang/sub bidang mereka
@@ -76,8 +82,9 @@ class TdFilePolicy
             if ($user->bidang_id && $folder->bidang_id === $user->bidang_id) {
                 return true;
             }
-            // Atau folder yang mereka buat sendiri
-            return $folder->created_by === $user->id;
+            // TIDAK bisa upload ke folder yang bukan bidang/sub_bidang mereka
+            // meskipun mereka adalah created_by folder tersebut
+            return false;
         }
 
         return false;

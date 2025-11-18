@@ -163,6 +163,11 @@ class TdFileController extends Controller
                     'name' => $file->name,
                 ]
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk mengubah file ini'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
