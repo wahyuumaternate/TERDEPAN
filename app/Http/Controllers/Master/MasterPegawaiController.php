@@ -8,14 +8,21 @@ use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class MasterPegawaiController extends Controller
 {
+    use AuthorizesRequests;
     public function index()
     {
         try {
+            $this->authorize('viewAny', MasterPegawai::class);
+
             $data = MasterPegawai::with(['jabatan', 'bidang', 'atasanLangsung', 'ttdDigital'])->get();
             return view('master-data.index-pegawai', compact('data'));
+        } catch (AuthorizationException $e) {
+            abort(403, 'Unauthorized');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -29,6 +36,8 @@ class MasterPegawaiController extends Controller
     public function store(Request $request)
     {
         try {
+            $this->authorize('create', MasterPegawai::class);
+
             // Debug: Log request data
             Log::info('Store Pegawai Request Data:', $request->all());
 
@@ -99,6 +108,8 @@ class MasterPegawaiController extends Controller
             Log::info('Pegawai created with ID: ' . $pegawai->id);
 
             return redirect()->route('master.pegawai.index')->with('success', 'Pegawai berhasil ditambah');
+        } catch (AuthorizationException $e) {
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation Error:', $e->errors());
             return redirect()->back()->withErrors($e->errors())->withInput();
@@ -137,6 +148,8 @@ class MasterPegawaiController extends Controller
     {
         try {
             $pegawai = MasterPegawai::findOrFail($id);
+
+            $this->authorize('update', $pegawai);
 
             $data = $request->validate([
                 'nomor_identitas' => 'required|unique:master_pegawai,nomor_identitas,' . $id,
@@ -202,6 +215,11 @@ class MasterPegawaiController extends Controller
             }
 
             return redirect()->route('master.pegawai.show', $id)->with('success', 'Data pegawai berhasil diperbarui');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => 'Pegawai tidak ditemukan'], 404);
@@ -225,6 +243,8 @@ class MasterPegawaiController extends Controller
         try {
             $pegawai = MasterPegawai::findOrFail($id);
 
+            $this->authorize('delete', $pegawai);
+
             // Delete photo file if exists
             if ($pegawai->foto_profile_path && file_exists(public_path($pegawai->foto_profile_path))) {
                 unlink(public_path($pegawai->foto_profile_path));
@@ -240,6 +260,11 @@ class MasterPegawaiController extends Controller
             }
 
             return redirect()->route('master.pegawai.index')->with('success', 'Pegawai berhasil dihapus');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => 'Pegawai tidak ditemukan'], 404);

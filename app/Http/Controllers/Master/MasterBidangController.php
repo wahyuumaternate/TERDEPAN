@@ -5,12 +5,18 @@ namespace App\Http\Controllers\Master;
 use App\Http\Controllers\Controller;
 use App\Models\MasterBidang;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class MasterBidangController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(Request $request)
     {
         try {
+            $this->authorize('viewAny', MasterBidang::class);
+
             $data = MasterBidang::all();
 
             // If AJAX request, return JSON
@@ -19,6 +25,11 @@ class MasterBidangController extends Controller
             }
 
             return view('master-data.index-bidang', compact('data'));
+        } catch (AuthorizationException $e) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Exception $e) {
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -38,6 +49,8 @@ class MasterBidangController extends Controller
     public function store(Request $request)
     {
         try {
+            $this->authorize('create', MasterBidang::class);
+
             $data = $request->validate([
                 'kode' => 'required|unique:master_bidang,kode|max:20',
                 'nama' => 'required|string|max:100',
@@ -62,6 +75,11 @@ class MasterBidangController extends Controller
             }
 
             return redirect()->route('master.bidang.index')->with('success', 'Bidang berhasil ditambah');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
@@ -104,6 +122,8 @@ class MasterBidangController extends Controller
         try {
             $bidang = MasterBidang::findOrFail($id);
 
+            $this->authorize('update', $bidang);
+
             $data = $request->validate([
                 'kode' => 'required|unique:master_bidang,kode,' . $id . '|max:20',
                 'nama' => 'required|string|max:100',
@@ -122,7 +142,12 @@ class MasterBidangController extends Controller
                 ]);
             }
 
-            return redirect()->route('master.bidang.show', $id)->with('success', 'Bidang berhasil diperbarui');
+            return redirect()->route('master.bidang.show', $bidang->id)->with('success', 'Bidang berhasil diperbarui');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => 'Bidang tidak ditemukan'], 404);
@@ -146,6 +171,8 @@ class MasterBidangController extends Controller
         try {
             $bidang = MasterBidang::findOrFail($id);
 
+            $this->authorize('delete', $bidang);
+
             // Check if bidang has pegawai
             if ($bidang->pegawai()->count() > 0) {
                 $message = 'Bidang tidak dapat dihapus karena masih memiliki pegawai';
@@ -165,6 +192,11 @@ class MasterBidangController extends Controller
             }
 
             return redirect()->route('master.bidang.index')->with('success', 'Bidang berhasil dihapus');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => 'Bidang tidak ditemukan'], 404);

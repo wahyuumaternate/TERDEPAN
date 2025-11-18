@@ -5,14 +5,22 @@ namespace App\Http\Controllers\Master;
 use App\Http\Controllers\Controller;
 use App\Models\MasterJabatan;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class MasterJabatanController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
         try {
+            $this->authorize('viewAny', MasterJabatan::class);
+
             $data = MasterJabatan::orderBy('level', 'ASC')->with(['pegawai'])->get();
             return view('master-data.index-jabatan', compact('data'));
+        } catch (AuthorizationException $e) {
+            abort(403, 'Unauthorized');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -26,6 +34,8 @@ class MasterJabatanController extends Controller
     public function store(Request $request)
     {
         try {
+            $this->authorize('create', MasterJabatan::class);
+
             $data = $request->validate([
                 'kode' => 'required|unique:master_jabatan,kode|max:10',
                 'nama' => 'required|string|max:100',
@@ -57,6 +67,11 @@ class MasterJabatanController extends Controller
             }
 
             return redirect()->route('master.jabatan.index')->with('success', 'Jabatan berhasil ditambah');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
@@ -99,6 +114,8 @@ class MasterJabatanController extends Controller
         try {
             $jabatan = MasterJabatan::findOrFail($id);
 
+            $this->authorize('update', $jabatan);
+
             $data = $request->validate([
                 'kode' => 'required|unique:master_jabatan,kode,' . $id . '|max:10',
                 'nama' => 'required|string|max:100',
@@ -119,6 +136,11 @@ class MasterJabatanController extends Controller
             }
 
             return redirect()->route('master.jabatan.show', $id)->with('success', 'Jabatan berhasil diperbarui');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => 'Jabatan tidak ditemukan'], 404);
@@ -142,6 +164,8 @@ class MasterJabatanController extends Controller
         try {
             $jabatan = MasterJabatan::findOrFail($id);
 
+            $this->authorize('delete', $jabatan);
+
             // Check if jabatan has pegawai
             if ($jabatan->pegawai()->count() > 0) {
                 $message = 'Jabatan tidak dapat dihapus karena masih memiliki pegawai';
@@ -161,6 +185,11 @@ class MasterJabatanController extends Controller
             }
 
             return redirect()->route('master.jabatan.index')->with('success', 'Jabatan berhasil dihapus');
+        } catch (AuthorizationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            abort(403, 'Unauthorized');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => 'Jabatan tidak ditemukan'], 404);
