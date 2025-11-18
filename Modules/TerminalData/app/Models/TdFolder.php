@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use App\Models\MasterPegawai;
 use App\Models\MasterBidang;
 use App\Models\MasterSubBidang;
-// use Modules\TerminalData\Database\Factories\TdFolderFactory;
+use Modules\TerminalData\Database\Factories\TdFolderFactory;
 
 class TdFolder extends Model
 {
@@ -50,6 +50,11 @@ class TdFolder extends Model
     ];
 
     protected $with = ['creator'];
+
+    protected static function newFactory()
+    {
+        return TdFolderFactory::new();
+    }
 
     protected static function boot()
     {

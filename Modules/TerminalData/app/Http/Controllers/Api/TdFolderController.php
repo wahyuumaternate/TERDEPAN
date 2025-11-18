@@ -3,6 +3,7 @@
 namespace Modules\TerminalData\Http\Controllers\Api;
 
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -190,6 +191,11 @@ class TdFolderController extends Controller
                 'message' => 'Folder berhasil diupdate',
                 'data' => new TdFolderResource($folder)
             ]);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

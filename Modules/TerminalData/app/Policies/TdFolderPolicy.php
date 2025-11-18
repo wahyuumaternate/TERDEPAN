@@ -67,6 +67,16 @@ class TdFolderPolicy
      */
     public function delete(MasterPegawai $user, TdFolder $folder): bool
     {
+        // Tidak bisa hapus folder jika masih ada file di dalamnya
+        if ($folder->files()->count() > 0) {
+            return false;
+        }
+
+        // Tidak bisa hapus folder jika masih ada subfolder
+        if ($folder->subfolders()->count() > 0) {
+            return false;
+        }
+
         $kodeJabatan = $user->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access

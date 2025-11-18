@@ -11,8 +11,7 @@ use App\Models\MasterPegawai;
 use App\Models\MasterBidang;
 use App\Models\MasterSubBidang;
 use Illuminate\Support\Facades\Auth;
-
-// use Modules\TerminalData\Database\Factories\TdFileFactory;
+use Modules\TerminalData\Database\Factories\TdFileFactory;
 
 class TdFile extends Model
 {
@@ -73,6 +72,11 @@ class TdFile extends Model
     ];
 
     protected $with = ['creator', 'folder'];
+
+    protected static function newFactory()
+    {
+        return TdFileFactory::new();
+    }
 
     protected static function boot()
     {

@@ -44,11 +44,11 @@ class TdFileController extends Controller
             /** @var \App\Models\MasterPegawai $user */
             $user = $request->user();
 
-            // Check upload permission
-            $this->authorize('upload', TdFile::class);
-
-            // Check if folder exists and user has access
+            // Check if folder exists
             $folder = TdFolder::findOrFail($request->folder_id);
+
+            // Check upload permission dengan folder context
+            $this->authorize('upload', [TdFile::class, $folder]);
 
             // Get uploaded file
             $uploadedFile = $request->file('file');
@@ -100,6 +100,12 @@ class TdFileController extends Controller
                     'size' => round($file->size / 1024, 2) . ' KB',
                 ]
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk upload file ke folder ini. ' .
+                    'Pastikan folder sesuai dengan bidang/sub bidang Anda atau Anda adalah pemilik folder.'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -244,6 +250,12 @@ class TdFileController extends Controller
                 'success' => true,
                 'message' => 'File berhasil dipindahkan ke sampah'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak dapat menghapus file. ' .
+                    'File di folder Eviden Kinerja tidak dapat dihapus atau Anda tidak memiliki izin.'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
