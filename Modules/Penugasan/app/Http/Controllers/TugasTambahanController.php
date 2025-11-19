@@ -5,10 +5,12 @@ namespace Modules\Penugasan\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Modules\Penugasan\Models\TugasTambahan;
 
 class TugasTambahanController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -51,6 +53,8 @@ class TugasTambahanController extends Controller
                 'attachedFiles'
             ])->findOrFail($id);
 
+            $this->authorize('uploadEviden', $tugas);
+
             $jenisTugas = 'tugas_tambahan';
 
             return view('penugasan::penugasan.upload-eviden', compact('tugas', 'jenisTugas'));
@@ -67,6 +71,8 @@ class TugasTambahanController extends Controller
         try {
             $tugasTambahan = TugasTambahan::with(['pegawai', 'pemberiTugas', 'validator', 'attachedFiles'])
                 ->findOrFail($id);
+
+            $this->authorize('view', $tugasTambahan);
 
             // Return JSON response for AJAX request
             if (request()->ajax() || request()->wantsJson()) {
@@ -91,6 +97,9 @@ class TugasTambahanController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            $tugasTambahan = TugasTambahan::findOrFail($id);
+            $this->authorize('update', $tugasTambahan);
+
             $validated = $request->validate([
                 'nama_tugas' => 'required|string|max:500',
                 'deskripsi' => 'nullable|string',
@@ -100,13 +109,17 @@ class TugasTambahanController extends Controller
                 'satuan' => 'required|string|max:50',
             ]);
 
-            $tugasTambahan = TugasTambahan::findOrFail($id);
             $tugasTambahan->update($validated);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Tugas tambahan berhasil diperbarui'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+            ], 403);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -128,15 +141,7 @@ class TugasTambahanController extends Controller
     {
         try {
             $tugasTambahan = TugasTambahan::findOrFail($id);
-
-            // Check if user has permission to delete
-            $currentUserId = Auth::id();
-            if ($tugasTambahan->pemberi_tugas_id !== $currentUserId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Anda tidak memiliki izin untuk menghapus tugas ini'
-                ], 403);
-            }
+            $this->authorize('delete', $tugasTambahan);
 
             $tugasTambahan->delete();
 
@@ -144,6 +149,11 @@ class TugasTambahanController extends Controller
                 'success' => true,
                 'message' => 'Tugas tambahan berhasil dihapus'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -157,11 +167,13 @@ class TugasTambahanController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
+        $tugasTambahan = TugasTambahan::findOrFail($id);
+        $this->authorize('updateStatus', $tugasTambahan);
+
         $validated = $request->validate([
             'status' => 'required|in:pending,dikerjakan,validasi,revisi,selesai'
         ]);
 
-        $tugasTambahan = TugasTambahan::findOrFail($id);
         $tugasTambahan->update(['status' => $validated['status']]);
 
         return response()->json([

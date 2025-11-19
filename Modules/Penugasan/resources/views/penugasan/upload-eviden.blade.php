@@ -5,7 +5,9 @@
         <h1>Upload Eviden Kinerja</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-pokok.index') }}">Penugasan</a></li>
+                <li class="breadcrumb-item">E-Kinerja</li>
+                <li class="breadcrumb-item">Penugasan</li>
+                <li class="breadcrumb-item"><a href="{{ route('penugasan.show', $tugas->pegawai->id) }}">Tugas Saya</a></li>
                 <li class="breadcrumb-item active">Upload Eviden</li>
             </ol>
         </nav>
@@ -284,7 +286,7 @@
                     <!-- Card Footer -->
                     <div class="card-footer bg-light py-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ route('penugasan.tugas-pokok.show', $tugas->pegawai_id) }}"
+                            <a href="{{ route('penugasan.show', $tugas->pegawai_id) }}"
                                 class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i> Kembali
                             </a>
@@ -1340,7 +1342,7 @@
                                 showConfirmButton: false
                             }).then(() => {
                                 window.location.href =
-                                    '{{ route('penugasan.tugas-pokok.index') }}';
+                                    '{{ route('penugasan.show', $tugas->pegawai_id) }}';
                             });
                         },
                         error: function(xhr) {

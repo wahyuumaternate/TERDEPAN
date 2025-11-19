@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Modules\Penugasan\Models\TugasHarian;
 use Modules\Penugasan\Models\TugasTambahan;
 use Modules\Penugasan\Helpers\PenilaianHelper;
@@ -17,6 +18,7 @@ use Modules\Penugasan\Models\TugasPokok;
 
 class PenugasanController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -292,6 +294,13 @@ class PenugasanController extends Controller
 
         $validated = $request->validate($rules);
 
+        // Check authorization based on task type
+        if ($validated['jenis_tugas'] === 'tugas_harian') {
+            $this->authorize('create', TugasHarian::class);
+        } else {
+            $this->authorize('create', TugasTambahan::class);
+        }
+
         DB::beginTransaction();
         try {
             // Get pemberi tugas id from authenticated user (MasterPegawai)
@@ -509,15 +518,19 @@ class PenugasanController extends Controller
                 $descMessage .= " - " . $validated['keterangan'];
             }
 
-            // Buat record progress dengan polymorphic relation
-            \Modules\Penugasan\Models\Progress::create([
-                'tipe_progress' => $modelClass,
-                'tipe_progress_id' => $tugas->id,
-                'pegawai_id' => $tugas->pegawai_id,
-                'tanggal' => now(),
-                'progress_persen' => 100.00,
-                'deskripsi_kegiatan' => $descMessage,
-            ]);
+            // Update or create progress record untuk hari ini (hindari duplicate)
+            \Modules\Penugasan\Models\Progress::updateOrCreate(
+                [
+                    'tipe_progress' => $modelClass,
+                    'tipe_progress_id' => $tugas->id,
+                    'tanggal' => now()->toDateString(), // Hanya tanggal, tanpa waktu
+                ],
+                [
+                    'pegawai_id' => $tugas->pegawai_id,
+                    'progress_persen' => 100.00,
+                    'deskripsi_kegiatan' => $descMessage,
+                ]
+            );
 
             // Simpan history revisi jika ini revisi
             if ($isRevision) {
@@ -570,9 +583,11 @@ class PenugasanController extends Controller
 
             $tugas = $modelClass::findOrFail($id);
 
-            // Validasi bahwa yang melakukan validasi adalah pemberi tugas
-            if ($tugas->pemberi_tugas_id !== Auth::id()) {
-                throw new \Exception('Anda tidak berhak memvalidasi tugas ini');
+            // Check authorization berdasarkan status validasi
+            if ($validated['status_validasi'] === 'diterima') {
+                $this->authorize('validate', $tugas);
+            } else {
+                $this->authorize('revise', $tugas);
             }
 
             // Validasi bahwa tugas dalam status validasi

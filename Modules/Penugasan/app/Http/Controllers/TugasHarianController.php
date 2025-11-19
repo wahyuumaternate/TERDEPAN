@@ -4,9 +4,11 @@ namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class TugasHarianController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -144,6 +146,8 @@ class TugasHarianController extends Controller
                 'attachedFiles'
             ])->findOrFail($id);
 
+            $this->authorize('uploadEviden', $tugas);
+
             $jenisTugas = 'tugas_harian';
 
             return view('penugasan::penugasan.upload-eviden', compact('tugas', 'jenisTugas'));
@@ -160,6 +164,8 @@ class TugasHarianController extends Controller
         try {
             $tugasHarian = \Modules\Penugasan\Models\TugasHarian::with(['tugasPokok', 'pegawai', 'pemberiTugas'])
                 ->findOrFail($id);
+
+            $this->authorize('view', $tugasHarian);
 
             // Return JSON response for AJAX request
             if (request()->ajax() || request()->wantsJson()) {
@@ -185,6 +191,9 @@ class TugasHarianController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+            $this->authorize('update', $tugasHarian);
+
             $validated = $request->validate([
                 'nama_tugas' => 'required|string|max:500',
                 'deskripsi' => 'nullable|string',
@@ -194,13 +203,17 @@ class TugasHarianController extends Controller
                 'satuan' => 'required|string|max:100',
             ]);
 
-            $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
             $tugasHarian->update($validated);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Tugas harian berhasil diperbarui'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+            ], 403);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -222,16 +235,7 @@ class TugasHarianController extends Controller
     {
         try {
             $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
-
-            // Check if user has permission to delete
-            // Only pemberi_tugas or admin can delete
-            $currentUserId = \Illuminate\Support\Facades\Auth::id();
-            if ($tugasHarian->pemberi_tugas_id !== $currentUserId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Anda tidak memiliki izin untuk menghapus tugas ini'
-                ], 403);
-            }
+            $this->authorize('delete', $tugasHarian);
 
             $tugasHarian->delete();
 
@@ -239,6 +243,11 @@ class TugasHarianController extends Controller
                 'success' => true,
                 'message' => 'Tugas harian berhasil dihapus'
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -252,11 +261,13 @@ class TugasHarianController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
+        $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
+        $this->authorize('updateStatus', $tugasHarian);
+
         $validated = $request->validate([
             'status' => 'required|in:pending,dikerjakan,validasi,revisi,selesai'
         ]);
 
-        $tugasHarian = \Modules\Penugasan\Models\TugasHarian::findOrFail($id);
         $tugasHarian->update(['status' => $validated['status']]);
 
         return response()->json([
