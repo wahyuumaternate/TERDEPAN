@@ -248,8 +248,11 @@ class PenugasanPermissionTest extends TestCase
         // Test: Atasan pemberi tugas bisa validasi
         $response = $this->actingAs($atasan)
             ->post(route('penugasan.validasi-tugas', $tugas->id), [
+                'jenis_tugas' => 'tugas_harian',
                 'status_validasi' => 'diterima',
-                'catatan' => 'Bagus',
+                'penilaian_kualitas' => 85,
+                'catatan_validasi' => 'Bagus',
+                'progress_update_type' => 'otomatis',
             ]);
 
         $this->assertContains($response->status(), [200, 302], "Atasan should be able to validate");
@@ -258,7 +261,10 @@ class PenugasanPermissionTest extends TestCase
         $tugas2 = $this->createTugasHarian($atasan, $bawahan, 'validasi');
         $response = $this->actingAs($bawahan)
             ->post(route('penugasan.validasi-tugas', $tugas2->id), [
+                'jenis_tugas' => 'tugas_harian',
                 'status_validasi' => 'diterima',
+                'penilaian_kualitas' => 85,
+                'progress_update_type' => 'otomatis',
             ]);
 
         $this->assertEquals(403, $response->status(), "Pegawai should NOT validate own task");
@@ -267,7 +273,10 @@ class PenugasanPermissionTest extends TestCase
         $tugas3 = $this->createTugasHarian($atasan, $bawahan, 'validasi');
         $response = $this->actingAs($otherUser)
             ->post(route('penugasan.validasi-tugas', $tugas3->id), [
+                'jenis_tugas' => 'tugas_harian',
                 'status_validasi' => 'diterima',
+                'penilaian_kualitas' => 85,
+                'progress_update_type' => 'otomatis',
             ]);
 
         $this->assertEquals(403, $response->status(), "Other atasan should NOT validate");
@@ -294,6 +303,8 @@ class PenugasanPermissionTest extends TestCase
                 'tanggal_mulai' => now()->toDateString(),
                 'tanggal_selesai' => now()->addDays(7)->toDateString(),
                 'prioritas' => 'medium',
+                'target_value' => 100,
+                'satuan' => 'dokumen',
             ]);
 
         if ($canCreate) {
@@ -428,9 +439,29 @@ class PenugasanPermissionTest extends TestCase
     protected function createTugasPokok(MasterPegawai $pegawai): TugasPokok
     {
         // Create dummy Perjanjian Kinerja hierarchy for testing
+        // atasan_id is required - use atasan_langsung_id if exists, otherwise use pegawai itself (for top level)
+        $atasanId = $pegawai->atasan_langsung_id ?? $pegawai->id;
+
+        // Create dummy PK template with unique kode
+        $randomId = rand(1000, 9999);
+        $template = \Modules\PerjanjianKinerja\Models\PkTemplate::create([
+            'kode_template' => 'TPK-TEST-' . now()->year . '-' . $pegawai->jabatan_id . '-' . $randomId,
+            'jabatan_id' => $pegawai->jabatan_id,
+            'tahun' => now()->year,
+            'nama_template' => 'Template Test ' . now()->year,
+            'kop_surat_html' => '<div>Kop Surat Test</div>',
+            'header_template' => 'Header Test',
+            'pernyataan_pembuka' => 'Pembuka Test',
+            'pernyataan_penutup' => 'Penutup Test',
+            'footer_template' => 'Footer Test',
+            'is_active' => true,
+        ]);
+
         $pk = \Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja::create([
-            'nomor_perjanjian' => 'PK/TEST/' . now()->year . '/' . str_pad($pegawai->id, 4, '0', STR_PAD_LEFT),
+            'nomor_perjanjian' => 'PK/TEST/' . now()->year . '/' . str_pad($pegawai->id, 4, '0', STR_PAD_LEFT) . '-' . uniqid(),
             'pegawai_id' => $pegawai->id,
+            'atasan_id' => $atasanId,
+            'template_id' => $template->id,
             'tahun' => now()->year,
             'periode_mulai' => now()->startOfYear(),
             'periode_selesai' => now()->endOfYear(),

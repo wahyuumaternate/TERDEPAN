@@ -13,7 +13,7 @@
 
     <section class="section">
         <!-- Dashboard Stats -->
-        <div class="row mb-4">
+        {{-- <div class="row mb-4">
             <div class="col-lg-3 col-md-6">
                 <div class="card info-card shadow-sm border-0">
                     <div class="card-body">
@@ -85,7 +85,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
 
         <div class="row">
             <div class="col-lg-12">

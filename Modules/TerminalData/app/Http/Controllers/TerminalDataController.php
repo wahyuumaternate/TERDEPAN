@@ -102,6 +102,17 @@ class TerminalDataController extends Controller
                 ->with(['creator'])
                 ->get();
 
+            // Add permissions to files
+            $files = $files->map(function ($file) use ($user) {
+                $file->permissions = [
+                    'view' => $user->can('view', $file),
+                    'update' => $user->can('update', $file),
+                    'delete' => $user->can('delete', $file),
+                    'download' => $user->can('download', $file),
+                ];
+                return $file;
+            });
+
             return view('terminaldata::folder.detail', compact('folder', 'subfolders', 'files'));
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             abort(403, $e->getMessage());

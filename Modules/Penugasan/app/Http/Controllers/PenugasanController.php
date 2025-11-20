@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Validation\ValidationException;
 use Modules\Penugasan\Models\TugasHarian;
 use Modules\Penugasan\Models\TugasTambahan;
 use Modules\Penugasan\Helpers\PenilaianHelper;
@@ -273,100 +275,113 @@ class PenugasanController extends Controller
      */
     public function berikanTugas(Request $request)
     {
-        // Validasi berdasarkan jenis tugas
-        $rules = [
-            'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-            'pegawai_id' => 'required|exists:master_pegawai,id',
-            'nama_tugas' => 'required|string|max:255',
-            'deskripsi' => 'nullable|string',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            // Ganti bobot_persen dengan target penilaian
-            'target_penilaian' => 'nullable|numeric|min:0|max:100',
-            'target_value' => 'required|numeric|min:0',
-            'satuan' => 'required|string|max:50',
-        ];
-
-        // Tambahan validasi untuk tugas harian
-        if ($request->jenis_tugas === 'tugas_harian') {
-            $rules['tugas_pokok_id'] = 'required|exists:knj_tugas_pokok,id';
-        }
-
-        $validated = $request->validate($rules);
-
-        // Check authorization based on task type
-        if ($validated['jenis_tugas'] === 'tugas_harian') {
-            $this->authorize('create', TugasHarian::class);
-        } else {
-            $this->authorize('create', TugasTambahan::class);
-        }
-
-        DB::beginTransaction();
         try {
-            // Get pemberi tugas id from authenticated user (MasterPegawai)
-            $pemberiTugasId = Auth::id(); // ID dari MasterPegawai yang login
+            // Validasi berdasarkan jenis tugas
+            $rules = [
+                'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
+                'pegawai_id' => 'required|exists:master_pegawai,id',
+                'nama_tugas' => 'required|string|max:255',
+                'deskripsi' => 'nullable|string',
+                'tanggal_mulai' => 'required|date',
+                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+                // Ganti bobot_persen dengan target penilaian
+                'target_penilaian' => 'nullable|numeric|min:0|max:100',
+                'target_value' => 'required|numeric|min:0',
+                'satuan' => 'required|string|max:50',
+            ];
 
-            // Validasi pemberi tugas
-            if (!$pemberiTugasId) {
-                throw new \Exception('Anda harus login untuk memberikan tugas.');
+            // Tambahan validasi untuk tugas harian
+            if ($request->jenis_tugas === 'tugas_harian') {
+                $rules['tugas_pokok_id'] = 'required|exists:knj_tugas_pokok,id';
             }
 
-            if ($validated['jenis_tugas'] === 'tugas_harian') {
-                // Verifikasi bahwa tugas pokok memang milik pegawai yang dituju
-                $tugasPokok = \Modules\Penugasan\Models\TugasPokok::where('id', $validated['tugas_pokok_id'])
-                    ->where('pegawai_id', $validated['pegawai_id'])
-                    ->first();
+            $validated = $request->validate($rules);
 
-                if (!$tugasPokok) {
-                    throw new \Exception('Tugas pokok tidak sesuai dengan pegawai yang dipilih');
+            // Check authorization based on task type
+            if ($validated['jenis_tugas'] === 'tugas_harian') {
+                $this->authorize('create', TugasHarian::class);
+            } else {
+                $this->authorize('create', TugasTambahan::class);
+            }
+
+            DB::beginTransaction();
+            try {
+                // Get pemberi tugas id from authenticated user (MasterPegawai)
+                $pemberiTugasId = Auth::id(); // ID dari MasterPegawai yang login
+
+                // Validasi pemberi tugas
+                if (!$pemberiTugasId) {
+                    throw new \Exception('Anda harus login untuk memberikan tugas.');
                 }
 
-                // Buat tugas harian
-                $tugasHarian = TugasHarian::create([
-                    'tugas_pokok_id' => $validated['tugas_pokok_id'],
-                    'pegawai_id' => $validated['pegawai_id'],
-                    'pemberi_tugas_id' => $pemberiTugasId,
-                    'is_mandiri' => false, // Tugas dari atasan
-                    'nama_tugas' => $validated['nama_tugas'],
-                    'deskripsi' => $validated['deskripsi'] ?? null,
-                    'tanggal_mulai' => $validated['tanggal_mulai'],
-                    'tanggal_selesai' => $validated['tanggal_selesai'],
-                    'target_penilaian' => $validated['target_penilaian'] ?? null,
-                    'target_value' => $validated['target_value'],
-                    'satuan' => $validated['satuan'],
-                    'status' => 'pending', // Sesuai dengan enum di migrasi
-                ]);
+                if ($validated['jenis_tugas'] === 'tugas_harian') {
+                    // Verifikasi bahwa tugas pokok memang milik pegawai yang dituju
+                    $tugasPokok = \Modules\Penugasan\Models\TugasPokok::where('id', $validated['tugas_pokok_id'])
+                        ->where('pegawai_id', $validated['pegawai_id'])
+                        ->first();
 
-                $message = 'Tugas harian berhasil diberikan kepada pegawai';
-            } else {
-                // Buat tugas tambahan
-                $tugasTambahan = TugasTambahan::create([
-                    'pegawai_id' => $validated['pegawai_id'],
-                    'pemberi_tugas_id' => $pemberiTugasId,
-                    'nama_tugas' => $validated['nama_tugas'],
-                    'deskripsi' => $validated['deskripsi'] ?? null,
-                    'tanggal_mulai' => $validated['tanggal_mulai'],
-                    'tanggal_selesai' => $validated['tanggal_selesai'],
-                    'target_penilaian' => $validated['target_penilaian'] ?? null,
-                    'status' => 'pending', // Sesuai dengan enum di migrasi
-                ]);
+                    if (!$tugasPokok) {
+                        throw new \Exception('Tugas pokok tidak sesuai dengan pegawai yang dipilih');
+                    }
 
-                $message = 'Tugas tambahan berhasil diberikan kepada pegawai';
+                    // Buat tugas harian
+                    $tugasHarian = TugasHarian::create([
+                        'tugas_pokok_id' => $validated['tugas_pokok_id'],
+                        'pegawai_id' => $validated['pegawai_id'],
+                        'pemberi_tugas_id' => $pemberiTugasId,
+                        'is_mandiri' => false, // Tugas dari atasan
+                        'nama_tugas' => $validated['nama_tugas'],
+                        'deskripsi' => $validated['deskripsi'] ?? null,
+                        'tanggal_mulai' => $validated['tanggal_mulai'],
+                        'tanggal_selesai' => $validated['tanggal_selesai'],
+                        'target_penilaian' => $validated['target_penilaian'] ?? null,
+                        'target_value' => $validated['target_value'],
+                        'satuan' => $validated['satuan'],
+                        'status' => 'pending', // Sesuai dengan enum di migrasi
+                    ]);
+
+                    $message = 'Tugas harian berhasil diberikan kepada pegawai';
+                } else {
+                    // Buat tugas tambahan
+                    $tugasTambahan = TugasTambahan::create([
+                        'pegawai_id' => $validated['pegawai_id'],
+                        'pemberi_tugas_id' => $pemberiTugasId,
+                        'nama_tugas' => $validated['nama_tugas'],
+                        'deskripsi' => $validated['deskripsi'] ?? null,
+                        'tanggal_mulai' => $validated['tanggal_mulai'],
+                        'tanggal_selesai' => $validated['tanggal_selesai'],
+                        'target_penilaian' => $validated['target_penilaian'] ?? null,
+                        'status' => 'pending', // Sesuai dengan enum di migrasi
+                    ]);
+
+                    $message = 'Tugas tambahan berhasil diberikan kepada pegawai';
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal memberikan tugas: ' . $e->getMessage(),
+                ], 500);
             }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memberikan tugas: ' . $e->getMessage(),
-            ], 500);
+                'message' => 'Anda tidak memiliki hak akses untuk melakukan operasi ini.',
+            ], 403);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal.',
+                'errors' => $e->errors(),
+            ], 422);
         }
     }
 
@@ -565,107 +580,116 @@ class PenugasanController extends Controller
      */
     public function validasiTugas(Request $request, $id)
     {
-        $validated = $request->validate([
-            'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-            'status_validasi' => 'required|in:diterima,revisi',
-            'penilaian_kualitas' => 'required_if:status_validasi,diterima|nullable|numeric|min:0|max:100',
-            'catatan_validasi' => 'nullable|string|max:1000',
-            'catatan_revisi' => 'required_if:status_validasi,revisi|nullable|string|max:1000',
-            'progress_update_type' => 'required_if:status_validasi,diterima|nullable|in:otomatis,manual',
-            'progress_value' => 'required_if:progress_update_type,manual|nullable|numeric|min:0',
-        ]);
-
-        DB::beginTransaction();
+        // Wrap everything in outer try-catch to catch AuthorizationException
         try {
-            $modelClass = $validated['jenis_tugas'] === 'tugas_harian'
-                ? TugasHarian::class
-                : TugasTambahan::class;
+            $validated = $request->validate([
+                'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
+                'status_validasi' => 'required|in:diterima,revisi',
+                'penilaian_kualitas' => 'required_if:status_validasi,diterima|nullable|numeric|min:0|max:100',
+                'catatan_validasi' => 'nullable|string|max:1000',
+                'catatan_revisi' => 'required_if:status_validasi,revisi|nullable|string|max:1000',
+                'progress_update_type' => 'required_if:status_validasi,diterima|nullable|in:otomatis,manual',
+                'progress_value' => 'required_if:progress_update_type,manual|nullable|numeric|min:0',
+            ]);
 
-            $tugas = $modelClass::findOrFail($id);
-
-            // Check authorization berdasarkan status validasi
-            if ($validated['status_validasi'] === 'diterima') {
-                $this->authorize('validate', $tugas);
-            } else {
-                $this->authorize('revise', $tugas);
-            }
-
-            // Validasi bahwa tugas dalam status validasi
-            if ($tugas->status !== 'validasi') {
-                throw new \Exception('Tugas harus dalam status validasi untuk dapat divalidasi');
-            }
-
-            if ($validated['status_validasi'] === 'diterima') {
-                // ========================================
-                // HITUNG PENILAIAN DENGAN HELPER
-                // ========================================
-                $nilaiKualitas = $validated['penilaian_kualitas'];
-                $tanggalSelesai = now(); // Tanggal validasi = tanggal selesai
-
-                // Gunakan PenilaianHelper untuk hitung nilai
-                $hasilPenilaian = PenilaianHelper::hitungDanSimpanPenilaian(
-                    $tugas,
-                    $nilaiKualitas,
-                    $tanggalSelesai
-                );
-
-                // VALIDASI DITERIMA - Status jadi selesai
-                $tugas->update([
-                    'status' => 'selesai',
-                    'validator_id' => Auth::id(),
-                    'validated_at' => $tanggalSelesai,
-                    'hasil_validasi' => 'diterima',
-                    'catatan_validasi' => $validated['catatan_validasi'] ?? 'Tugas diterima dan selesai',
-                    // penilaian_kualitas dan nilai_akhir sudah di-update oleh helper
-                ]);
-
-                // Update progress tugas pokok jika tugas harian
-                if ($validated['jenis_tugas'] === 'tugas_harian') {
-                    $this->updateProgressTugasPokok($tugas, $validated);
-                }
-
-                $message = sprintf(
-                    'Tugas berhasil divalidasi! Nilai Waktu: %.2f, Nilai Kualitas: %.2f, Nilai Akhir: %.2f (%s)',
-                    $hasilPenilaian['waktu']['nilai'],
-                    $nilaiKualitas,
-                    $hasilPenilaian['nilai_akhir'],
-                    $hasilPenilaian['grade']['kategori']
-                );
-            } else {
-                // VALIDASI REVISI - Status jadi revisi
-                $tugas->update([
-                    'status' => 'revisi',
-                    'validator_id' => Auth::id(),
-                    'validated_at' => now(),
-                    'hasil_validasi' => 'revisi',
-                    'catatan_validasi' => $validated['catatan_revisi'] ?? 'Perlu revisi',
-                ]);
-
-                // Simpan history revisi dengan model class
-                $jenisTugas = $validated['jenis_tugas'] === 'tugas_harian'
+            DB::beginTransaction();
+            try {
+                $modelClass = $validated['jenis_tugas'] === 'tugas_harian'
                     ? TugasHarian::class
                     : TugasTambahan::class;
 
-                $this->saveRevisionHistory($tugas, $validated, $jenisTugas);
+                $tugas = $modelClass::findOrFail($id);
 
-                $message = 'Tugas dikembalikan untuk revisi';
+                // Check authorization berdasarkan status validasi
+                if ($validated['status_validasi'] === 'diterima') {
+                    $this->authorize('validate', $tugas);
+                } else {
+                    $this->authorize('revise', $tugas);
+                }
+
+                // Validasi bahwa tugas dalam status validasi
+                if ($tugas->status !== 'validasi') {
+                    throw new \Exception('Tugas harus dalam status validasi untuk dapat divalidasi');
+                }
+
+                if ($validated['status_validasi'] === 'diterima') {
+                    // ========================================
+                    // HITUNG PENILAIAN DENGAN HELPER
+                    // ========================================
+                    $nilaiKualitas = $validated['penilaian_kualitas'];
+                    $tanggalSelesai = now(); // Tanggal validasi = tanggal selesai
+
+                    // Gunakan PenilaianHelper untuk hitung nilai
+                    $hasilPenilaian = PenilaianHelper::hitungDanSimpanPenilaian(
+                        $tugas,
+                        $nilaiKualitas,
+                        $tanggalSelesai
+                    );
+
+                    // VALIDASI DITERIMA - Status jadi selesai
+                    $tugas->update([
+                        'status' => 'selesai',
+                        'validator_id' => Auth::id(),
+                        'validated_at' => $tanggalSelesai,
+                        'hasil_validasi' => 'diterima',
+                        'catatan_validasi' => $validated['catatan_validasi'] ?? 'Tugas diterima dan selesai',
+                        // penilaian_kualitas dan nilai_akhir sudah di-update oleh helper
+                    ]);
+
+                    // Update progress tugas pokok jika tugas harian
+                    if ($validated['jenis_tugas'] === 'tugas_harian') {
+                        $this->updateProgressTugasPokok($tugas, $validated);
+                    }
+
+                    $message = sprintf(
+                        'Tugas berhasil divalidasi! Nilai Waktu: %.2f, Nilai Kualitas: %.2f, Nilai Akhir: %.2f (%s)',
+                        $hasilPenilaian['waktu']['nilai'],
+                        $nilaiKualitas,
+                        $hasilPenilaian['nilai_akhir'],
+                        $hasilPenilaian['grade']['kategori']
+                    );
+                } else {
+                    // VALIDASI REVISI - Status jadi revisi
+                    $tugas->update([
+                        'status' => 'revisi',
+                        'validator_id' => Auth::id(),
+                        'validated_at' => now(),
+                        'hasil_validasi' => 'revisi',
+                        'catatan_validasi' => $validated['catatan_revisi'] ?? 'Perlu revisi',
+                    ]);
+
+                    // Simpan history revisi dengan model class
+                    $jenisTugas = $validated['jenis_tugas'] === 'tugas_harian'
+                        ? TugasHarian::class
+                        : TugasTambahan::class;
+
+                    $this->saveRevisionHistory($tugas, $validated, $jenisTugas);
+
+                    $message = 'Tugas dikembalikan untuk revisi';
+                }
+
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'status' => $tugas->status,
+                    'penilaian' => $validated['status_validasi'] === 'diterima' ? [
+                        'nilai_waktu' => $hasilPenilaian['waktu']['nilai'],
+                        'nilai_kualitas' => $nilaiKualitas,
+                        'nilai_akhir' => $hasilPenilaian['nilai_akhir'],
+                        'grade' => $hasilPenilaian['grade'],
+                        'keterlambatan' => $hasilPenilaian['waktu']['status'],
+                    ] : null
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e; // Re-throw to outer catch
             }
-
-            DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'status' => $tugas->status,
-                'penilaian' => $validated['status_validasi'] === 'diterima' ? [
-                    'nilai_waktu' => $hasilPenilaian['waktu']['nilai'],
-                    'nilai_kualitas' => $nilaiKualitas,
-                    'nilai_akhir' => $hasilPenilaian['nilai_akhir'],
-                    'grade' => $hasilPenilaian['grade'],
-                    'keterlambatan' => $hasilPenilaian['waktu']['status'],
-                ] : null
-            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
