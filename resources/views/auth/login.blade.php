@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SISTEM TERDEPAN BAPPEDA MALUT</title>
+
+    <!-- Favicons -->
+    <link href="{{ asset('favicon/favicon.ico') }}" rel="icon">
+    <link href="{{ asset('favicon/apple-touch-icon.png') }}" rel="apple-touch-icon">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -331,7 +336,7 @@
         <div class="w-2/5 desktop-left flex items-center justify-center overflow-hidden">
             <div class="content-wrapper text-center text-white px-8 py-12 max-w-lg">
                 <div class="mb-10">
-                    <img src="{{ asset('img/logo-white.png') }}" alt="Logo TERDEPAN" class="w-24 h-24 mx-auto mb-4">
+                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Logo TERDEPAN" class="w-24 h-24 mx-auto mb-4">
                     <h1 class="text-4xl font-bold mb-2">TERDEPAN</h1>
                     <p class="text-xl opacity-90">Terminal Data dan e-Kinerja Perencana</p>
                 </div>
@@ -544,7 +549,7 @@
             @if (app()->environment('local'))
                 const defaultCredentials = {
                     nomor_identitas: '197001011990011001',
-                    password: 'password123'
+                    password: 'password'
                 };
 
                 // Auto-login for mobile
