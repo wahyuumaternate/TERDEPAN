@@ -107,13 +107,27 @@
                                     </h5>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary" onclick="showBuatTugasModal()"
-                                        id="btnBuatTugas">
-                                        <i class="bi bi-plus-lg me-1"></i> Buat Tugas
-                                    </button>
-                                    <button type="button" class="btn btn-success" onclick="showBerikanTugasModal()">
-                                        <i class="bi bi-send me-1"></i> Berikan Tugas
-                                    </button>
+                                    @php
+                                        // Cek apakah user melihat tugasnya sendiri
+                                        $isOwnTask = $pegawai->id == auth()->id();
+                                        // Cek apakah user adalah atasan langsung dari pegawai ini
+                                        $isAtasanLangsung = $pegawai->atasan_langsung_id == auth()->id();
+                                        // User bisa memberikan tugas jika bukan tugas sendiri dan adalah atasan langsung
+                                        $canBerikanTugas = !$isOwnTask && $isAtasanLangsung;
+                                    @endphp
+
+                                    @if ($isOwnTask)
+                                        <button type="button" class="btn btn-primary" onclick="showBuatTugasModal()"
+                                            id="btnBuatTugas">
+                                            <i class="bi bi-plus-lg me-1"></i> Buat Tugas
+                                        </button>
+                                    @endif
+
+                                    @if ($canBerikanTugas)
+                                        <button type="button" class="btn btn-success" onclick="showBerikanTugasModal()">
+                                            <i class="bi bi-send me-1"></i> Berikan Tugas
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
 
@@ -2410,10 +2424,10 @@
                                             <i class="bi bi-person"></i> ${item.direvisi_oleh ? item.direvisi_oleh.nama : 'Unknown'}
                                         </small>
                                         ${item.dokumen_lama ? `
-                                                                                                                                <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
-                                                                                                                                    <i class="bi bi-download"></i> File Lama
-                                                                                                                                </a>
-                                                                                                                            ` : ''}
+                                                                                                                                    <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
+                                                                                                                                        <i class="bi bi-download"></i> File Lama
+                                                                                                                                    </a>
+                                                                                                                                ` : ''}
                                     </div>
                                 </div>
                             `;

@@ -2,12 +2,10 @@
 
 @section('main')
     <div class="pagetitle">
-        <h1>Selamat Datang di TERDEPAN</h1>
-        <p class="text-muted">Terminal Data dan e-Kinerja Perencana</p>
+        <h1>E-Kinerja Perencana</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                <li class="breadcrumb-item active">Dashboard</li>
+                <li class="breadcrumb-item"><a href="{{ url('/e-kinerja') }}">Beranda</a></li>
             </ol>
         </nav>
     </div><!-- End Page Title -->
@@ -667,70 +665,6 @@
                 </div>
             </div><!-- End Progress Tugas Pokok -->
         </div>
-        <!-- Aktivitas Terbaru -->
-        <div class="card">
-            <div class="filter">
-                <a class="icon" href="#" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></a>
-                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                    <li class="dropdown-header text-start">
-                        <h6>Filter</h6>
-                    </li>
-                    <li><a class="dropdown-item" href="#">Hari Ini</a></li>
-                    <li><a class="dropdown-item" href="#">Bulan Ini</a></li>
-                </ul>
-            </div>
-
-            <div class="card-body">
-                <h5 class="card-title">Aktivitas Terbaru <span>| Hari Ini</span></h5>
-
-                <div class="activity">
-                    <div class="activity-item d-flex">
-                        <div class="activite-label">08:30</div>
-                        <i class='bi bi-circle-fill activity-badge text-success align-self-start'></i>
-                        <div class="activity-content">
-                            <strong>Budi Santoso</strong> mengupload dokumen <a href="#"
-                                class="fw-bold text-dark">Laporan Kinerja Triwulan III</a>
-                        </div>
-                    </div><!-- End activity item-->
-
-                    <div class="activity-item d-flex">
-                        <div class="activite-label">09:15</div>
-                        <i class='bi bi-circle-fill activity-badge text-danger align-self-start'></i>
-                        <div class="activity-content">
-                            <strong>Ahmad Putra</strong> menyelesaikan tugas <a href="#"
-                                class="fw-bold text-dark">Analisis Data Spatial Kawasan Ekonomi</a>
-                        </div>
-                    </div><!-- End activity item-->
-
-                    <div class="activity-item d-flex">
-                        <div class="activite-label">10:02</div>
-                        <i class='bi bi-circle-fill activity-badge text-info align-self-start'></i>
-                        <div class="activity-content">
-                            <strong>Siti Rahayu</strong> membuat folder baru <a href="#"
-                                class="fw-bold text-dark">RPJMD 2025-2030</a>
-                        </div>
-                    </div><!-- End activity item-->
-
-                    <div class="activity-item d-flex">
-                        <div class="activite-label">11:45</div>
-                        <i class='bi bi-circle-fill activity-badge text-warning align-self-start'></i>
-                        <div class="activity-content">
-                            <strong>Dewi Lestari</strong> memvalidasi tugas <a href="#"
-                                class="fw-bold text-dark">Penyusunan Materi Rapat Koordinasi</a>
-                        </div>
-                    </div><!-- End activity item-->
-
-                    <div class="activity-item d-flex">
-                        <div class="activite-label">13:15</div>
-                        <i class='bi bi-circle-fill activity-badge text-primary align-self-start'></i>
-                        <div class="activity-content">
-                            <strong>Agus Wijaya</strong> menandatangani dokumen <a href="#"
-                                class="fw-bold text-dark">Perjanjian Kinerja 2025</a>
-                        </div>
-                    </div><!-- End activity item-->
-                </div>
-            </div>
-        </div><!-- End Aktivitas Terbaru -->
     </section>
 @endsection
 

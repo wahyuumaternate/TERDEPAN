@@ -24,46 +24,78 @@
          <li class="nav-heading">E-Kinerja Perencana</li>
 
          <!-- Perjanjian Kinerja Nav -->
+         @php
+             $kodeJabatan = auth()->user()->jabatan?->kode;
+             $fullAccessPK = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+             $kabidAccess = $kodeJabatan === 'KABID';
+             $limitedAccessPK = in_array($kodeJabatan, ['KASUBAG', 'JF', 'PELAKSANA', 'GATEK']);
+         @endphp
+
          <li class="nav-item">
              <a class="nav-link collapsed" data-bs-target="#pk-nav" data-bs-toggle="collapse" href="#">
                  <i class="bi bi-file-earmark-text"></i><span>Perjanjian Kinerja</span><i
                      class="bi bi-chevron-down ms-auto"></i>
              </a>
              <ul id="pk-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                 <!-- PK Saya - Semua role bisa akses -->
                  <li>
-                     <a href="{{ url('perjanjian-kinerja') }}">
-                         <i class="bi bi-circle"></i><span>Daftar PK</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('perjanjian-kinerja/template') }}">
-                         <i class="bi bi-circle"></i><span>Template PK</span>
+                     <a href="#">
+                         <i class="bi bi-circle"></i><span>PK Saya</span>
                      </a>
                  </li>
 
-                 <li>
-                     <a href="{{ url('perjanjian-kinerja/create') }}">
-                         <i class="bi bi-circle"></i><span>Buat PK Baru</span>
-                     </a>
-                 </li>
+                 @if ($fullAccessPK || $kabidAccess)
+                     <!-- Daftar PK - Admin, Kaban, Sekban, Kabid -->
+                     <li>
+                         <a href="{{ url('perjanjian-kinerja') }}">
+                             <i class="bi bi-circle"></i><span>Daftar PK</span>
+                         </a>
+                     </li>
+                 @endif
+
+                 @if ($fullAccessPK)
+                     <!-- Template PK - Hanya Admin, Kaban, Sekban -->
+                     <li>
+                         <a href="{{ url('perjanjian-kinerja/template') }}">
+                             <i class="bi bi-circle"></i><span>Template PK</span>
+                         </a>
+                     </li>
+                 @endif
+
+                 @if ($fullAccessPK || $kabidAccess)
+                     <!-- Buat PK Baru - Admin, Kaban, Sekban, Kabid -->
+                     <li>
+                         <a href="{{ url('perjanjian-kinerja/create') }}">
+                             <i class="bi bi-circle"></i><span>Buat PK Baru</span>
+                         </a>
+                     </li>
+                 @endif
              </ul>
          </li><!-- End Perjanjian Kinerja Nav -->
 
-         <!-- Penugasan Pegawai Nav (Kaban, Sekban, Kabid/kasubag, Jf, Pelaksana) -->
-         <li class="nav-item">
-             <a class="nav-link {{ Request::routeIs('penugasan.index') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.index') }}">
-                 <i class="bi bi-person-lines-fill"></i>
-                 <span>Penugasan Pegawai</span>
-             </a>
-         </li><!-- End Penugasan Pegawai Nav -->
+         <!-- Penugasan Pegawai Nav -->
+         @php
+             $canAccessPenugasan = !in_array($kodeJabatan, ['PELAKSANA', 'GATEK']);
+         @endphp
 
-         <!-- Penugasan Pegawai Nav (Semua role) -->
+         @if ($canAccessPenugasan)
+             <li class="nav-item">
+                 <a class="nav-link {{ Request::routeIs('penugasan.index') ? 'active' : 'collapsed' }}"
+                     href="{{ route('penugasan.index') }}">
+                     <i class="bi bi-person-lines-fill"></i>
+                     <span>Penugasan Pegawai</span>
+                 </a>
+             </li><!-- End Penugasan Pegawai Nav -->
+         @endif
+
+         <!-- Tugas Saya Nav (Semua role) -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::routeIs('penugasan.show') ? 'active' : 'collapsed' }}" href="{{ route('penugasan.show', AUTH::user()->id) }}">
+             <a class="nav-link {{ Request::routeIs('penugasan.show') ? 'active' : 'collapsed' }}"
+                 href="{{ route('penugasan.show', AUTH::user()->id) }}">
                  <i class="bi bi-list-task"></i>
                  <span>Tugas Saya</span>
              </a>
-         </li><!-- End Penugasan Pegawai Nav -->
+         </li><!-- End Tugas Saya Nav -->
 
          {{-- <!-- Penugasan Nav -->
          <li class="nav-item">
@@ -162,53 +194,79 @@
          </li><!-- End Delegasi & Workload Nav --> --}}
 
          <!-- Master Data -->
-         <li class="nav-heading">Master Data</li>
+         @php
+             $kodeJabatan = auth()->user()->jabatan?->kode;
+             $canAccessMasterData = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+         @endphp
 
-         <!-- Master Data Nav -->
-         <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#master-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-database"></i><span>Master Data</span><i class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="master-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ route('master.pegawai.index') }}">
-                         <i class="bi bi-circle"></i><span>Pegawai</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ route('master.bidang.index') }}">
-                         <i class="bi bi-circle"></i><span>Bidang</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ route('master.jabatan.index') }}">
-                         <i class="bi bi-circle"></i><span>Jabatan</span>
-                     </a>
-                 </li>
-             </ul>
-         </li><!-- End Master Data Nav -->
+         @if ($canAccessMasterData)
+             <li class="nav-heading">Master Data</li>
+
+             <!-- Master Data Nav -->
+             <li class="nav-item">
+                 <a class="nav-link collapsed" data-bs-target="#master-nav" data-bs-toggle="collapse" href="#">
+                     <i class="bi bi-database"></i><span>Master Data</span><i class="bi bi-chevron-down ms-auto"></i>
+                 </a>
+                 <ul id="master-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                     <li>
+                         <a href="{{ route('master.pegawai.index') }}">
+                             <i class="bi bi-circle"></i><span>Pegawai</span>
+                         </a>
+                     </li>
+                     <li>
+                         <a href="{{ route('master.bidang.index') }}">
+                             <i class="bi bi-circle"></i><span>Bidang</span>
+                         </a>
+                     </li>
+                     <li>
+                         <a href="{{ route('master.jabatan.index') }}">
+                             <i class="bi bi-circle"></i><span>Jabatan</span>
+                         </a>
+                     </li>
+                 </ul>
+             </li><!-- End Master Data Nav -->
+         @endif
 
          <!-- Sistem -->
-         <li class="nav-heading">Sistem</li>
+         @php
+             $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
+             $canAccessSistem = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+         @endphp
 
-         <!-- Sistem Nav -->
-         <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#sistem-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-sliders"></i><span>Sistem</span><i class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="sistem-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="#">
-                         <i class="bi bi-circle"></i><span>Audit Log</span>
+         @if ($canAccessMonitoring)
+             <li class="nav-heading">Sistem & Monitoring</li>
+
+             <!-- Monitoring Nav -->
+             <li class="nav-item">
+                 <a class="nav-link collapsed" href="#">
+                     <i class="bi bi-activity"></i><span>Monitoring Aktifitas</span>
+                 </a>
+             </li><!-- End Monitoring Nav -->
+         @endif
+
+         @if ($canAccessSistem)
+             <!-- Sistem Nav -->
+             @if ($kodeJabatan === 'ADMIN')
+                 <li class="nav-item">
+                     <a class="nav-link collapsed" data-bs-target="#sistem-nav" data-bs-toggle="collapse"
+                         href="#">
+                         <i class="bi bi-sliders"></i><span>Sistem</span><i class="bi bi-chevron-down ms-auto"></i>
                      </a>
-                 </li>
-                 <li>
-                     <a href="#">
-                         <i class="bi bi-circle"></i><span>Konfigurasi</span>
-                     </a>
-                 </li>
-             </ul>
-         </li><!-- End Sistem Nav -->
+                     <ul id="sistem-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                         <li>
+                             <a href="#">
+                                 <i class="bi bi-circle"></i><span>Audit Log</span>
+                             </a>
+                         </li>
+                         <li>
+                             <a href="#">
+                                 <i class="bi bi-circle"></i><span>Konfigurasi</span>
+                             </a>
+                         </li>
+                     </ul>
+                 </li><!-- End Sistem Nav -->
+             @endif
+         @endif
 
      </ul>
 

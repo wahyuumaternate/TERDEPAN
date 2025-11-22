@@ -49,13 +49,14 @@
          @can('viewAny', \Modules\TerminalData\Models\TdFolder::class)
              @php
                  $kodeJabatan = auth()->user()->jabatan?->kode;
-                 $canViewMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+                 $canViewMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
              @endphp
 
              @if ($canViewMonitoring)
                  <!-- Sistem -->
                  <li class="nav-heading">Sistem & Monitoring</li>
 
+                 <!-- Monitoring Nav -->
                  <li class="nav-item">
                      <a class="nav-link collapsed" href="#">
                          <i class="bi bi-activity"></i><span>Monitoring Aktifitas</span>
