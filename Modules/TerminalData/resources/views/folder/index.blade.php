@@ -150,12 +150,12 @@
         }
 
         .gdrive-folder-icon i {
-            font-size: 24px;
-            color: #5f6368;
+            font-size: 28px;
+            transition: transform 0.2s ease;
         }
 
         .gdrive-folder-card:hover .gdrive-folder-icon i {
-            color: #1a73e8;
+            transform: scale(1.05);
         }
 
         .gdrive-folder-info {
@@ -427,7 +427,7 @@
             let html = '<div class="row g-3">';
             level1Folders.forEach(item => {
                 const bidangName = item.bidang ? item.bidang.nama : 'Tidak ada bidang';
-                // Hitung jumlah subfolder
+                const bidangColor = item.bidang?.warna || '#6366f1'; // Default indigo color
                 const subfolderCount = folders.filter(f => f.parent_id === item.id).length;
 
                 html += `
@@ -438,13 +438,14 @@
                              data-folder-id="${item.id}">
                             <div class="gdrive-folder-content">
                                 <div class="gdrive-folder-icon">
-                                    <i class="bi bi-folder-fill"></i>
+                                    <i class="bi bi-folder-fill" style="color: ${bidangColor};"></i>
                                 </div>
                                 <div class="gdrive-folder-info">
                                     <div class="gdrive-folder-title" title="${item.name}">
                                         ${item.name}
                                     </div>
                                     <div class="gdrive-folder-meta">
+                                        ${item.bidang ? `<small class="badge" style="background-color: ${bidangColor}; color: white; font-size: 10px; padding: 2px 6px;">${item.bidang.nama}</small>` : ''}
                                         <small class="text-muted">${item.total_files || 0} file${(item.total_files || 0) !== 1 ? 's' : ''}</small>
                                         ${subfolderCount > 0 ? ` <span class="text-muted">• ${subfolderCount} folder${subfolderCount !== 1 ? 's' : ''}</span>` : ''}
                                     </div>
