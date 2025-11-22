@@ -16,60 +16,36 @@ class TerminalDataPermissionSeeder extends Seeder
         // ===================================
         // PERMISSIONS - Terminal Data
         // ===================================
-        
-        // Folder Permissions
+
+        // Folder Permissions (Sesuai Policy)
         $folderPermissions = [
-            // Basic CRUD
-            'td_folder_view_all',           // Lihat semua folder
-            'td_folder_view_own',            // Lihat folder sendiri
-            'td_folder_view_bidang',         // Lihat folder bidang
-            'td_folder_view_sub_bidang',     // Lihat folder sub bidang
+            'td_folder_view',                // Lihat folder (semua pegawai)
             'td_folder_create',              // Buat folder baru
-            'td_folder_edit_own',            // Edit folder sendiri
-            'td_folder_edit_bidang',         // Edit folder bidang
-            'td_folder_delete_own',          // Hapus folder sendiri
-            'td_folder_delete_bidang',       // Hapus folder bidang
+            'td_folder_update',              // Update folder (general)
+            'td_folder_rename',              // Ganti nama folder
+            'td_folder_delete',              // Hapus folder (soft delete)
             'td_folder_restore',             // Restore folder dari sampah
             'td_folder_force_delete',        // Hapus permanen
+            'td_folder_view_trashed',        // Lihat semua sampah (ADMIN/KABAN/SEKBAN)
         ];
 
-        // File Permissions
+        // File Permissions (Sesuai Policy)
         $filePermissions = [
-            'td_file_view_all',              // Lihat semua file
-            'td_file_view_own',              // Lihat file sendiri
-            'td_file_view_bidang',           // Lihat file bidang
-            'td_file_view_sub_bidang',       // Lihat file sub bidang
+            'td_file_view',                  // Lihat file (semua pegawai)
             'td_file_upload',                // Upload file
-            'td_file_download_own',          // Download file sendiri
-            'td_file_download_bidang',       // Download file bidang
-            'td_file_download_all',          // Download semua file
-            'td_file_edit_own',              // Edit file sendiri
-            'td_file_edit_bidang',           // Edit file bidang
-            'td_file_delete_own',            // Hapus file sendiri
-            'td_file_delete_bidang',         // Hapus file bidang
+            'td_file_download',              // Download file (semua pegawai)
+            'td_file_update',                // Update/ganti nama file
+            'td_file_move',                  // Pindahkan file
+            'td_file_delete',                // Hapus file (soft delete)
             'td_file_restore',               // Restore file dari sampah
             'td_file_force_delete',          // Hapus permanen
-        ];
-
-        // Trash Permissions
-        $trashPermissions = [
-            'td_trash_view',                 // Lihat sampah
-            'td_trash_empty',                // Kosongkan sampah
-        ];
-
-        // Share Permissions
-        $sharePermissions = [
-            'td_share_internal',             // Share ke pegawai internal
-            'td_share_bidang',               // Share ke bidang
-            'td_share_public',               // Share public
+            'td_file_view_trashed',          // Lihat semua sampah (ADMIN/KABAN/SEKBAN)
         ];
 
         // Create all permissions
         $allPermissions = array_merge(
             $folderPermissions,
-            $filePermissions,
-            $trashPermissions,
-            $sharePermissions
+            $filePermissions
         );
 
         foreach ($allPermissions as $permission) {
@@ -77,91 +53,176 @@ class TerminalDataPermissionSeeder extends Seeder
         }
 
         // ===================================
-        // ROLES - Berdasarkan Level Hierarki
+        // ROLES - Berdasarkan Kode Jabatan di Policy
         // ===================================
 
-        // 1. Super Admin - Full Access
-        $superAdmin = Role::create(['name' => 'Super Admin']);
-        $superAdmin->givePermissionTo(Permission::all());
+        // 1. ADMIN - Full Access (Super Admin)
+        $admin = Role::create(['name' => 'ADMIN']);
+        $admin->givePermissionTo(Permission::all());
 
-        // 2. Kepala Dinas - Akses Semua Bidang
-        $kepalaDinas = Role::create(['name' => 'Kepala Dinas']);
-        $kepalaDinas->givePermissionTo([
-            'td_folder_view_all',
+        // 2. KABAN (Kepala Dinas) - Akses Semua
+        $kaban = Role::create(['name' => 'KABAN']);
+        $kaban->givePermissionTo([
+            // Folder permissions - Full access
+            'td_folder_view',
             'td_folder_create',
-            'td_folder_edit_bidang',
-            'td_folder_delete_bidang',
-            'td_file_view_all',
+            'td_folder_update',
+            'td_folder_rename',
+            'td_folder_delete',
+            'td_folder_restore',
+            'td_folder_force_delete',
+            'td_folder_view_trashed',
+
+            // File permissions - Full access
+            'td_file_view',
             'td_file_upload',
-            'td_file_download_all',
-            'td_file_edit_bidang',
-            'td_file_delete_bidang',
-            'td_trash_view',
-            'td_share_public',
-            'td_share_bidang',
-            'td_share_internal',
+            'td_file_download',
+            'td_file_update',
+            'td_file_move',
+            'td_file_delete',
+            'td_file_restore',
+            'td_file_force_delete',
+            'td_file_view_trashed',
         ]);
 
-        // 3. Sekretaris - Akses Semua Bidang (Limited)
-        $sekretaris = Role::create(['name' => 'Sekretaris']);
-        $sekretaris->givePermissionTo([
-            'td_folder_view_all',
+        // 3. SEKBAN (Sekretaris) - Akses Semua
+        $sekban = Role::create(['name' => 'SEKBAN']);
+        $sekban->givePermissionTo([
+            // Folder permissions - Full access
+            'td_folder_view',
             'td_folder_create',
-            'td_folder_edit_own',
-            'td_file_view_all',
+            'td_folder_update',
+            'td_folder_rename',
+            'td_folder_delete',
+            'td_folder_restore',
+            'td_folder_force_delete',
+            'td_folder_view_trashed',
+
+            // File permissions - Full access
+            'td_file_view',
             'td_file_upload',
-            'td_file_download_all',
-            'td_file_edit_own',
-            'td_trash_view',
-            'td_share_bidang',
-            'td_share_internal',
+            'td_file_download',
+            'td_file_update',
+            'td_file_move',
+            'td_file_delete',
+            'td_file_restore',
+            'td_file_force_delete',
+            'td_file_view_trashed',
         ]);
 
-        // 4. Kepala Bidang - Akses Bidang Sendiri
-        $kepalaBidang = Role::create(['name' => 'Kepala Bidang']);
-        $kepalaBidang->givePermissionTo([
-            'td_folder_view_bidang',
+        // 4. KABID (Kepala Bidang) - Akses Bidang
+        $kabid = Role::create(['name' => 'KABID']);
+        $kabid->givePermissionTo([
+            // Folder permissions - bidang scope
+            'td_folder_view',
             'td_folder_create',
-            'td_folder_edit_bidang',
-            'td_folder_delete_bidang',
-            'td_file_view_bidang',
-            'td_file_upload',
-            'td_file_download_bidang',
-            'td_file_edit_bidang',
-            'td_file_delete_bidang',
-            'td_trash_view',
-            'td_share_bidang',
-            'td_share_internal',
+            'td_folder_update',
+            'td_folder_rename',          // Rename semua folder di bidangnya
+            'td_folder_delete',          // Delete folder sendiri
+            'td_folder_restore',         // Restore folder sendiri
+            'td_folder_force_delete',    // Force delete folder sendiri
+
+            // File permissions - bidang scope for upload, own for edit/delete
+            'td_file_view',
+            'td_file_upload',            // Upload di folder bidangnya
+            'td_file_download',
+            'td_file_update',            // Update file sendiri
+            'td_file_move',              // Move file sendiri
+            'td_file_delete',            // Delete file sendiri
+            'td_file_restore',           // Restore file sendiri
+            'td_file_force_delete',      // Force delete file sendiri
         ]);
 
-        // 5. Kepala Sub Bidang - Akses Sub Bidang
-        $kepalaSubBidang = Role::create(['name' => 'Kepala Sub Bidang']);
-        $kepalaSubBidang->givePermissionTo([
-            'td_folder_view_sub_bidang',
+        // 5. KASUBAG (Kepala Sub Bidang) - Akses Sub Bidang
+        $kasubag = Role::create(['name' => 'KASUBAG']);
+        $kasubag->givePermissionTo([
+            // Folder permissions - own items only
+            'td_folder_view',
             'td_folder_create',
-            'td_folder_edit_own',
-            'td_file_view_sub_bidang',
-            'td_file_upload',
-            'td_file_download_bidang',
-            'td_file_edit_own',
-            'td_file_delete_own',
-            'td_trash_view',
-            'td_share_internal',
+            'td_folder_update',          // Update folder sendiri
+            'td_folder_rename',          // Rename folder sendiri
+            'td_folder_delete',          // Delete folder sendiri
+            'td_folder_restore',         // Restore folder sendiri
+            'td_folder_force_delete',    // Force delete folder sendiri
+
+            // File permissions - bidang scope for upload, own for edit/delete
+            'td_file_view',
+            'td_file_upload',            // Upload di folder bidangnya
+            'td_file_download',
+            'td_file_update',            // Update file sendiri
+            'td_file_move',              // Move file sendiri
+            'td_file_delete',            // Delete file sendiri
+            'td_file_restore',           // Restore file sendiri
+            'td_file_force_delete',      // Force delete file sendiri
         ]);
 
-        // 6. Staff - Akses Terbatas
-        $staff = Role::create(['name' => 'Staff']);
-        $staff->givePermissionTo([
-            'td_folder_view_own',
+        // 6. PELAKSANA - Akses Terbatas (Own Items)
+        $pelaksana = Role::create(['name' => 'PELAKSANA']);
+        $pelaksana->givePermissionTo([
+            // Folder permissions - own items only
+            'td_folder_view',
             'td_folder_create',
-            'td_folder_edit_own',
-            'td_folder_delete_own',
-            'td_file_view_own',
-            'td_file_upload',
-            'td_file_download_own',
-            'td_file_edit_own',
-            'td_file_delete_own',
-            'td_share_internal',
+            'td_folder_update',          // Update folder sendiri
+            'td_folder_rename',          // Rename folder sendiri
+            'td_folder_delete',          // Delete folder sendiri
+            'td_folder_restore',         // Restore folder sendiri
+            'td_folder_force_delete',    // Force delete folder sendiri
+
+            // File permissions - bidang scope for upload, own for edit/delete
+            'td_file_view',
+            'td_file_upload',            // Upload di folder bidangnya
+            'td_file_download',
+            'td_file_update',            // Update file sendiri
+            'td_file_move',              // Move file sendiri
+            'td_file_delete',            // Delete file sendiri
+            'td_file_restore',           // Restore file sendiri
+            'td_file_force_delete',      // Force delete file sendiri
+        ]);
+
+        // 7. JAFUNG (Jabatan Fungsional) - Akses Terbatas (Own Items)
+        $jafung = Role::create(['name' => 'JAFUNG']);
+        $jafung->givePermissionTo([
+            // Folder permissions - own items only
+            'td_folder_view',
+            'td_folder_create',
+            'td_folder_update',          // Update folder sendiri
+            'td_folder_rename',          // Rename folder sendiri
+            'td_folder_delete',          // Delete folder sendiri
+            'td_folder_restore',         // Restore folder sendiri
+            'td_folder_force_delete',    // Force delete folder sendiri
+
+            // File permissions - bidang scope for upload, own for edit/delete
+            'td_file_view',
+            'td_file_upload',            // Upload di folder bidangnya
+            'td_file_download',
+            'td_file_update',            // Update file sendiri
+            'td_file_move',              // Move file sendiri
+            'td_file_delete',            // Delete file sendiri
+            'td_file_restore',           // Restore file sendiri
+            'td_file_force_delete',      // Force delete file sendiri
+        ]);
+
+        // 8. GATEK (Gabungan Teknisi) - Akses Terbatas (Own Items)
+        $gatek = Role::create(['name' => 'GATEK']);
+        $gatek->givePermissionTo([
+            // Folder permissions - own items only
+            'td_folder_view',
+            'td_folder_create',
+            'td_folder_update',          // Update folder sendiri
+            'td_folder_rename',          // Rename folder sendiri
+            'td_folder_delete',          // Delete folder sendiri
+            'td_folder_restore',         // Restore folder sendiri
+            'td_folder_force_delete',    // Force delete folder sendiri
+
+            // File permissions - bidang scope for upload, own for edit/delete
+            'td_file_view',
+            'td_file_upload',            // Upload di folder bidangnya
+            'td_file_download',
+            'td_file_update',            // Update file sendiri
+            'td_file_move',              // Move file sendiri
+            'td_file_delete',            // Delete file sendiri
+            'td_file_restore',           // Restore file sendiri
+            'td_file_force_delete',      // Force delete file sendiri
         ]);
     }
 }

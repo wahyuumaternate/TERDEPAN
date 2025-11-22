@@ -113,7 +113,7 @@
                                             <li>
                                                 <hr class="dropdown-divider">
                                             </li>
-                                            @can('update', $crumb)
+                                            @can('rename', $crumb)
                                                 <li><a class="dropdown-item" href="#"><i
                                                             class="bi bi-pencil me-2"></i>Ganti Nama</a></li>
                                             @endcan
@@ -335,9 +335,11 @@
                                 <i class="bi bi-file-earmark-x empty-state-icon"></i>
                                 <h4 class="text-muted mb-2">Belum ada dokumen</h4>
                                 <p class="text-muted mb-4">Mulai dengan upload dokumen pertama Anda</p>
-                                <button class="btn btn-primary btn-lg px-5" id="btnTriggerUpload">
-                                    <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
-                                </button>
+                                @can('upload', [$folder])
+                                    <button class="btn btn-primary btn-lg px-5" id="btnTriggerUploadEmpty">
+                                        <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
+                                    </button>
+                                @endcan
                             </div>
                         </div>
 
@@ -1356,7 +1358,7 @@
             loadFiles();
 
             // Trigger file upload when button clicked (using event delegation for dynamically added buttons)
-            $(document).on('click', '#btnTriggerUpload', function() {
+            $(document).on('click', '#btnTriggerUpload, #btnTriggerUploadEmpty', function() {
                 $('#fileUpload').click();
             });
 
@@ -2094,9 +2096,9 @@
                                 <li><a class="dropdown-item" href="#" onclick="navigateToFolder('${folder.id}'); return false;">
                                     <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                 </a></li>
-                                ${folder.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
-                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                    </a></li>` : ''}
+                                ${folder.permissions?.rename ? `<li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
+                                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                            </a></li>` : ''}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${folder.id}'); return false;">
                                     <i class="bi bi-link-45deg me-2"></i>Salin Link
@@ -2105,10 +2107,10 @@
                                     <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                 </a></li>
                                 ${folder.permissions?.delete ? `
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
-                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                    </a></li>` : ''}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
+                                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                            </a></li>` : ''}
                             </ul>
                         </td>
                     </tr>
@@ -2181,20 +2183,20 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 ${doc.permissions?.download !== false ? `<li><a class="dropdown-item" href="{{ url('terminal-data/api/files') }}/${doc.id}/download" onclick="event.stopPropagation()">
-                                        <i class="bi bi-download me-2"></i>Unduh
-                                    </a></li>` : ''}
+                                                <i class="bi bi-download me-2"></i>Unduh
+                                            </a></li>` : ''}
                                 ${doc.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${doc.id}'); return false;">
-                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                    </a></li>` : ''}
+                                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                            </a></li>` : ''}
                                 ${(doc.permissions?.download !== false || doc.permissions?.update) ? `<li><hr class="dropdown-divider"></li>` : ''}
                                 <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${doc.id}'); return false;">
                                     <i class="bi bi-info-circle me-2"></i>Info File
                                 </a></li>
                                 ${doc.permissions?.delete ? `
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
-                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                    </a></li>` : ''}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
+                                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                            </a></li>` : ''}
                             </ul>
                         </td>
                     </tr>
@@ -2716,10 +2718,10 @@
                                     <li><a class="dropdown-item" href="#" onclick="navigateToFolder('${folder.id}'); return false;">
                                         <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                     </a></li>
-                                    ${folder.permissions?.update ? `
-                                        <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
-                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                        </a></li>` : ''}
+                                    ${folder.permissions?.rename ? `
+                                                <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
+                                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                </a></li>` : ''}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${folder.id}'); return false;">
                                         <i class="bi bi-link-45deg me-2"></i>Salin Link
@@ -2728,10 +2730,10 @@
                                         <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                     </a></li>
                                     ${folder.permissions?.delete ? `
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
-                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                        </a></li>` : ''}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
+                                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                </a></li>` : ''}
                                 </ul>
                             </div>
                         </div>
@@ -2819,37 +2821,37 @@
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow">
                                     ${file.permissions?.download !== false ? `<li><a class="dropdown-item" href="${downloadUrl}" onclick="event.stopPropagation()">
-                                            <i class="bi bi-download me-2"></i>Unduh
-                                        </a></li>` : ''}
+                                                    <i class="bi bi-download me-2"></i>Unduh
+                                                </a></li>` : ''}
                                     ${file.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
-                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                        </a></li>` : ''}
+                                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                </a></li>` : ''}
                                     ${(file.permissions?.download !== false || file.permissions?.update) ? `<li><hr class="dropdown-divider"></li>` : ''}
                                     <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${file.id}'); return false;">
                                         <i class="bi bi-info-circle me-2"></i>Info File
                                     </a></li>
                                     ${file.permissions?.delete ? `
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
-                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                        </a></li>` : ''}
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
+                                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                </a></li>` : ''}
                                 </ul>
                             </div>
                         </div>
                         <div class="file-card-preview">
                             ${isImage ? `
-                                        <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
-                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                        <div class="file-icon-preview" data-type="image" style="display: none;">
-                                            <i class="bi bi-image"></i>
-                                            <div class="file-extension">${extension.toUpperCase()}</div>
-                                        </div>
-                                    ` : `
-                                        <div class="file-icon-preview" data-type="${dataType}">
-                                            <i class="bi ${fileIcon}"></i>
-                                            <div class="file-extension">${extension.toUpperCase()}</div>
-                                        </div>
-                                    `}
+                                                <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
+                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div class="file-icon-preview" data-type="image" style="display: none;">
+                                                    <i class="bi bi-image"></i>
+                                                    <div class="file-extension">${extension.toUpperCase()}</div>
+                                                </div>
+                                            ` : `
+                                                <div class="file-icon-preview" data-type="${dataType}">
+                                                    <i class="bi ${fileIcon}"></i>
+                                                    <div class="file-extension">${extension.toUpperCase()}</div>
+                                                </div>
+                                            `}
                         </div>
                     </div>
                 </div>

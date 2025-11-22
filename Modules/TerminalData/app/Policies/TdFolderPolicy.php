@@ -37,8 +37,35 @@ class TdFolderPolicy
         return $user->jabatan !== null;
     }
 
+    public function createInParent(MasterPegawai $user, ?TdFolder $parentFolder): bool
+    {
+        // Basic check - user harus punya jabatan
+        if (!$user->jabatan) {
+            return false;
+        }
+
+        // Jika tidak ada parent folder, return true (general check)
+        if (!$parentFolder) {
+            return true;
+        }
+
+        $kodeJabatan = $user->jabatan->kode;
+
+        // ADMIN, KABAN, SEKBAN - bisa create di mana saja
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // KABID - hanya bisa create di folder bidangnya
+        if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $parentFolder->bidang_id === $user->bidang_id;
+        }
+
+        return false;
+    }
+
     /**
-     * Determine if user can update folder
+     * Determine if user can update folder (general update)
      */
     public function update(MasterPegawai $user, TdFolder $folder): bool
     {
@@ -63,20 +90,11 @@ class TdFolderPolicy
     }
 
     /**
-     * Determine if user can delete folder
+     * Determine if user can rename folder
+     * KABID bisa rename semua folder di bidangnya, bukan hanya milik sendiri
      */
-    public function delete(MasterPegawai $user, TdFolder $folder): bool
+    public function rename(MasterPegawai $user, TdFolder $folder): bool
     {
-        // Tidak bisa hapus folder jika masih ada file di dalamnya
-        if ($folder->files()->count() > 0) {
-            return false;
-        }
-
-        // Tidak bisa hapus folder jika masih ada subfolder
-        if ($folder->subfolders()->count() > 0) {
-            return false;
-        }
-
         $kodeJabatan = $user->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
@@ -84,12 +102,12 @@ class TdFolderPolicy
             return true;
         }
 
-        // KABID - Delete folder bidangnya
+        // KABID - Rename semua folder bidangnya
         if (in_array($kodeJabatan, ['KABID'])) {
             return $folder->bidang_id === $user->bidang_id;
         }
 
-        // KASUBAG, PELAKSANA, JAFUNG, GATEK - Delete folder sendiri
+        // KASUBAG, PELAKSANA, JAFUNG, GATEK - Rename folder sendiri
         if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
             return $folder->created_by === $user->id;
         }
@@ -98,12 +116,77 @@ class TdFolderPolicy
     }
 
     /**
+     * Determine if user can delete folder
+     */
+    public function delete(MasterPegawai $user, TdFolder $folder): bool
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - Full Access
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // KABID, KASUBAG, PELAKSANA, JAFUNG, GATEK - Delete folder sendiri
+        if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $folder->created_by === $user->id;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine if user can upload files to folder
+     */
+    public function upload(MasterPegawai $user, TdFolder $folder): bool
+    {
+        // Basic check - user harus punya jabatan
+        if (!$user->jabatan) {
+            return false;
+        }
+
+        $kodeJabatan = $user->jabatan->kode;
+
+        // ADMIN, KABAN, SEKBAN - bisa upload di mana saja
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // KABID, KASUBAG, PELAKSANA, JAFUNG, GATEK - hanya bisa upload di folder bidangnya
+        if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
+            return $folder->bidang_id === $user->bidang_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine if user can view all trashed folders
+     * ADMIN, KABAN, SEKBAN bisa lihat semua sampah
+     * User lain hanya bisa lihat sampah mereka sendiri
+     */
+    public function viewTrashed(MasterPegawai $user): bool
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - bisa lihat semua sampah
+        return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+    }
+
+    /**
      * Determine if user can restore folder
      */
     public function restore(MasterPegawai $user, TdFolder $folder): bool
     {
-        // Bisa restore jika bisa delete
-        return $this->delete($user, $folder);
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - Full Access
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // Pemilik folder bisa restore
+        return $folder->created_by === $user->id;
     }
 
     /**
@@ -113,7 +196,12 @@ class TdFolderPolicy
     {
         $kodeJabatan = $user->jabatan?->kode;
 
-        // Hanya ADMIN, KABAN dan SEKBAN yang bisa force delete
-        return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']) && $this->delete($user, $folder);
+        // ADMIN, KABAN, SEKBAN - Full Access
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // Pemilik folder bisa force delete
+        return $folder->created_by === $user->id;
     }
 }

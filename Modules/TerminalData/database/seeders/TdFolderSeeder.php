@@ -18,11 +18,11 @@ class TdFolderSeeder extends Seeder
 
         // Get only Bappeda and Sekretariat bidang
         $bidangList = DB::table('master_bidang')
-            ->whereIn('nama', ['Bappeda', 'Sekretariat'])
+            ->whereIn('nama', ['Sekretariat'])
             ->get();
 
         if ($bidangList->isEmpty()) {
-            $this->command->warn('Bidang Bappeda atau Sekretariat tidak ditemukan!');
+            $this->command->warn('Bidang tidak ditemukan!');
             return;
         }
 
@@ -32,9 +32,6 @@ class TdFolderSeeder extends Seeder
         // Jenis folder Level 2 yang akan dibuat untuk setiap bidang
         $jenisFolder = [
             'Eviden Kinerja',
-            'Bahan Tayang',
-            'Laporan',
-            'Surat',
         ];
 
         $now = Carbon::now();

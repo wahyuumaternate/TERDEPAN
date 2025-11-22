@@ -83,7 +83,9 @@ class TdFolderResource extends JsonResource
             'permissions' => [
                 'view' => $request->user()?->can('view', $this->resource) ?? false,
                 'update' => $request->user()?->can('update', $this->resource) ?? false,
+                'rename' => $request->user()?->can('rename', $this->resource) ?? false,
                 'delete' => $request->user()?->can('delete', $this->resource) ?? false,
+                'upload' => $request->user()?->can('upload', $this->resource) ?? false,
             ],
 
             // Timestamps

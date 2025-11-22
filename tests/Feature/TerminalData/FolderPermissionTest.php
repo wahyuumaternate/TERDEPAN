@@ -144,15 +144,25 @@ class FolderPermissionTest extends TestCase
     {
         $user = $this->createUserWithJabatan($jabatanKode, $userBidangId);
 
-        // Buat owner untuk folder (different from test user for non-own scenarios)
-        $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        // Tentukan owner berdasarkan skenario
+        if (in_array($jabatanKode, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            // Admin/Kaban/Sekban bisa update folder siapa saja
+            $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        } elseif ($jabatanKode === 'KABID' && $canUpdate) {
+            // KABID update folder di bidangnya (bisa punya orang lain)
+            $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        } elseif ($canUpdate) {
+            // User lain yang canUpdate = folder sendiri
+            $owner = $user;
+        } else {
+            // Tidak bisa update = folder orang lain
+            $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        }
 
         // Buat folder untuk di-update
         $folder = TdFolder::factory()->create([
             'bidang_id' => $folderBidangId,
-            'created_by' => $canUpdate && in_array($jabatanKode, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
-                ? $user->id
-                : $owner->id
+            'created_by' => $owner->id
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
@@ -241,15 +251,141 @@ class FolderPermissionTest extends TestCase
         $this->assertSoftDeleted('td_folders', ['id' => $emptyFolder->id]);
     }
 
+    /**
+     * Test delete folder permission by jabatan
+     * 
+     * @test
+     * @dataProvider jabatanDeleteProvider
+     */
+    public function test_delete_folder_permission_by_jabatan($jabatanKode, $canDeleteOthers)
+    {
+        $user = $this->createUserWithJabatan($jabatanKode, 1);
+
+        // Test delete folder sendiri (semua bisa)
+        $ownFolder = TdFolder::factory()->create(['created_by' => $user->id, 'bidang_id' => 1]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->deleteJson(route('terminaldata.foldersData.destroy', $ownFolder->id));
+
+        $response->assertStatus(200);
+        $this->assertSoftDeleted('td_folders', ['id' => $ownFolder->id]);
+
+        // Test delete folder orang lain
+        $otherUser = $this->createUserWithJabatan('PELAKSANA', 1);
+        $othersFolder = TdFolder::factory()->create(['created_by' => $otherUser->id, 'bidang_id' => 1]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->deleteJson(route('terminaldata.foldersData.destroy', $othersFolder->id));
+
+        if ($canDeleteOthers) {
+            $response->assertStatus(200);
+        } else {
+            $response->assertStatus(403);
+        }
+    }
+
+    /**
+     * Test rename folder permission by jabatan
+     * Policy rename() berbeda dengan update()
+     * 
+     * @test
+     * @dataProvider jabatanRenameProvider
+     */
+    public function test_rename_folder_permission_by_jabatan($jabatanKode, $folderBidangId, $userBidangId, $canRename)
+    {
+        $user = $this->createUserWithJabatan($jabatanKode, $userBidangId);
+
+        // Tentukan owner
+        if (in_array($jabatanKode, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            // Bisa rename folder siapa saja
+            $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        } elseif ($jabatanKode === 'KABID' && $canRename) {
+            // KABID bisa rename semua folder di bidangnya (milik orang lain juga)
+            $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        } elseif ($canRename) {
+            // User lain hanya bisa rename folder sendiri
+            $owner = $user;
+        } else {
+            $owner = $this->createUserWithJabatan('PELAKSANA', $folderBidangId);
+        }
+
+        $folder = TdFolder::factory()->create([
+            'bidang_id' => $folderBidangId,
+            'created_by' => $owner->id
+        ]);
+
+        // Test policy rename langsung
+        $result = $user->can('rename', $folder);
+
+        $this->assertEquals(
+            $canRename,
+            $result,
+            "{$jabatanKode} " . ($canRename ? 'harus bisa' : 'tidak bisa') . " rename folder"
+        );
+    }
+
+    /**
+     * Test restore folder permission
+     * 
+     * @test
+     */
+    public function test_restore_folder_permission()
+    {
+        $admin = $this->createUserWithJabatan('ADMIN');
+        $user = $this->createUserWithJabatan('PELAKSANA', 1);
+
+        // Admin restore folder sendiri
+        $adminFolder = TdFolder::factory()->create(['created_by' => $admin->id]);
+        $adminFolder->delete();
+        $this->assertTrue($admin->can('restore', $adminFolder));
+
+        // User restore folder sendiri
+        $userFolder = TdFolder::factory()->create(['created_by' => $user->id]);
+        $userFolder->delete();
+        $this->assertTrue($user->can('restore', $userFolder));
+
+        // User tidak bisa restore folder orang lain
+        $this->assertFalse($user->can('restore', $adminFolder));
+
+        // Admin bisa restore folder orang lain
+        $this->assertTrue($admin->can('restore', $userFolder));
+    }
+
+    /**
+     * Test viewTrashed permission
+     * 
+     * @test
+     */
+    public function test_view_trashed_permission()
+    {
+        // ADMIN, KABAN, SEKBAN bisa view semua trash
+        $admin = $this->createUserWithJabatan('ADMIN');
+        $kaban = $this->createUserWithJabatan('KABAN');
+        $sekban = $this->createUserWithJabatan('SEKBAN');
+
+        $this->assertTrue($admin->can('viewTrashed', TdFolder::class));
+        $this->assertTrue($kaban->can('viewTrashed', TdFolder::class));
+        $this->assertTrue($sekban->can('viewTrashed', TdFolder::class));
+
+        // User lain tidak bisa view semua trash
+        $kabid = $this->createUserWithJabatan('KABID');
+        $pelaksana = $this->createUserWithJabatan('PELAKSANA');
+
+        $this->assertFalse($kabid->can('viewTrashed', TdFolder::class));
+        $this->assertFalse($pelaksana->can('viewTrashed', TdFolder::class));
+    }
+
     // ==================== DATA PROVIDERS ====================
 
     public static function jabatanViewAccessProvider()
     {
+        // Berdasarkan policy view(): semua user yang terautentikasi bisa melihat folder
+        // Policy viewAny(): semua pegawai bisa view folders
         return [
             'ADMIN sees all folders' => ['ADMIN', 1, 10, true],
             'KABAN sees all folders' => ['KABAN', 1, 10, true],
             'SEKBAN sees all folders' => ['SEKBAN', 1, 10, true],
-            'KABID sees bidang folders' => ['KABID', 1, 5, false],
+            'KABID sees all folders' => ['KABID', 1, 10, true],  // Changed: semua user bisa view
             'KASUBAG sees all folders' => ['KASUBAG', 1, 10, true],
             'PELAKSANA sees all folders' => ['PELAKSANA', 1, 10, true],
             'JAFUNG sees all folders' => ['JAFUNG', 1, 10, true],
@@ -273,16 +409,58 @@ class FolderPermissionTest extends TestCase
 
     public static function jabatanUpdateDeleteProvider()
     {
+        // Berdasarkan policy update():
+        // - ADMIN, KABAN, SEKBAN: Full Access (semua folder)
+        // - KABID: Edit folder bidangnya
+        // - KASUBAG, PELAKSANA, JAFUNG, GATEK: Edit folder sendiri (created_by)
         return [
             'ADMIN can update any folder' => ['ADMIN', 1, 1, true],
             'KABAN can update any folder' => ['KABAN', 1, 2, true],
             'SEKBAN can update any folder' => ['SEKBAN', 1, 2, true],
-            'KABID can update same bidang' => ['KABID', 1, 1, true],
-            'KABID cannot update other bidang' => ['KABID', 2, 1, false],
+            'KABID can update same bidang folder' => ['KABID', 1, 1, true],
+            'KABID cannot update other bidang folder' => ['KABID', 2, 1, false],
             'KASUBAG can update own folder' => ['KASUBAG', 1, 1, true],
+            'KASUBAG cannot update other folder' => ['KASUBAG', 1, 2, false],
             'PELAKSANA can update own folder' => ['PELAKSANA', 1, 1, true],
+            'PELAKSANA cannot update other folder' => ['PELAKSANA', 1, 2, false],
             'JAFUNG can update own folder' => ['JAFUNG', 1, 1, true],
             'GATEK can update own folder' => ['GATEK', 1, 1, true],
+        ];
+    }
+
+    public static function jabatanDeleteProvider()
+    {
+        // Berdasarkan policy delete():
+        // - ADMIN, KABAN, SEKBAN: Full Access
+        // - Semua user lain: Delete folder sendiri saja
+        return [
+            'ADMIN can delete others folder' => ['ADMIN', true],
+            'KABAN can delete others folder' => ['KABAN', true],
+            'SEKBAN can delete others folder' => ['SEKBAN', true],
+            'KABID can only delete own' => ['KABID', false],
+            'KASUBAG can only delete own' => ['KASUBAG', false],
+            'PELAKSANA can only delete own' => ['PELAKSANA', false],
+            'JAFUNG can only delete own' => ['JAFUNG', false],
+            'GATEK can only delete own' => ['GATEK', false],
+        ];
+    }
+
+    public static function jabatanRenameProvider()
+    {
+        // Berdasarkan policy rename():
+        // - ADMIN, KABAN, SEKBAN: Rename semua folder
+        // - KABID: Rename semua folder di bidangnya
+        // - User lain: Rename folder sendiri saja
+        return [
+            'ADMIN can rename any folder' => ['ADMIN', 1, 1, true],
+            'KABAN can rename any folder' => ['KABAN', 1, 2, true],
+            'SEKBAN can rename any folder' => ['SEKBAN', 1, 2, true],
+            'KABID can rename all in bidang' => ['KABID', 1, 1, true],
+            'KABID cannot rename other bidang' => ['KABID', 2, 1, false],
+            'KASUBAG can rename own only' => ['KASUBAG', 1, 1, true],
+            'PELAKSANA can rename own only' => ['PELAKSANA', 1, 1, true],
+            'JAFUNG can rename own only' => ['JAFUNG', 1, 1, true],
+            'GATEK can rename own only' => ['GATEK', 1, 1, true],
         ];
     }
 

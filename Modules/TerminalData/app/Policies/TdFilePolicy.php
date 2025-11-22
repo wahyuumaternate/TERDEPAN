@@ -12,24 +12,26 @@ class TdFilePolicy
 
     /**
      * Determine if user can view any files
+     * Semua pegawai bisa lihat file
      */
     public function viewAny(MasterPegawai $user): bool
     {
-        // Semua pegawai bisa view files sesuai level mereka
         return $user->jabatan !== null;
     }
 
     /**
      * Determine if user can view specific file
+     * Semua pegawai bisa lihat file
      */
     public function view(MasterPegawai $user, TdFile $file): bool
     {
-        // Semua user yang terautentikasi bisa melihat file
-        return true;
+        return $user->jabatan !== null;
     }
+
     /**
      * Determine if user can upload files
-     * Upload ke folder tertentu dibatasi sesuai scope user
+     * ADMIN, KABAN, SEKBAN - bisa upload di semua lokasi
+     * Pegawai bidang - bisa upload di folder bidangnya
      */
     public function upload(MasterPegawai $user, $folder = null): bool
     {
@@ -44,47 +46,16 @@ class TdFilePolicy
         }
 
         $kodeJabatan = $user->jabatan->kode;
-        $folderName = strtolower($folder->name ?? '');
 
-        // Folder Eviden Kinerja - hanya pemilik file yang bisa upload
-        if (str_contains($folderName, 'eviden') && str_contains($folderName, 'kinerja')) {
-            // Hanya pemilik folder yang bisa upload
-            return $folder->created_by === $user->id;
-        }
-
-        // ADMIN, KABAN, SEKBAN - bisa upload dimana saja
+        // ADMIN, KABAN, SEKBAN - bisa upload di semua lokasi
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
             return true;
         }
 
-        // KABID - hanya bisa upload di folder bidangnya
-        if ($kodeJabatan === 'KABID') {
+        // Pegawai bidang (KABID, KASUBAG, PELAKSANA, JAFUNG, GATEK)
+        // Hanya bisa upload di folder bidangnya
+        if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
             return $folder->bidang_id === $user->bidang_id;
-        }
-
-        // KASUBAG - hanya bisa upload di folder sub bidangnya
-        // Jika KASUBAG punya sub_bidang_id, harus match dengan folder
-        // Jika tidak punya sub_bidang_id, fallback ke bidang_id check
-        if ($kodeJabatan === 'KASUBAG') {
-            if ($user->sub_bidang_id && $folder->sub_bidang_id) {
-                return $folder->sub_bidang_id === $user->sub_bidang_id;
-            }
-            // Fallback: bisa upload di folder bidangnya
-            return $folder->bidang_id === $user->bidang_id;
-        }
-
-        // PELAKSANA, JAFUNG, GATEK - hanya bisa upload di folder bidang/sub bidang mereka
-        if (in_array($kodeJabatan, ['PELAKSANA', 'JAFUNG', 'GATEK'])) {
-            // Bisa upload di folder bidang atau sub bidang mereka
-            if ($user->sub_bidang_id && $folder->sub_bidang_id === $user->sub_bidang_id) {
-                return true;
-            }
-            if ($user->bidang_id && $folder->bidang_id === $user->bidang_id) {
-                return true;
-            }
-            // TIDAK bisa upload ke folder yang bukan bidang/sub_bidang mereka
-            // meskipun mereka adalah created_by folder tersebut
-            return false;
         }
 
         return false;
@@ -92,14 +63,16 @@ class TdFilePolicy
 
     /**
      * Determine if user can download file
+     * Semua pegawai bisa download file
      */
     public function download(MasterPegawai $user, TdFile $file): bool
     {
-        // Semua user yang terautentikasi bisa download file
-        return true;
+        return $user->jabatan !== null;
     }
     /**
      * Determine if user can update file
+     * ADMIN, KABAN, SEKBAN - Full Access
+     * Pemilik file - bisa update file sendiri
      */
     public function update(MasterPegawai $user, TdFile $file): bool
     {
@@ -110,32 +83,17 @@ class TdFilePolicy
             return true;
         }
 
-        // KABID - Edit file bidangnya
-        if (in_array($kodeJabatan, ['KABID'])) {
-            return $file->bidang_id === $user->bidang_id;
-        }
-
-        // KASUBAG, PELAKSANA, JAFUNG, GATEK - Edit file sendiri
-        if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
-            return $file->created_by === $user->id;
-        }
-
-        return false;
+        // Pemilik file bisa update
+        return $file->created_by === $user->id;
     }
 
     /**
      * Determine if user can delete file
+     * ADMIN, KABAN, SEKBAN - Full Access
+     * Pemilik file - bisa delete file sendiri
      */
     public function delete(MasterPegawai $user, TdFile $file): bool
     {
-        // Tidak bisa hapus file di folder eviden kinerja
-        if ($file->folder) {
-            $folderName = strtolower($file->folder->name ?? '');
-            if (str_contains($folderName, 'eviden') && str_contains($folderName, 'kinerja')) {
-                return false; // Tidak bisa hapus file eviden
-            }
-        }
-
         $kodeJabatan = $user->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
@@ -143,34 +101,74 @@ class TdFilePolicy
             return true;
         }
 
-        // KABID - Delete file bidangnya
-        if (in_array($kodeJabatan, ['KABID'])) {
-            return $file->bidang_id === $user->bidang_id;
+        // Pemilik file bisa delete
+        return $file->created_by === $user->id;
+    }
+
+    /**
+     * Determine if user can move file
+     * ADMIN, KABAN, SEKBAN - Full Access
+     * Pemilik file - bisa move file sendiri
+     */
+    public function move(MasterPegawai $user, TdFile $file): bool
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - Full Access
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
         }
 
-        // KASUBAG, PELAKSANA, JAFUNG, GATEK - Delete file sendiri
-        if (in_array($kodeJabatan, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
-            return $file->created_by === $user->id;
-        }
+        // Pemilik file bisa move
+        return $file->created_by === $user->id;
+    }
 
-        return false;
+    /**
+     * Determine if user can view all trashed files
+     * ADMIN, KABAN, SEKBAN bisa lihat semua sampah
+     * User lain hanya bisa lihat sampah mereka sendiri
+     */
+    public function viewTrashed(MasterPegawai $user): bool
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - bisa lihat semua sampah
+        return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 
     /**
      * Determine if user can restore file from trash
-     * Restore permission sama dengan delete permission
+     * ADMIN, KABAN, SEKBAN - Full Access
+     * Pemilik file - bisa restore file sendiri
      */
     public function restore(MasterPegawai $user, TdFile $file): bool
     {
-        return $this->delete($user, $file);
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - Full Access
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // Pemilik file bisa restore
+        return $file->created_by === $user->id;
     }
 
     /**
      * Determine if user can permanently delete file
-     * Force delete permission sama dengan delete permission
+     * ADMIN, KABAN, SEKBAN - Full Access
+     * Pemilik file - bisa force delete file sendiri
      */
     public function forceDelete(MasterPegawai $user, TdFile $file): bool
     {
-        return $this->delete($user, $file);
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN - Full Access
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // Pemilik file bisa force delete
+        return $file->created_by === $user->id;
     }
 }
