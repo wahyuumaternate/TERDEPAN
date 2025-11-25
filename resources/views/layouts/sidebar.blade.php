@@ -14,7 +14,7 @@
 
          <!-- Beranda Nav -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
+             <a class="nav-link {{ Request::is('/e-kinerja') ? 'active' : 'collapsed' }}" href="{{ url('/e-kinerja') }}">
                  <i class="bi bi-house"></i>
                  <span>Beranda</span>
              </a>
@@ -29,6 +29,9 @@
              $fullAccessPK = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
              $kabidAccess = $kodeJabatan === 'KABID';
              $limitedAccessPK = in_array($kodeJabatan, ['KASUBAG', 'JF', 'PELAKSANA', 'GATEK']);
+             $canAccessMasterData = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+             $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
+             $canAccessSistem = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
          @endphp
 
          <li class="nav-item">
@@ -73,29 +76,125 @@
              </ul>
          </li><!-- End Perjanjian Kinerja Nav -->
 
-         <!-- Penugasan Pegawai Nav -->
+         <!-- Penugasan Nav -->
          @php
-             $canAccessPenugasan = !in_array($kodeJabatan, ['PELAKSANA', 'GATEK']);
+             $canManagePenugasan = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
+             $canManageTeam = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG']);
          @endphp
 
-         @if ($canAccessPenugasan)
+         <!-- ========================================== -->
+         <!-- BAGIAN 1: TUGAS SAYA (Semua Role)         -->
+         <!-- ========================================== -->
+         <li class="nav-item">
+             <a class="nav-link collapsed" data-bs-target="#tugas-saya-nav" data-bs-toggle="collapse" href="#">
+                 <i class="bi bi-person-check"></i><span>Tugas Saya</span><i class="bi bi-chevron-down ms-auto"></i>
+             </a>
+             <ul id="tugas-saya-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                 <!-- Tugas Pokok Saya -->
+                 <li>
+                     <a href="{{ route('penugasan.tugas-pokok.tugas-saya') }}">
+                         <i class="bi bi-circle"></i><span>Tugas Pokok</span>
+                     </a>
+                 </li>
+
+                 <!-- Tugas Harian Saya -->
+                 <li>
+                     <a href="{{ route('penugasan.tugas-harian.tugas-saya') }}">
+                         <i class="bi bi-circle"></i><span>Tugas Harian</span>
+                     </a>
+                 </li>
+
+                 <!-- Tugas Tambahan Saya -->
+                 <li>
+                     <a href="{{ route('penugasan.tugas-tambahan.tugas-saya') }}">
+                         <i class="bi bi-circle"></i><span>Tugas Tambahan</span>
+                     </a>
+                 </li>
+             </ul>
+         </li><!-- End Tugas Saya Nav -->
+
+         <!-- ========================================== -->
+         <!-- BAGIAN 2: MANAJEMEN TUGAS (Admin/Atasan)  -->
+         <!-- ========================================== -->
+         @if ($canManagePenugasan)
              <li class="nav-item">
-                 <a class="nav-link {{ Request::routeIs('penugasan.index') ? 'active' : 'collapsed' }}"
-                     href="{{ route('penugasan.index') }}">
-                     <i class="bi bi-person-lines-fill"></i>
-                     <span>Penugasan Pegawai</span>
+                 <a class="nav-link collapsed" data-bs-target="#manajemen-tugas-nav" data-bs-toggle="collapse"
+                     href="#">
+                     <i class="bi bi-list-check"></i><span>Manajemen Tugas</span><i
+                         class="bi bi-chevron-down ms-auto"></i>
                  </a>
-             </li><!-- End Penugasan Pegawai Nav -->
+                 <ul id="manajemen-tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                     <!-- Daftar Tugas Pokok -->
+                     <li>
+                         <a href="{{ route('penugasan.tugas-pokok.index') }}">
+                             <i class="bi bi-circle"></i><span>Daftar Tugas Pokok</span>
+                         </a>
+                     </li>
+
+                     <!-- Daftar Tugas Harian -->
+                     <li>
+                         <a href="{{ route('penugasan.tugas-harian.index') }}">
+                             <i class="bi bi-circle"></i><span>Daftar Tugas Harian</span>
+                         </a>
+                     </li>
+
+                     <!-- Daftar Tugas Tambahan -->
+                     <li>
+                         <a href="{{ route('penugasan.tugas-tambahan.index') }}">
+                             <i class="bi bi-circle"></i><span>Daftar Tugas Tambahan</span>
+                         </a>
+                     </li>
+                 </ul>
+             </li><!-- End Manajemen Tugas Nav -->
          @endif
 
-         <!-- Tugas Saya Nav (Semua role) -->
-         <li class="nav-item">
-             <a class="nav-link {{ Request::routeIs('penugasan.show') ? 'active' : 'collapsed' }}"
-                 href="{{ route('penugasan.show', AUTH::user()->id) }}">
-                 <i class="bi bi-list-task"></i>
-                 <span>Tugas Saya</span>
-             </a>
-         </li><!-- End Tugas Saya Nav -->
+         <!-- ========================================== -->
+         <!-- BAGIAN 3: MANAJEMEN TIM (Atasan)          -->
+         <!-- ========================================== -->
+         @if ($canManageTeam)
+             <li class="nav-item">
+                 <a class="nav-link collapsed" data-bs-target="#manajemen-tim-nav" data-bs-toggle="collapse"
+                     href="#">
+                     <i class="bi bi-people"></i><span>Manajemen Tim</span><i class="bi bi-chevron-down ms-auto"></i>
+                 </a>
+                 <ul id="manajemen-tim-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                     <!-- Tim Saya -->
+                     <li>
+                         <a href="{{ route('penugasan.tim.index') }}">
+                             <i class="bi bi-circle"></i><span>Tim Saya</span>
+                         </a>
+                     </li>
+
+                     <!-- Berikan Tugas -->
+                     <li>
+                         <a href="{{ route('penugasan.tim.form-berikan-tugas') }}">
+                             <i class="bi bi-circle"></i><span>Berikan Tugas</span>
+                         </a>
+                     </li>
+
+                     <!-- Validasi Tugas -->
+                     <li>
+                         <a href="{{ route('penugasan.tim.daftar-validasi') }}">
+                             <i class="bi bi-circle"></i><span>Validasi Tugas</span>
+                             @php
+                                 // Count pending validation (example - adjust based on your logic)
+                                 $pendingCount = 0; // You can add real count here
+                             @endphp
+                             @if ($pendingCount > 0)
+                                 <span class="badge bg-danger badge-number">{{ $pendingCount }}</span>
+                             @endif
+                         </a>
+                     </li>
+
+                     <!-- Monitoring Tim -->
+                     <li>
+                         <a href="{{ route('penugasan.tim.monitoring') }}">
+                             <i class="bi bi-circle"></i><span>Monitoring Tim</span>
+                         </a>
+                     </li>
+                 </ul>
+             </li><!-- End Manajemen Tim Nav -->
+         @endif
 
          {{-- <!-- Penugasan Nav -->
          <li class="nav-item">
@@ -194,11 +293,6 @@
          </li><!-- End Delegasi & Workload Nav --> --}}
 
          <!-- Master Data -->
-         @php
-             $kodeJabatan = auth()->user()->jabatan?->kode;
-             $canAccessMasterData = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
-         @endphp
-
          @if ($canAccessMasterData)
              <li class="nav-heading">Master Data</li>
 
@@ -228,11 +322,6 @@
          @endif
 
          <!-- Sistem -->
-         @php
-             $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
-             $canAccessSistem = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
-         @endphp
-
          @if ($canAccessMonitoring)
              <li class="nav-heading">Sistem & Monitoring</li>
 

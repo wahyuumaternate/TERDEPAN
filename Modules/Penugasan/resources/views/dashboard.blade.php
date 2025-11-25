@@ -2,13 +2,14 @@
 
 @section('main')
     <div class="pagetitle">
-        <h1>Beranda E-Kinerja</h1>
+        <h1>Dashboard Penugasan</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item active">Beranda</li>
+                <li class="breadcrumb-item"><a href="{{ url('/') }}">Beranda</a></li>
+                <li class="breadcrumb-item active">Dashboard Penugasan</li>
             </ol>
         </nav>
-    </div><!-- End Page Title -->
+    </div>
 
     <section class="section dashboard">
         <!-- Stats Cards -->
@@ -24,11 +25,11 @@
                                 <i class="bi bi-file-earmark-text text-primary fs-4"></i>
                             </div>
                             <div class="ps-3">
-                                <h6 class="mb-0 fw-bold fs-4">{{ $stats['tugas_pokok']['total'] ?? 0 }}</h6>
+                                <h6 class="mb-0 fw-bold fs-4">{{ $stats['tugas_pokok']['total'] }}</h6>
                                 <div class="small text-muted mt-1">
-                                    <span class="text-success">{{ $stats['tugas_pokok']['selesai'] ?? 0 }} selesai</span>
+                                    <span class="text-success">{{ $stats['tugas_pokok']['selesai'] }} selesai</span>
                                     <span class="mx-1">•</span>
-                                    <span class="text-info">{{ $stats['tugas_pokok']['aktif'] ?? 0 }} aktif</span>
+                                    <span class="text-info">{{ $stats['tugas_pokok']['aktif'] }} aktif</span>
                                 </div>
                             </div>
                         </div>
@@ -47,11 +48,11 @@
                                 <i class="bi bi-calendar-check text-info fs-4"></i>
                             </div>
                             <div class="ps-3">
-                                <h6 class="mb-0 fw-bold fs-4">{{ $stats['tugas_harian']['total'] ?? 0 }}</h6>
+                                <h6 class="mb-0 fw-bold fs-4">{{ $stats['tugas_harian']['total'] }}</h6>
                                 <div class="small text-muted mt-1">
-                                    <span class="text-warning">{{ $stats['tugas_harian']['pending'] ?? 0 }} pending</span>
+                                    <span class="text-warning">{{ $stats['tugas_harian']['pending'] }} pending</span>
                                     <span class="mx-1">•</span>
-                                    <span class="text-primary">{{ $stats['tugas_harian']['dikerjakan'] ?? 0 }} dikerjakan</span>
+                                    <span class="text-primary">{{ $stats['tugas_harian']['dikerjakan'] }} dikerjakan</span>
                                 </div>
                             </div>
                         </div>
@@ -70,11 +71,11 @@
                                 <i class="bi bi-plus-circle text-success fs-4"></i>
                             </div>
                             <div class="ps-3">
-                                <h6 class="mb-0 fw-bold fs-4">{{ $stats['tugas_tambahan']['total'] ?? 0 }}</h6>
+                                <h6 class="mb-0 fw-bold fs-4">{{ $stats['tugas_tambahan']['total'] }}</h6>
                                 <div class="small text-muted mt-1">
-                                    <span class="text-success">{{ $stats['tugas_tambahan']['selesai'] ?? 0 }} selesai</span>
+                                    <span class="text-success">{{ $stats['tugas_tambahan']['selesai'] }} selesai</span>
                                     <span class="mx-1">•</span>
-                                    <span class="text-info">{{ $stats['tugas_tambahan']['aktif'] ?? 0 }} aktif</span>
+                                    <span class="text-info">{{ $stats['tugas_tambahan']['aktif'] }} aktif</span>
                                 </div>
                             </div>
                         </div>
@@ -93,7 +94,7 @@
                                 <i class="bi bi-star text-warning fs-4"></i>
                             </div>
                             <div class="ps-3">
-                                <h6 class="mb-0 fw-bold fs-4">{{ number_format($stats['nilai_rata_rata'] ?? 0, 1) }}</h6>
+                                <h6 class="mb-0 fw-bold fs-4">{{ number_format($stats['nilai_rata_rata'], 1) }}</h6>
                                 <span class="text-muted small">dari skala 100</span>
                             </div>
                         </div>
@@ -109,7 +110,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Tugas Pokok - Progress</h5>
 
-                        @if (empty($tugasPokok) || $tugasPokok->isEmpty())
+                        @if ($tugasPokok->isEmpty())
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle me-2"></i>
                                 Belum ada tugas pokok yang ditugaskan.
@@ -219,65 +220,61 @@
                     <div class="card-body">
                         <h5 class="card-title">Tugas Mendesak</h5>
 
-                        @if ((empty($tugasMendesak) || $tugasMendesak->isEmpty()) && (empty($tugasTambahanMendesak) || $tugasTambahanMendesak->isEmpty()))
+                        @if ($tugasMendesak->isEmpty() && $tugasTambahanMendesak->isEmpty())
                             <div class="alert alert-success mb-0">
                                 <i class="bi bi-check-circle me-2"></i>
                                 Tidak ada tugas mendesak.
                             </div>
                         @else
                             <div class="list-group list-group-flush">
-                                @if(!empty($tugasMendesak))
-                                    @foreach ($tugasMendesak as $tugas)
-                                        <div class="list-group-item px-0">
-                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                <div class="fw-semibold small">
-                                                    <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
-                                                        class="text-decoration-none">
-                                                        {{ Str::limit($tugas->nama_tugas, 40) }}
-                                                    </a>
-                                                </div>
-                                                @php
-                                                    $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
-                                                    $urgencyClass = $daysLeft <= 2 ? 'danger' : 'warning';
-                                                @endphp
-                                                <span class="badge bg-{{ $urgencyClass }}">
-                                                    {{ abs($daysLeft) }}h
-                                                </span>
+                                @foreach ($tugasMendesak as $tugas)
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <div class="fw-semibold small">
+                                                <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
+                                                    class="text-decoration-none">
+                                                    {{ Str::limit($tugas->nama_tugas, 40) }}
+                                                </a>
                                             </div>
-                                            <small class="text-muted">
-                                                <i class="bi bi-calendar3"></i>
-                                                {{ $tugas->tanggal_selesai->format('d M Y') }}
-                                            </small>
+                                            @php
+                                                $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
+                                                $urgencyClass = $daysLeft <= 2 ? 'danger' : 'warning';
+                                            @endphp
+                                            <span class="badge bg-{{ $urgencyClass }}">
+                                                {{ abs($daysLeft) }}h
+                                            </span>
                                         </div>
-                                    @endforeach
-                                @endif
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar3"></i>
+                                            {{ $tugas->tanggal_selesai->format('d M Y') }}
+                                        </small>
+                                    </div>
+                                @endforeach
 
-                                @if(!empty($tugasTambahanMendesak))
-                                    @foreach ($tugasTambahanMendesak as $tugas)
-                                        <div class="list-group-item px-0">
-                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                <div class="fw-semibold small">
-                                                    <a href="{{ route('penugasan.tugas-tambahan.show', $tugas->id) }}"
-                                                        class="text-decoration-none">
-                                                        {{ Str::limit($tugas->nama_tugas, 40) }}
-                                                    </a>
-                                                    <span class="badge bg-info">Tambahan</span>
-                                                </div>
-                                                @php
-                                                    $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
-                                                    $urgencyClass = $daysLeft <= 2 ? 'danger' : 'warning';
-                                                @endphp
-                                                <span class="badge bg-{{ $urgencyClass }}">
-                                                    {{ abs($daysLeft) }}h
-                                                </span>
+                                @foreach ($tugasTambahanMendesak as $tugas)
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <div class="fw-semibold small">
+                                                <a href="{{ route('penugasan.tugas-tambahan.show', $tugas->id) }}"
+                                                    class="text-decoration-none">
+                                                    {{ Str::limit($tugas->nama_tugas, 40) }}
+                                                </a>
+                                                <span class="badge bg-info">Tambahan</span>
                                             </div>
-                                            <small class="text-muted">
-                                                <i class="bi bi-calendar3"></i>
-                                                {{ $tugas->tanggal_selesai->format('d M Y') }}
-                                            </small>
+                                            @php
+                                                $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
+                                                $urgencyClass = $daysLeft <= 2 ? 'danger' : 'warning';
+                                            @endphp
+                                            <span class="badge bg-{{ $urgencyClass }}">
+                                                {{ abs($daysLeft) }}h
+                                            </span>
                                         </div>
-                                    @endforeach
-                                @endif
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar3"></i>
+                                            {{ $tugas->tanggal_selesai->format('d M Y') }}
+                                        </small>
+                                    </div>
+                                @endforeach
                             </div>
                         @endif
                     </div>
@@ -286,7 +283,7 @@
         </div>
 
         <!-- Progress Mingguan Chart -->
-        @if (!empty($progressMingguan) && !$progressMingguan->isEmpty())
+        @if (!empty($progressMingguan))
             <div class="row mt-4">
                 <div class="col-12">
                     <div class="card shadow-sm border-0">
@@ -302,7 +299,7 @@
 @endsection
 
 @push('scripts')
-    @if (!empty($progressMingguan) && !$progressMingguan->isEmpty())
+    @if (!empty($progressMingguan))
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {

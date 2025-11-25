@@ -1,66 +1,148 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Penugasan\Http\Controllers\DashboardController;
 use Modules\Penugasan\Http\Controllers\PenugasanController;
 use Modules\Penugasan\Http\Controllers\TugasPokokController;
 use Modules\Penugasan\Http\Controllers\TugasHarianController;
 use Modules\Penugasan\Http\Controllers\TugasTambahanController;
+use Modules\Penugasan\Http\Controllers\TeamController;
+use Modules\Penugasan\Http\Controllers\ApiController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes - URUTAN SANGAT PENTING!
-| Route SPESIFIK harus di ATAS route UMUM
+| Web Routes - Modul Penugasan
+|--------------------------------------------------------------------------
+| Route structure mengikuti hierarki database dan best practice RESTful:
+| - Dashboard (landing page)
+| - Tugas Pokok (main tasks from PK)
+| - Tugas Harian (daily tasks - child of Tugas Pokok)
+| - Tugas Tambahan (additional tasks - standalone)
+| - Team Management (for supervisors)
+| - API endpoints (for AJAX)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(function () {
 
     // ============================================
-    // PENUGASAN GENERAL ROUTES
+    // DASHBOARD
     // ============================================
-    Route::get('/', [PenugasanController::class, 'index'])->name('index');
-    Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
-    Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
-    Route::post('/buat-tugas', [PenugasanController::class, 'buatTugas'])->name('buat-tugas');
-    Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
-    Route::post('/validasi-tugas/{id}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
-    Route::post('/preview-penilaian', [PenugasanController::class, 'previewPenilaian'])->name('preview-penilaian');
-    Route::post('/catatan-monitoring', [PenugasanController::class, 'catatanMonitoring'])->name('catatan-monitoring');
-    Route::get('/dashboard-monitoring', [PenugasanController::class, 'dashboardMonitoring'])->name('dashboard-monitoring');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     // ============================================
-    // TUGAS POKOK ROUTES - /tugas-pokok
+    // TUGAS POKOK (Tugas utama dari Perjanjian Kinerja)
     // ============================================
     Route::prefix('tugas-pokok')->name('tugas-pokok.')->group(function () {
+        // List & view
+        Route::get('/', [TugasPokokController::class, 'index'])->name('index');
+        Route::get('/saya', [TugasPokokController::class, 'tugasSaya'])->name('tugas-saya');
+        Route::get('/{tugasPokok}', [TugasPokokController::class, 'show'])->name('show');
+        
+        // Actions
         Route::post('/sinkron', [TugasPokokController::class, 'sinkronData'])->name('sinkron');
-        Route::post('/{id}/update-status', [TugasPokokController::class, 'updateStatus'])->name('update-status');
+        // Route::post('/{tugasPokok}/terima', [TugasPokokController::class, 'terima'])->name('terima');
+        Route::post('/{tugasPokok}/update-status', [TugasPokokController::class, 'updateStatus'])->name('update-status');
+        
+        // Nested: Tugas Harian di bawah Tugas Pokok
+        Route::prefix('{tugasPokok}/tugas-harian')->name('tugas-harian.')->group(function() {
+            Route::get('/', [TugasHarianController::class, 'indexByTugasPokok'])->name('index');
+            Route::post('/', [TugasHarianController::class, 'store'])->name('store');
+        });
     });
 
     // ============================================
-    // TUGAS HARIAN ROUTES - /tugas-harian
+    // TUGAS HARIAN (Daily Tasks)
     // ============================================
     Route::prefix('tugas-harian')->name('tugas-harian.')->group(function () {
+        // List & view
         Route::get('/', [TugasHarianController::class, 'index'])->name('index');
-        Route::get('/{id}/detail', [TugasHarianController::class, 'detail'])->name('detail');
-        Route::get('/{id}/upload-eviden', [TugasHarianController::class, 'uploadEviden'])->name('upload-eviden');
-        Route::get('/{id}/edit', [TugasHarianController::class, 'edit'])->name('edit');
-        Route::get('/{id}/history', [TugasHarianController::class, 'getHistory'])->name('history');
-        Route::put('/{id}', [TugasHarianController::class, 'update'])->name('update');
-        Route::delete('/{id}', [TugasHarianController::class, 'destroy'])->name('destroy');
-        Route::post('/{id}/update-status', [TugasHarianController::class, 'updateStatus'])->name('update-status');
-        Route::post('/{id}/update-progress', [TugasHarianController::class, 'updateProgress'])->name('update-progress');
+        Route::get('/saya', [TugasHarianController::class, 'tugasSaya'])->name('tugas-saya');
+        Route::get('/buat', [TugasHarianController::class, 'create'])->name('create');
+        Route::get('/{tugasHarian}', [TugasHarianController::class, 'show'])->name('show');
+        Route::get('/{tugasHarian}/edit', [TugasHarianController::class, 'edit'])->name('edit');
+        
+        // CRUD operations
+        Route::post('/', [TugasHarianController::class, 'store'])->name('store');
+        Route::put('/{tugasHarian}', [TugasHarianController::class, 'update'])->name('update');
+        Route::delete('/{tugasHarian}', [TugasHarianController::class, 'destroy'])->name('destroy');
+        
+        // Task actions
+        Route::post('/{tugasHarian}/terima', [TugasHarianController::class, 'terima'])->name('terima');
+        Route::post('/{tugasHarian}/tolak', [TugasHarianController::class, 'tolak'])->name('tolak');
+        Route::post('/{tugasHarian}/mulai', [TugasHarianController::class, 'mulai'])->name('mulai');
+        Route::post('/{tugasHarian}/submit', [TugasHarianController::class, 'submit'])->name('submit');
+        Route::post('/{tugasHarian}/upload-bukti', [TugasHarianController::class, 'uploadBukti'])->name('upload-bukti');
+        Route::post('/{tugasHarian}/update-progress', [TugasHarianController::class, 'updateProgress'])->name('update-progress');
+        
+        // History
+        Route::get('/{tugasHarian}/history', [TugasHarianController::class, 'history'])->name('history');
     });
 
     // ============================================
-    // TUGAS TAMBAHAN ROUTES - /tugas-tambahan
+    // TUGAS TAMBAHAN (Additional Tasks)
     // ============================================
     Route::prefix('tugas-tambahan')->name('tugas-tambahan.')->group(function () {
+        // List & view
         Route::get('/', [TugasTambahanController::class, 'index'])->name('index');
-        Route::get('/{id}/upload-eviden', [TugasTambahanController::class, 'uploadEviden'])->name('upload-eviden');
-        Route::get('/{id}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [TugasTambahanController::class, 'update'])->name('update');
-        Route::delete('/{id}', [TugasTambahanController::class, 'destroy'])->name('destroy');
-        Route::post('/{id}/update-status', [TugasTambahanController::class, 'updateStatus'])->name('update-status');
-        Route::post('/{id}/update-progress', [TugasTambahanController::class, 'updateProgress'])->name('update-progress');
+        Route::get('/saya', [TugasTambahanController::class, 'tugasSaya'])->name('tugas-saya');
+        Route::get('/{tugasTambahan}', [TugasTambahanController::class, 'show'])->name('show');
+        Route::get('/{tugasTambahan}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
+        
+        // CRUD operations
+        Route::put('/{tugasTambahan}', [TugasTambahanController::class, 'update'])->name('update');
+        Route::delete('/{tugasTambahan}', [TugasTambahanController::class, 'destroy'])->name('destroy');
+        
+        // Task actions
+        Route::post('/{tugasTambahan}/terima', [TugasTambahanController::class, 'terima'])->name('terima');
+        Route::post('/{tugasTambahan}/tolak', [TugasTambahanController::class, 'tolak'])->name('tolak');
+        Route::post('/{tugasTambahan}/mulai', [TugasTambahanController::class, 'mulai'])->name('mulai');
+        Route::post('/{tugasTambahan}/submit', [TugasTambahanController::class, 'submit'])->name('submit');
+        Route::post('/{tugasTambahan}/upload-bukti', [TugasTambahanController::class, 'uploadBukti'])->name('upload-bukti');
+        Route::post('/{tugasTambahan}/update-progress', [TugasTambahanController::class, 'updateProgress'])->name('update-progress');
     });
+
+    // ============================================
+    // TEAM MANAGEMENT (Untuk Atasan)
+    // ============================================
+    Route::prefix('tim')->name('tim.')->group(function () {
+        // Overview tim dan anggota
+        Route::get('/', [TeamController::class, 'index'])->name('index');
+        Route::get('/overview', [TeamController::class, 'overview'])->name('overview');
+        Route::get('/anggota/{pegawai}', [TeamController::class, 'detailAnggota'])->name('detail-anggota');
+        
+        // Berikan tugas
+        Route::get('/berikan-tugas', [TeamController::class, 'formBerikanTugas'])->name('form-berikan-tugas');
+        Route::post('/berikan-tugas', [TeamController::class, 'berikanTugas'])->name('berikan-tugas');
+        
+        // Validasi tugas
+        Route::get('/validasi', [TeamController::class, 'daftarValidasi'])->name('daftar-validasi');
+        Route::post('/validasi/{tugas}', [TeamController::class, 'validasiTugas'])->name('validasi-tugas');
+        Route::post('/preview-penilaian', [TeamController::class, 'previewPenilaian'])->name('preview-penilaian');
+        
+        // Monitoring
+        Route::get('/monitoring', [TeamController::class, 'monitoring'])->name('monitoring');
+        Route::post('/catatan-monitoring', [TeamController::class, 'catatanMonitoring'])->name('catatan-monitoring');
+    });
+
+    // ============================================
+    // API ENDPOINTS (untuk AJAX calls)
+    // ============================================
+    Route::prefix('api')->name('api.')->group(function () {
+        // Dashboard stats
+        Route::get('/statistik', [ApiController::class, 'statistik'])->name('statistik');
+        Route::get('/kalender', [ApiController::class, 'kalender'])->name('kalender');
+        Route::get('/notifikasi', [ApiController::class, 'notifikasi'])->name('notifikasi');
+        
+        // Team workload
+        Route::get('/workload-tim', [ApiController::class, 'workloadTim'])->name('workload-tim');
+        Route::get('/progress-anggota/{pegawai}', [ApiController::class, 'progressAnggota'])->name('progress-anggota');
+    });
+
+    // ============================================
+    // LEGACY ROUTES (Backward Compatibility)
+    // TODO: Remove after migration complete
+    // ============================================
+    Route::get('/daftar-pegawai', [PenugasanController::class, 'index'])->name('index');
+    Route::get('/pegawai/{id}', [PenugasanController::class, 'show'])->name('show');
 });

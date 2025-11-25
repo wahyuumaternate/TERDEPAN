@@ -43,13 +43,41 @@ class TugasTambahanPolicy
     /**
      * Determine if user can create tugas tambahan
      * Atasan langsung bisa memberikan tugas tambahan ke bawahan
+     * Level tertentu (KABAN, KABID) bisa assign lintas hierarki
      */
     public function create(MasterPegawai $user): bool
     {
         $kodeJabatan = $user->jabatan?->kode;
 
         // Semua jabatan struktural bisa memberikan tugas tambahan
+        // KABAN dan KABID bisa assign lintas bidang/hierarki
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG']);
+    }
+
+    /**
+     * Determine if user can assign task to specific pegawai
+     * Mengecek apakah user berhak memberikan tugas ke target pegawai
+     */
+    public function assignTo(MasterPegawai $user, MasterPegawai $targetPegawai): bool
+    {
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // ADMIN, KABAN, SEKBAN bisa assign ke siapa saja
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            return true;
+        }
+
+        // KABID bisa assign ke pegawai di bidangnya
+        if ($kodeJabatan === 'KABID') {
+            return $user->bidang_id === $targetPegawai->bidang_id;
+        }
+
+        // KASUBAG hanya bisa assign ke bawahan langsung
+        if ($kodeJabatan === 'KASUBAG') {
+            return $targetPegawai->atasan_langsung_id === $user->id;
+        }
+
+        return false;
     }
 
     /**
@@ -126,5 +154,44 @@ class TugasTambahanPolicy
         }
 
         return $tugas->status === 'selesai';
+    }
+
+    /**
+     * Determine if user can accept task (terima)
+     * Hanya pegawai penerima tugas (status: pending)
+     */
+    public function terima(MasterPegawai $user, TugasTambahan $tugas): bool
+    {
+        if ($user->id !== $tugas->pegawai_id) {
+            return false;
+        }
+
+        return $tugas->status === 'pending';
+    }
+
+    /**
+     * Determine if user can reject task (tolak)
+     * Hanya pegawai penerima tugas (status: pending)
+     */
+    public function tolak(MasterPegawai $user, TugasTambahan $tugas): bool
+    {
+        if ($user->id !== $tugas->pegawai_id) {
+            return false;
+        }
+
+        return $tugas->status === 'pending';
+    }
+
+    /**
+     * Determine if user can submit task for validation
+     * Hanya pegawai penerima tugas (status: dikerjakan atau revisi)
+     */
+    public function submit(MasterPegawai $user, TugasTambahan $tugas): bool
+    {
+        if ($user->id !== $tugas->pegawai_id) {
+            return false;
+        }
+
+        return in_array($tugas->status, ['dikerjakan', 'revisi']);
     }
 }

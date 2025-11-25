@@ -127,4 +127,43 @@ class TugasHarianPolicy
 
         return $tugas->status === 'selesai';
     }
+
+    /**
+     * Determine if user can accept task (terima)
+     * Hanya pegawai penerima tugas (status: pending)
+     */
+    public function terima(MasterPegawai $user, TugasHarian $tugas): bool
+    {
+        if ($user->id !== $tugas->pegawai_id) {
+            return false;
+        }
+
+        return $tugas->status === 'pending';
+    }
+
+    /**
+     * Determine if user can reject task (tolak)
+     * Hanya pegawai penerima tugas (status: pending)
+     */
+    public function tolak(MasterPegawai $user, TugasHarian $tugas): bool
+    {
+        if ($user->id !== $tugas->pegawai_id) {
+            return false;
+        }
+
+        return $tugas->status === 'pending';
+    }
+
+    /**
+     * Determine if user can submit task for validation
+     * Hanya pegawai penerima tugas (status: dikerjakan atau revisi)
+     */
+    public function submit(MasterPegawai $user, TugasHarian $tugas): bool
+    {
+        if ($user->id !== $tugas->pegawai_id) {
+            return false;
+        }
+
+        return in_array($tugas->status, ['dikerjakan', 'revisi']);
+    }
 }

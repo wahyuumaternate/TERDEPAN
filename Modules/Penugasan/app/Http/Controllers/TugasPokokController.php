@@ -10,37 +10,276 @@ use Illuminate\Http\Request;
 use Modules\Penugasan\Models\TugasPokok;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+/**
+ * TugasPokokController
+ * 
+ * Mengelola tugas pokok yang bersumber dari Perjanjian Kinerja (PK)
+ * Tugas pokok merupakan breakdown dari indikator PK (60-70% dari total pekerjaan)
+ */
 class TugasPokokController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
-     * Display a listing of the resource.
+     * Menampilkan daftar tugas pokok (untuk atasan/admin)
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View
      */
     public function index(Request $request)
     {
-        //
+        $user = $request->user();
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // Cek akses: Admin, Kaban, Sekban, Kabid
+        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID'])) {
+            abort(403, 'Tidak memiliki akses ke halaman ini');
+        }
+
+        $query = TugasPokok::with([
+            'pegawai:id,nama,jabatan_id,bidang_id',
+            'pegawai.jabatan:id,nama',
+            'pegawai.bidang:id,nama',
+            'perjanjianKinerja:id,periode_mulai,periode_selesai',
+            'indikatorPK:id,indikator_sasaran'
+        ]);
+
+        // Filter berdasarkan role
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            // Lihat semua
+        } elseif ($kodeJabatan === 'KABID') {
+            // Lihat hanya bidangnya
+            $query->whereHas('pegawai', function ($q) use ($user) {
+                $q->where('bidang_id', $user->bidang_id);
+            });
+        }
+
+        // Filter berdasarkan tahun
+        $tahun = $request->get('tahun', date('Y'));
+        $query->whereYear('tanggal_mulai', $tahun);
+
+        // Filter berdasarkan status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter berdasarkan bidang
+        if ($request->filled('bidang_id')) {
+            $query->whereHas('pegawai', function ($q) use ($request) {
+                $q->where('bidang_id', $request->bidang_id);
+            });
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('nama_tugas', 'like', "%{$request->search}%")
+                    ->orWhere('deskripsi', 'like', "%{$request->search}%")
+                    ->orWhereHas('pegawai', function ($subQ) use ($request) {
+                        $subQ->where('nama', 'like', "%{$request->search}%");
+                    });
+            });
+        }
+
+        // Sort
+        $sortBy = $request->get('sort_by', 'tanggal_mulai');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $tugasPokok = $query->paginate($request->get('per_page', 20));
+
+        // Get filter options
+        $tahuns = TugasPokok::selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun')
+            ->toArray();
+
+        $bidangs = MasterBidang::where('is_active', true)
+            ->select('id', 'nama')
+            ->get();
+
+        // Get pegawai list for filter
+        $pegawaiQuery = MasterPegawai::where('status_aktif', 'Aktif');
+
+        if ($kodeJabatan === 'KABID') {
+            $pegawaiQuery->where('bidang_id', $user->bidang_id);
+        }
+
+        $pegawaiList = $pegawaiQuery->select('id', 'nama')->orderBy('nama')->get();
+
+        // Stats
+        $statsQuery = TugasPokok::query();
+
+        if ($kodeJabatan === 'KABID') {
+            $statsQuery->whereHas('pegawai', function ($q) use ($user) {
+                $q->where('bidang_id', $user->bidang_id);
+            });
+        }
+
+        $stats = [
+            'total' => $statsQuery->count(),
+            'pending' => $statsQuery->where('status', 'pending')->count(),
+            'dikerjakan' => $statsQuery->where('status', 'dikerjakan')->count(),
+            'selesai' => $statsQuery->where('status', 'selesai')->count(),
+        ];
+
+        return view('penugasan::tugas-pokok.index', compact(
+            'tugasPokok',
+            'tahuns',
+            'bidangs',
+            'tahun',
+            'pegawaiList',
+            'stats'
+        ));
     }
 
     /**
-     * Show the specified resource.
+     * Menampilkan daftar tugas pokok milik user yang sedang login
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View
+     */
+    public function tugasSaya(Request $request)
+    {
+        $user = $request->user();
+
+        $query = TugasPokok::where('pegawai_id', $user->id)
+            ->with([
+                'perjanjianKinerja:id,periode_mulai,periode_selesai',
+                'indikatorPK:id,indikator_sasaran,target_value,satuan',
+                'tugasHarian' => function ($q) {
+                    $q->select('id', 'tugas_pokok_id', 'nama_tugas', 'deskripsi', 'status', 'is_mandiri', 'tanggal_selesai')
+                        ->orderByRaw("CASE 
+                          WHEN status = 'revisi' THEN 1
+                          WHEN status = 'dikerjakan' THEN 2
+                          WHEN status = 'pending' THEN 3
+                          WHEN status = 'validasi' THEN 4
+                          WHEN status = 'selesai' THEN 5
+                          ELSE 99 END");
+                }
+            ])
+            ->withCount([
+                'tugasHarian as total_tugas_harian',
+                'tugasHarian as selesai_count' => function ($q) {
+                    $q->where('status', 'selesai');
+                }
+            ]);
+
+        // Filter berdasarkan status
+        $status = $request->get('status', 'all');
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        // Filter berdasarkan tahun
+        $tahun = $request->get('tahun', date('Y'));
+        $query->whereYear('tanggal_mulai', $tahun);
+
+        // Sort
+        $sortBy = $request->get('sort_by', 'tanggal_mulai');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $tugasPokok = $query->paginate(20);
+
+        // Get tahun options
+        $tahuns = TugasPokok::where('pegawai_id', $user->id)
+            ->selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun')
+            ->toArray();
+
+        if (empty($tahuns)) {
+            $tahuns = [date('Y')];
+        }
+
+        return view('penugasan::tugas-pokok.tugas-saya', compact(
+            'tugasPokok',
+            'tahuns',
+            'tahun',
+            'status'
+        ));
+    }
+
+    /**
+     * Menampilkan detail tugas pokok
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $id
+     * @return \Illuminate\View\View
      */
     public function show(Request $request, $id)
     {
-        //
+        $tugasPokok = TugasPokok::with([
+            'pegawai:id,nama,nip,jabatan_id,bidang_id',
+            'pegawai.jabatan:id,nama',
+            'pegawai.bidang:id,nama',
+            'perjanjianKinerja:id,periode_mulai,periode_selesai,tahun',
+            'indikatorPK:id,indikator_sasaran,target_value,satuan',
+            'tugasHarian' => function ($q) {
+                $q->select(
+                    'id',
+                    'tugas_pokok_id',
+                    'nama_tugas',
+                    'tanggal_mulai',
+                    'tanggal_selesai',
+                    'status',
+                    'progress_persen',
+                    'nilai_akhir'
+                )->orderBy('tanggal_mulai', 'desc');
+            },
+            'progress' => function ($q) {
+                $q->orderBy('tanggal', 'desc')->limit(10);
+            },
+            'attachedFiles'
+        ])->findOrFail($id);
+
+        // Authorization check
+        $this->authorize('view', $tugasPokok);
+
+        // Statistik tugas harian
+        $statistikTugasHarian = [
+            'total' => $tugasPokok->tugasHarian->count(),
+            'selesai' => $tugasPokok->tugasHarian->where('status', 'selesai')->count(),
+            'dikerjakan' => $tugasPokok->tugasHarian->where('status', 'dikerjakan')->count(),
+            'pending' => $tugasPokok->tugasHarian->where('status', 'pending')->count(),
+            'rata_rata_nilai' => $tugasPokok->tugasHarian
+                ->whereNotNull('nilai_akhir')
+                ->avg('nilai_akhir'),
+        ];
+
+        return view('penugasan::tugas-pokok.show', compact(
+            'tugasPokok',
+            'statistikTugasHarian'
+        ));
     }
 
-    public function sinkronData()
+    /**
+     * Sinkronisasi data tugas pokok dari Perjanjian Kinerja
+     * Hanya mensinkronkan untuk pegawai yang sedang login
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sinkronData(Request $request)
     {
+        $userId = $request->user()->id;
         $created = 0;
         $skipped = 0;
 
         DB::beginTransaction();
         try {
             // Query dengan join yang benar: pk_indikator -> pk_sasaran -> pk_perjanjian_kinerja
+            // Filter hanya untuk pegawai yang sedang login
             $rows = DB::table('pk_indikator as i')
                 ->join('pk_sasaran as s', 'i.sasaran_id', '=', 's.id')
                 ->join('pk_perjanjian_kinerja as p', 's.perjanjian_kinerja_id', '=', 'p.id')
                 ->join('master_pegawai as peg', 'p.pegawai_id', '=', 'peg.id')
+                ->where('p.pegawai_id', $userId) // Hanya untuk user yang login
                 ->where('peg.status_aktif', 'Aktif')
                 ->where('p.status_dokumen', '!=', 'Draft') // Hanya sinkron yang sudah bukan draft
                 ->whereNull('p.deleted_at') // Tidak yang sudah dihapus
@@ -90,7 +329,7 @@ class TugasPokokController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sinkron selesai',
+                'message' => 'Sinkronisasi berhasil',
                 'created' => $created,
                 'skipped' => $skipped,
             ]);
@@ -99,13 +338,17 @@ class TugasPokokController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Sinkron gagal: ' . $e->getMessage(),
+                'message' => 'Sinkronisasi gagal: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Update status tugas pokok
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function updateStatus(Request $request, $id)
     {
@@ -114,6 +357,10 @@ class TugasPokokController extends Controller
         ]);
 
         $tugasPokok = TugasPokok::findOrFail($id);
+
+        // Authorization
+        $this->authorize('update', $tugasPokok);
+
         $tugasPokok->update(['status' => $validated['status']]);
 
         return response()->json([
