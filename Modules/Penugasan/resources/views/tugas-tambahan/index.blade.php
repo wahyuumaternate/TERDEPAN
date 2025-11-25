@@ -165,14 +165,15 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 5%">#</th>
-                                <th style="width: 25%">Nama Tugas</th>
-                                <th>Pegawai</th>
-                                <th>Pemberi Tugas</th>
-                                <th class="text-center">Deadline</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Target</th>
-                                <th class="text-center">Aksi</th>
+                                <th style="width: 3%">#</th>
+                                <th style="width: 22%">Nama Tugas</th>
+                                <th style="width: 13%">Pegawai</th>
+                                <th style="width: 10%">Bidang</th>
+                                <th style="width: 13%">Pemberi Tugas</th>
+                                <th class="text-center" style="width: 10%">Deadline</th>
+                                <th class="text-center" style="width: 8%">Status</th>
+                                <th class="text-center" style="width: 8%">Target</th>
+                                <th class="text-center" style="width: 7%">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -194,16 +195,24 @@
                                         @endif
                                     </td>
                                     <td>
-                                        {{ $tugas->pegawai->nama ?? 'N/A' }}
+                                        <div class="fw-semibold">{{ $tugas->pegawai->nama ?? 'N/A' }}</div>
                                         @if ($tugas->pegawai && $tugas->pegawai->masterJabatan)
-                                            <br><small
+                                            <small
                                                 class="text-muted">{{ $tugas->pegawai->masterJabatan->nama_jabatan }}</small>
                                         @endif
                                     </td>
                                     <td>
-                                        {{ $tugas->pemberiTugas->nama ?? 'N/A' }}
+                                        @if ($tugas->pegawai && $tugas->pegawai->masterBidang)
+                                            <span
+                                                class="badge bg-secondary">{{ $tugas->pegawai->masterBidang->nama_bidang }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">{{ $tugas->pemberiTugas->nama ?? 'N/A' }}</div>
                                         @if ($tugas->pemberiTugas && $tugas->pemberiTugas->masterJabatan)
-                                            <br><small
+                                            <small
                                                 class="text-muted">{{ $tugas->pemberiTugas->masterJabatan->nama_jabatan }}</small>
                                         @endif
                                     </td>
@@ -261,7 +270,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-5">
+                                    <td colspan="9" class="text-center py-5">
                                         <i class="bi bi-inbox fs-1 text-muted"></i>
                                         <p class="text-muted mt-3">Tidak ada data tugas tambahan</p>
                                     </td>
