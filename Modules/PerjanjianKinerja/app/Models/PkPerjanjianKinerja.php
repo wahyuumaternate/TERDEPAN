@@ -19,6 +19,7 @@ class PkPerjanjianKinerja extends Model
         'pegawai_id',
         'atasan_id',
         'template_id',
+        'periode_id',
         'tahun',
         'periode_mulai',
         'periode_selesai',
@@ -26,6 +27,10 @@ class PkPerjanjianKinerja extends Model
         'tanggal_ttd',
         'total_anggaran',
         'status_dokumen',
+        'status_validasi',
+        'divalidasi_oleh',
+        'divalidasi_pada',
+        'catatan_validasi',
         'catatan',
         'is_locked',
     ];
@@ -35,6 +40,7 @@ class PkPerjanjianKinerja extends Model
         'periode_mulai' => 'date',
         'periode_selesai' => 'date',
         'tanggal_ttd' => 'date',
+        'divalidasi_pada' => 'datetime',
         'total_anggaran' => 'decimal:2',
         'is_locked' => 'boolean',
     ];
@@ -47,6 +53,16 @@ class PkPerjanjianKinerja extends Model
     public function atasan()
     {
         return $this->belongsTo(MasterPegawai::class, 'atasan_id');
+    }
+
+    public function periode()
+    {
+        return $this->belongsTo(PkPeriode::class, 'periode_id');
+    }
+
+    public function validator()
+    {
+        return $this->belongsTo(MasterPegawai::class, 'divalidasi_oleh');
     }
 
     public function template()

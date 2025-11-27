@@ -133,6 +133,62 @@ class PerjanjianKinerjaController extends Controller
     }
 
     /**
+     * Display perjanjian kinerja milik user yang login
+     */
+    public function pkSaya(Request $request)
+    {
+        $user = Auth::user();
+
+        $query = PkPerjanjianKinerja::where('pegawai_id', $user->id)
+            ->with([
+                'pegawai.jabatan',
+                'pegawai.bidang',
+                'atasan',
+                'template',
+                'sasaran.indikator',
+                'sasaran.program.kegiatan.subKegiatan',
+                'dokumen' => function ($q) {
+                    $q->where('is_latest', true);
+                }
+            ]);
+
+        // Filter tahun
+        $tahun = $request->get('tahun', date('Y'));
+        $query->where('tahun', $tahun);
+
+        // Filter status
+        if ($request->filled('status')) {
+            $query->where('status_dokumen', $request->status);
+        }
+
+        // Sort by tahun desc, then by created_at desc
+        $query->orderBy('tahun', 'desc')->orderBy('created_at', 'desc');
+
+        $perjanjians = $query->paginate($request->get('per_page', 10));
+
+        // Get available years
+        $tahuns = PkPerjanjianKinerja::where('pegawai_id', $user->id)
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun');
+
+        // Statistics for current user
+        $stats = [
+            'total' => PkPerjanjianKinerja::where('pegawai_id', $user->id)->where('tahun', $tahun)->count(),
+            'draft' => PkPerjanjianKinerja::where('pegawai_id', $user->id)->where('tahun', $tahun)->where('status_dokumen', 'Draft')->count(),
+            'aktif' => PkPerjanjianKinerja::where('pegawai_id', $user->id)->where('tahun', $tahun)->where('status_dokumen', 'Aktif')->count(),
+            'selesai' => PkPerjanjianKinerja::where('pegawai_id', $user->id)->where('tahun', $tahun)->where('status_dokumen', 'Selesai')->count(),
+        ];
+
+        return view('perjanjiankinerja::pk-saya', compact(
+            'perjanjians',
+            'tahuns',
+            'tahun',
+            'stats'
+        ));
+    }
+
+    /**
      * Download PDF dokumen
      */
     /**
@@ -265,23 +321,97 @@ class PerjanjianKinerjaController extends Controller
     /**
      * Show the form for creating a new perjanjian kinerja
      */
-    public function create()
+    public function create(Request $request)
     {
         $tahunSekarang = date('Y');
 
+        // Check periode aktif
+        $periodeAktif = \Modules\PerjanjianKinerja\Models\PkPeriode::getPeriodeAktif($tahunSekarang);
+
+        if (!$periodeAktif) {
+            return redirect()->route('perjanjian-kinerja.pk-saya')
+                ->with('error', 'Tidak ada periode pengisian PK yang sedang aktif untuk tahun ' . $tahunSekarang);
+        }
+
+        // Check if user is authorized to create
+        $user = Auth::user();
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // Detect creation mode: for self or for others
+        $forOthers = $request->has('for_others') && $request->get('for_others') == '1';
+
+        // Only KABAN/SEKBAN/KABID can create for others
+        $canCreateForOthers = in_array($kodeJabatan, ['KABAN', 'SEKBAN', 'KABID']);
+
         // Ambil ID pegawai yang sudah memiliki PK di tahun ini
         $pegawaiYangSudahPunya = PkPerjanjianKinerja::where('tahun', $tahunSekarang)
+            ->where('periode_id', $periodeAktif->id)
             ->pluck('pegawai_id')
             ->toArray();
 
-        // Ambil pegawai yang aktif, punya atasan, DAN belum punya PK di tahun ini
-        $pegawai = MasterPegawai::where('status_aktif', 'Aktif')
-            ->whereNotNull('atasan_langsung_id')
-            ->whereNotIn('id', $pegawaiYangSudahPunya) // Filter yang sudah punya PK
-            ->with(['jabatan', 'bidang', 'atasanLangsung'])
-            ->where('status_kepegawaian', '!=', 'Kontrak')
-            ->orderBy('nama')
-            ->get();
+        if ($forOthers && $canCreateForOthers) {
+            // KABAN/SEKBAN/KABID creating for subordinates based on hierarchy
+            $query = MasterPegawai::where('status_aktif', 'Aktif')
+                ->whereNotIn('id', $pegawaiYangSudahPunya)
+                ->where('id', '!=', $user->id) // Exclude self
+                ->where('status_kepegawaian', '!=', 'Kontrak')
+                ->whereHas('jabatan', function ($q) {
+                    // Exclude GATEK - memiliki mekanisme tersendiri
+                    $q->where('kode', '!=', 'GATEK');
+                });
+
+            if ($kodeJabatan === 'KABAN') {
+                // KABAN can create for ALL pegawai (no filter)
+                // Query already set up
+            } elseif ($kodeJabatan === 'SEKBAN') {
+                // SEKBAN can create for all pegawai in Sekretariat bidang
+                $query->whereHas('bidang', function ($q) {
+                    $q->where('nama', 'LIKE', '%Sekretariat%')
+                        ->orWhere('kode', 'LIKE', '%SEKRE%');
+                });
+            } elseif ($kodeJabatan === 'KABID') {
+                // KABID can create for all pegawai in their bidang
+                if ($user->bidang_id) {
+                    $query->where('bidang_id', $user->bidang_id);
+                } else {
+                    // If KABID has no bidang, fallback to direct subordinates only
+                    $query->where('atasan_langsung_id', $user->id);
+                }
+            }
+
+            $pegawai = $query->with(['jabatan', 'bidang', 'atasanLangsung'])
+                ->orderBy('nama')
+                ->get();
+
+            if ($pegawai->isEmpty()) {
+                $message = 'Tidak ada pegawai yang dapat dibuatkan PK (semua sudah memiliki PK atau tidak ada pegawai aktif';
+                if ($kodeJabatan === 'KABID') {
+                    $message .= ' di bidang Anda';
+                } elseif ($kodeJabatan === 'SEKBAN') {
+                    $message .= ' di Sekretariat';
+                }
+                $message .= ')';
+
+                return redirect()->route('perjanjian-kinerja.pk-saya')
+                    ->with('warning', $message);
+            }
+        } else {
+            // Creating for self
+            if (in_array($user->id, $pegawaiYangSudahPunya)) {
+                return redirect()->route('perjanjian-kinerja.pk-saya')
+                    ->with('error', 'Anda sudah membuat PK untuk tahun ' . $tahunSekarang);
+            }
+
+            // Check if user is GATEK
+            if ($user->jabatan?->kode === 'GATEK') {
+                return redirect()->route('perjanjian-kinerja.pk-saya')
+                    ->with('error', 'GATEK memiliki mekanisme penilaian kinerja tersendiri, tidak perlu membuat PK melalui sistem ini.');
+            }
+
+            // Return only the logged-in user
+            $pegawai = collect([$user]);
+            $forOthers = false; // Ensure flag is false for self-creation
+        }
 
         // Ambil template yang aktif untuk tahun ini
         $templates = PkTemplate::where('is_active', true)
@@ -294,7 +424,10 @@ class PerjanjianKinerjaController extends Controller
         return view('perjanjiankinerja::create', compact(
             'pegawai',
             'templates',
-            'currentYear'
+            'currentYear',
+            'periodeAktif',
+            'canCreateForOthers',
+            'forOthers'
         ));
     }
 
@@ -352,6 +485,15 @@ class PerjanjianKinerjaController extends Controller
 
         DB::beginTransaction();
         try {
+            // Check periode aktif
+            $periodeAktif = \Modules\PerjanjianKinerja\Models\PkPeriode::getPeriodeAktif($validated['tahun']);
+
+            if (!$periodeAktif) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Tidak ada periode pengisian PK yang sedang aktif untuk tahun ' . $validated['tahun']);
+            }
+
             // Validasi atasan
             if (!$validated['atasan_id']) {
                 return back()
@@ -368,12 +510,14 @@ class PerjanjianKinerjaController extends Controller
                 'pegawai_id' => $validated['pegawai_id'],
                 'atasan_id' => $validated['atasan_id'],
                 'template_id' => $validated['template_id'],
+                'periode_id' => $periodeAktif->id,
                 'tahun' => $validated['tahun'],
                 'periode_mulai' => $validated['periode_mulai'],
                 'periode_selesai' => $validated['periode_selesai'],
                 'tempat_ttd' => 'Sofifi',
                 'catatan' => $validated['catatan'] ?? null,
                 'status_dokumen' => 'Draft',
+                'status_validasi' => 'Menunggu',
                 'is_locked' => false,
                 'total_anggaran' => 0,
             ]);
@@ -1878,6 +2022,123 @@ class PerjanjianKinerjaController extends Controller
                 'message' => 'Gagal menandatangani Perjanjian Kinerja: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Validasi PK oleh atasan langsung
+     */
+    public function validasi(Request $request, $id)
+    {
+        $pk = PkPerjanjianKinerja::with('pegawai')->findOrFail($id);
+        $user = Auth::user();
+
+        // Check authorization: harus atasan langsung
+        if ($pk->atasan_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses untuk memvalidasi PK ini'
+            ], 403);
+        }
+
+        // Check status
+        if ($pk->status_validasi !== 'Menunggu') {
+            return response()->json([
+                'success' => false,
+                'message' => 'PK sudah divalidasi sebelumnya'
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'status_validasi' => 'required|in:Disetujui,Ditolak,Revisi',
+            'catatan_validasi' => 'required_if:status_validasi,Ditolak,Revisi|nullable|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $pk->update([
+                'status_validasi' => $validated['status_validasi'],
+                'catatan_validasi' => $validated['catatan_validasi'] ?? null,
+                'divalidasi_oleh' => $user->id,
+                'divalidasi_pada' => now(),
+            ]);
+
+            // Jika disetujui, update status dokumen
+            if ($validated['status_validasi'] === 'Disetujui') {
+                $pk->update([
+                    'status_dokumen' => 'Menunggu_TTD'
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PK berhasil divalidasi'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memvalidasi PK: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get daftar PK yang menunggu validasi (untuk atasan)
+     */
+    public function daftarValidasi(Request $request)
+    {
+        $user = Auth::user();
+
+        $query = PkPerjanjianKinerja::where('atasan_id', $user->id)
+            ->with([
+                'pegawai.jabatan',
+                'pegawai.bidang',
+                'template',
+                'periode'
+            ]);
+
+        // Filter by status - jika tidak ada filter, default tampilkan 'Menunggu'
+        // Jika filter status ada (termasuk string kosong dari "Semua Status"), gunakan filter itu
+        if ($request->has('status')) {
+            // Jika status diisi (not empty string), filter by status
+            if ($request->status != '') {
+                $query->where('status_validasi', $request->status);
+            }
+            // Jika status empty string (Semua Status dipilih), tidak filter status
+        } else {
+            // Jika tidak ada parameter status sama sekali, default Menunggu
+            $query->where('status_validasi', 'Menunggu');
+        }
+
+        // Filter tahun
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        // Filter bidang
+        if ($request->filled('bidang')) {
+            $query->whereHas('pegawai', function ($q) use ($request) {
+                $q->where('bidang_id', $request->bidang);
+            });
+        }
+
+        $pkList = $query->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 15));
+
+        // Get filter options
+        $tahuns = PkPerjanjianKinerja::where('atasan_id', $user->id)
+            ->distinct()
+            ->orderBy('tahun', 'desc')
+            ->pluck('tahun');
+
+        $bidangs = MasterBidang::where('is_active', true)
+            ->orderBy('nama')
+            ->get();
+
+        return view('perjanjiankinerja::validasi.index', compact('pkList', 'tahuns', 'bidangs'));
     }
 
     /**

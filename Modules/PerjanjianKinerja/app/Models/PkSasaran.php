@@ -12,7 +12,9 @@ class PkSasaran extends Model
     protected $table = 'pk_sasaran';
 
     protected $fillable = [
-        'perjanjian_kinerja_id', 'urutan', 'sasaran_strategis',
+        'perjanjian_kinerja_id',
+        'urutan',
+        'sasaran_strategis',
     ];
 
     protected $casts = [
@@ -29,6 +31,18 @@ class PkSasaran extends Model
         return $this->hasMany(PkIndikator::class, 'sasaran_id');
     }
 
+    public function program()
+    {
+        return $this->hasManyThrough(
+            PkProgram::class,
+            PkIndikator::class,
+            'sasaran_id',    // Foreign key on pk_indikator table
+            'indikator_id',  // Foreign key on pk_program table
+            'id',            // Local key on pk_sasaran table
+            'id'             // Local key on pk_indikator table
+        );
+    }
+
     public function scopeOrdered($query)
     {
         return $query->orderBy('urutan');
@@ -41,4 +55,3 @@ class PkSasaran extends Model
         return $last ? $last->urutan + 1 : 1;
     }
 }
-

@@ -6,12 +6,30 @@
 <script src="{{ asset('assets/js/rupiah-formatter.js') }}"></script>
 @section('main')
     <div class="pagetitle">
-        <h1>Buat Perjanjian Kinerja Baru</h1>
+        <h1>
+            @if($forOthers)
+                @php
+                    $kodeJabatan = auth()->user()->jabatan?->kode;
+                @endphp
+                <i class="bi bi-people-fill text-primary"></i> 
+                @if($kodeJabatan === 'KABAN')
+                    Buat PK untuk Pegawai
+                @elseif($kodeJabatan === 'SEKBAN')
+                    Buat PK untuk Pegawai Sekretariat
+                @elseif($kodeJabatan === 'KABID')
+                    Buat PK untuk Pegawai Bidang
+                @else
+                    Buat Perjanjian Kinerja untuk Pegawai
+                @endif
+            @else
+                <i class="bi bi-person-fill text-primary"></i> Buat Perjanjian Kinerja Saya
+            @endif
+        </h1>
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('perjanjian-kinerja.index') }}">Perjanjian Kinerja</a></li>
-                <li class="breadcrumb-item active">Buat Baru</li>
+                <li class="breadcrumb-item"><a href="{{ route('perjanjian-kinerja.pk-saya') }}">PK Saya</a></li>
+                <li class="breadcrumb-item active">{{ $forOthers ? 'Buat PK Pegawai' : 'Buat PK Saya' }}</li>
             </ol>
         </nav>
     </div>
@@ -35,18 +53,52 @@
                                     <label for="pegawai_id" class="form-label">
                                         Pegawai <span class="text-danger">*</span>
                                     </label>
-                                    <select class="form-select select2" id="pegawai_id" name="pegawai_id" required>
-                                        <option value="">-- Pilih Pegawai --</option>
-                                        @foreach ($pegawai as $p)
-                                            <option value="{{ $p->id }}"
-                                                data-jabatan="{{ $p->jabatan->nama ?? '-' }}"
-                                                data-bidang="{{ $p->bidang->nama ?? '-' }}"
-                                                data-nip="{{ $p->nomor_identitas }}">
-                                                {{ $p->nama }} - {{ $p->nomor_identitas }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <div class="invalid-feedback">Pilih pegawai terlebih dahulu</div>
+                                    @if($forOthers)
+                                        {{-- Creating for subordinates: show dropdown --}}
+                                        <select class="form-select select2" id="pegawai_id" name="pegawai_id" required>
+                                            <option value="">-- Pilih Pegawai --</option>
+                                            @foreach ($pegawai as $p)
+                                                <option value="{{ $p->id }}"
+                                                    data-jabatan="{{ $p->jabatan->nama ?? '-' }}"
+                                                    data-bidang="{{ $p->bidang->nama ?? '-' }}"
+                                                    data-nip="{{ $p->nomor_identitas }}">
+                                                    {{ $p->nama }} - {{ $p->nomor_identitas }} ({{ $p->bidang->nama ?? '-' }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <div class="invalid-feedback">Pilih pegawai terlebih dahulu</div>
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle"></i>
+                                            @php
+                                                $kodeJabatan = auth()->user()->jabatan?->kode;
+                                            @endphp
+                                            @if($kodeJabatan === 'KABAN')
+                                                Anda dapat membuat PK untuk semua pegawai
+                                            @elseif($kodeJabatan === 'SEKBAN')
+                                                Anda dapat membuat PK untuk pegawai di Sekretariat
+                                            @elseif($kodeJabatan === 'KABID')
+                                                Anda dapat membuat PK untuk pegawai di bidang Anda
+                                            @else
+                                                Anda membuat PK untuk pegawai
+                                            @endif
+                                        </div>
+                                    @else
+                                        {{-- Creating for self: auto-filled, read-only --}}
+                                        @php
+                                            $currentUser = $pegawai->first();
+                                        @endphp
+                                        <input type="text" class="form-control" 
+                                            value="{{ $currentUser->nama }} - {{ $currentUser->nomor_identitas }}" 
+                                            readonly style="background-color: #f8f9fa;">
+                                        <input type="hidden" id="pegawai_id" name="pegawai_id" value="{{ $currentUser->id }}"
+                                            data-jabatan="{{ $currentUser->jabatan->nama ?? '-' }}"
+                                            data-bidang="{{ $currentUser->bidang->nama ?? '-' }}"
+                                            data-nip="{{ $currentUser->nomor_identitas }}">
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle"></i>
+                                            Anda membuat PK untuk diri sendiri
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="col-md-6 mb-3">
@@ -818,18 +870,28 @@
                 return;
             }
 
-            $('.select2').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: '-- Pilih Pegawai --',
-                allowClear: true
-            });
+            // Initialize Select2 only if creating for others
+            @if($forOthers)
+                $('.select2').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    placeholder: '-- Pilih Pegawai --',
+                    allowClear: true
+                });
 
-            // Update preview on change
-            $('#pegawai_id').change(function() {
-                updatePegawaiPreview();
-                loadAtasan($(this).val());
-            });
+                // Update preview on change
+                $('#pegawai_id').change(function() {
+                    updatePegawaiPreview();
+                    loadAtasan($(this).val());
+                });
+            @else
+                // Creating for self: auto-load atasan and update preview
+                const pegawaiId = $('#pegawai_id').val();
+                if (pegawaiId) {
+                    updatePegawaiPreview();
+                    loadAtasan(pegawaiId);
+                }
+            @endif
 
             $('#periode_mulai, #periode_selesai').change(updatePeriodePreview);
             $('#tahun').change(function() {
@@ -915,21 +977,38 @@
         });
 
         function updatePegawaiPreview() {
-            const selected = $('#pegawai_id option:selected');
-            if (selected.val()) {
-                const nama = selected.text().split(' - ')[0];
-                const nip = selected.data('nip');
-                const jabatan = selected.data('jabatan');
-                const bidang = selected.data('bidang');
+            @if($forOthers)
+                // For others: get from select dropdown
+                const selected = $('#pegawai_id option:selected');
+                if (selected.val()) {
+                    const nama = selected.text().split(' - ')[0];
+                    const nip = selected.data('nip');
+                    const jabatan = selected.data('jabatan');
+                    const bidang = selected.data('bidang');
 
-                $('#preview-pegawai').text(nama);
-                $('#preview-pegawai-detail').html(
-                    `NIP: ${nip}<br>Jabatan: ${jabatan}<br>Unit: ${bidang}`
-                );
-            } else {
-                $('#preview-pegawai').text('-');
-                $('#preview-pegawai-detail').html('');
-            }
+                    $('#preview-pegawai').text(nama);
+                    $('#preview-pegawai-detail').html(
+                        `NIP: ${nip}<br>Jabatan: ${jabatan}<br>Unit: ${bidang}`
+                    );
+                } else {
+                    $('#preview-pegawai').text('-');
+                    $('#preview-pegawai-detail').html('');
+                }
+            @else
+                // For self: get from hidden input
+                const pegawaiInput = $('#pegawai_id');
+                if (pegawaiInput.val()) {
+                    const nama = pegawaiInput.closest('div').find('input[type="text"]').val().split(' - ')[0];
+                    const nip = pegawaiInput.data('nip');
+                    const jabatan = pegawaiInput.data('jabatan');
+                    const bidang = pegawaiInput.data('bidang');
+
+                    $('#preview-pegawai').text(nama);
+                    $('#preview-pegawai-detail').html(
+                        `NIP: ${nip}<br>Jabatan: ${jabatan}<br>Unit: ${bidang}`
+                    );
+                }
+            @endif
         }
 
         function updatePeriodePreview() {
