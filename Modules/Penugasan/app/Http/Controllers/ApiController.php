@@ -279,6 +279,59 @@ class ApiController extends Controller
     }
 
     /**
+     * Mendapatkan daftar tugas pokok berdasarkan pegawai
+     * Digunakan untuk dropdown saat memberikan tugas harian
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function tugasPokokByPegawai(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            // Cek apakah pegawai adalah bawahan atau user sendiri yang memiliki akses
+            $pegawai = MasterPegawai::where('id', $id)->firstOrFail();
+
+            // Authorization: hanya atasan langsung atau pegawai itu sendiri yang bisa akses
+            if ($pegawai->atasan_langsung_id !== $user->id && $pegawai->id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak memiliki akses'
+                ], 403);
+            }
+
+            // Get tugas pokok yang masih aktif
+            $tugasPokok = TugasPokok::where('pegawai_id', $id)
+                ->whereIn('status', ['dikerjakan', 'pending'])
+                ->select('id', 'nama_tugas', 'progress_persen', 'status')
+                ->orderBy('nama_tugas')
+                ->get()
+                ->map(function ($tugas) {
+                    return [
+                        'id' => $tugas->id,
+                        'nama_tugas' => $tugas->nama_tugas,
+                        'progress_persen' => $tugas->progress_persen ?? 0,
+                        'status' => $tugas->status,
+                    ];
+                });
+
+            return response()->json($tugasPokok);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pegawai tidak ditemukan'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Helper: Get color based on status
      * 
      * @param  string  $status

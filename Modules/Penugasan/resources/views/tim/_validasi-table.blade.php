@@ -32,8 +32,8 @@
                     </td>
                     <td>
                         {{ $t->pegawai->nama ?? 'N/A' }}
-                        @if ($t->pegawai && $t->pegawai->masterJabatan)
-                            <br><small class="text-muted">{{ $t->pegawai->masterJabatan->nama_jabatan }}</small>
+                        @if ($t->pegawai && $t->pegawai->jabatan)
+                            <br><small class="text-muted">{{ $t->pegawai->jabatan->nama_jabatan }}</small>
                         @endif
                     </td>
                     <td class="text-center">

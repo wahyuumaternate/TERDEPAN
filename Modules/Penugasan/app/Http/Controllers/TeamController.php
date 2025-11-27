@@ -31,30 +31,30 @@ class TeamController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         // Get anggota tim (bawahan langsung)
         $anggotaTim = MasterPegawai::where('atasan_langsung_id', $user->id)
             ->where('status_aktif', 'Aktif')
             ->with(['jabatan', 'bidang'])
             ->withCount([
-                'tugasHarian as tugas_aktif' => function($q) {
+                'tugasHarian as tugas_aktif' => function ($q) {
                     $q->whereIn('status', ['dikerjakan', 'validasi']);
                 },
-                'tugasHarian as tugas_selesai' => function($q) {
+                'tugasHarian as tugas_selesai' => function ($q) {
                     $q->where('status', 'selesai');
                 },
-                'tugasHarian as tugas_pending' => function($q) {
+                'tugasHarian as tugas_pending' => function ($q) {
                     $q->where('status', 'pending');
                 },
             ])
             ->get()
-            ->map(function($anggota) {
+            ->map(function ($anggota) {
                 // Hitung workload sederhana
                 $workload = ($anggota->tugas_aktif + $anggota->tugas_pending) * 10;
                 $anggota->workload_persen = min($workload, 100);
                 return $anggota;
             });
-        
+
         return view('penugasan::tim.index', compact('anggotaTim'));
     }
 
@@ -67,32 +67,32 @@ class TeamController extends Controller
     public function overview(Request $request)
     {
         $user = $request->user();
-        
+
         // Get anggota tim dengan detail tugas
         $anggotaTim = MasterPegawai::where('atasan_langsung_id', $user->id)
             ->where('status_aktif', 'Aktif')
             ->with(['jabatan', 'bidang'])
             ->withCount([
-                'tugasHarian as tugas_selesai' => function($q) {
+                'tugasHarian as tugas_selesai' => function ($q) {
                     $q->where('status', 'selesai');
                 },
-                'tugasHarian as tugas_aktif' => function($q) {
+                'tugasHarian as tugas_aktif' => function ($q) {
                     $q->whereIn('status', ['dikerjakan', 'validasi']);
                 },
-                'tugasHarian as tugas_pending' => function($q) {
+                'tugasHarian as tugas_pending' => function ($q) {
                     $q->where('status', 'pending');
                 },
-                'tugasTambahan as tugas_tambahan_aktif' => function($q) {
+                'tugasTambahan as tugas_tambahan_aktif' => function ($q) {
                     $q->whereIn('status', ['dikerjakan', 'validasi']);
                 },
             ])
             ->get()
-            ->map(function($anggota) {
+            ->map(function ($anggota) {
                 $workload = ($anggota->tugas_aktif + $anggota->tugas_pending) * 10;
                 $anggota->workload_persen = min($workload, 100);
                 return $anggota;
             });
-        
+
         // Statistik tim
         $statistikTim = [
             'total_anggota' => $anggotaTim->count(),
@@ -106,7 +106,7 @@ class TeamController extends Controller
                 ->where('tanggal_selesai', '<', now())
                 ->count(),
         ];
-        
+
         return view('penugasan::tim.overview', compact('anggotaTim', 'statistikTim'));
     }
 
@@ -120,13 +120,13 @@ class TeamController extends Controller
     public function detailAnggota(Request $request, $id)
     {
         $user = $request->user();
-        
+
         // Cek apakah pegawai adalah bawahan
         $pegawai = MasterPegawai::where('id', $id)
             ->where('atasan_langsung_id', $user->id)
             ->with(['jabatan', 'bidang'])
             ->firstOrFail();
-        
+
         // Redirect ke PenugasanController@show untuk detail lengkap
         return redirect()->route('penugasan.show', $id);
     }
@@ -140,14 +140,44 @@ class TeamController extends Controller
     public function formBerikanTugas(Request $request)
     {
         $user = $request->user();
-        
+
         // Get daftar bawahan
-        $bawahan = MasterPegawai::where('atasan_langsung_id', $user->id)
+        $bawahanLangsung = MasterPegawai::where('atasan_langsung_id', $user->id)
             ->where('status_aktif', 'Aktif')
             ->with(['jabatan', 'bidang'])
             ->get();
-        
-        return view('penugasan::tim.form-berikan-tugas', compact('bawahan'));
+
+        // Get recent assignments (7 hari terakhir)
+        $recentAssignments = collect();
+
+        $tugasHarianRecent = TugasHarian::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
+            ->where('created_at', '>=', now()->subDays(7))
+            ->with('pegawai')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        $tugasTambahanRecent = TugasTambahan::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
+            ->where('created_at', '>=', now()->subDays(7))
+            ->with('pegawai')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        $recentAssignments = $tugasHarianRecent->merge($tugasTambahanRecent)->sortByDesc('created_at')->take(5);
+
+        // Stats
+        $stats = [
+            'tugas_aktif' => TugasHarian::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
+                ->whereIn('status', ['dikerjakan', 'validasi'])
+                ->count(),
+            'menunggu_validasi' => TugasHarian::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
+                ->where('status', 'validasi')
+                ->count(),
+            'avg_progress' => 0,
+        ];
+
+        return view('penugasan::tim.berikan-tugas', compact('bawahanLangsung', 'recentAssignments', 'stats'));
     }
 
     /**
@@ -172,11 +202,11 @@ class TeamController extends Controller
     public function daftarValidasi(Request $request)
     {
         $user = $request->user();
-        
+
         // Get tugas yang perlu validasi dari bawahan
-        $tugasValidasi = TugasHarian::whereHas('pegawai', function($q) use ($user) {
-                $q->where('atasan_langsung_id', $user->id);
-            })
+        $tugasValidasi = TugasHarian::whereHas('pegawai', function ($q) use ($user) {
+            $q->where('atasan_langsung_id', $user->id);
+        })
             ->where('status', 'validasi')
             ->with([
                 'tugasPokok:id,nama_tugas',
@@ -187,7 +217,7 @@ class TeamController extends Controller
             ])
             ->orderBy('tanggal_selesai', 'asc')
             ->paginate(20);
-        
+
         return view('penugasan::tim.daftar-validasi', compact('tugasValidasi'));
     }
 
@@ -226,9 +256,29 @@ class TeamController extends Controller
      */
     public function monitoring(Request $request)
     {
-        // Delegate to PenugasanController for now
-        $controller = new \Modules\Penugasan\Http\Controllers\PenugasanController();
-        return $controller->dashboardMonitoring($request);
+        $user = $request->user();
+
+        // Get anggota tim dengan statistik
+        $anggotaTim = MasterPegawai::where('atasan_langsung_id', $user->id)
+            ->where('status_aktif', 'Aktif')
+            ->with(['jabatan', 'bidang'])
+            ->withCount([
+                'tugasHarian as tugas_aktif' => function ($q) {
+                    $q->whereIn('status', ['dikerjakan', 'validasi']);
+                },
+                'tugasHarian as tugas_selesai' => function ($q) {
+                    $q->where('status', 'selesai');
+                },
+                'tugasHarian as tugas_pending' => function ($q) {
+                    $q->where('status', 'pending');
+                },
+                'tugasHarian as tugas_terlambat' => function ($q) {
+                    $q->whereIn('status', ['dikerjakan', 'validasi'])->where('tanggal_selesai', '<', now());
+                },
+            ])
+            ->get();
+
+        return view('penugasan::tim.monitoring', compact('anggotaTim'));
     }
 
     /**

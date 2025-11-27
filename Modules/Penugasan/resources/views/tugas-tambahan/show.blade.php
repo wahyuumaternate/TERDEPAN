@@ -86,9 +86,9 @@
                                 <label class="form-label fw-semibold small text-muted">Pemberi Tugas</label>
                                 <p>
                                     {{ $tugasTambahan->pemberiTugas->nama ?? 'N/A' }}
-                                    @if ($tugasTambahan->pemberiTugas && $tugasTambahan->pemberiTugas->masterJabatan)
+                                    @if ($tugasTambahan->pemberiTugas && $tugasTambahan->pemberiTugas->jabatan)
                                         <br><small
-                                            class="text-muted">{{ $tugasTambahan->pemberiTugas->masterJabatan->nama_jabatan }}</small>
+                                            class="text-muted">{{ $tugasTambahan->pemberiTugas->jabatan->nama_jabatan }}</small>
                                     @endif
                                 </p>
                             </div>
@@ -330,9 +330,9 @@
                                 <label class="small text-muted">Validator</label>
                                 <p class="mb-0">
                                     {{ $tugasTambahan->validator->nama }}
-                                    @if ($tugasTambahan->validator->masterJabatan)
+                                    @if ($tugasTambahan->validator->jabatan)
                                         <br><small
-                                            class="text-muted">{{ $tugasTambahan->validator->masterJabatan->nama_jabatan }}</small>
+                                            class="text-muted">{{ $tugasTambahan->validator->jabatan->nama_jabatan }}</small>
                                     @endif
                                 </p>
                             </div>

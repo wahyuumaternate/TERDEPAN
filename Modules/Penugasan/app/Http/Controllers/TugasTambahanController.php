@@ -31,12 +31,12 @@ class TugasTambahanController extends Controller
     {
         $user = $request->user();
         $kodeJabatan = $user->jabatan?->kode;
-        
+
         // Cek akses: Admin, Kaban, Sekban, Kabid
         if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG'])) {
             abort(403, 'Tidak memiliki akses ke halaman ini');
         }
-        
+
         $query = TugasTambahan::with([
             'pegawai:id,nama,jabatan_id,bidang_id',
             'pegawai.jabatan:id,nama',
@@ -44,38 +44,38 @@ class TugasTambahanController extends Controller
             'pemberiTugas:id,nama',
             'validator:id,nama'
         ]);
-        
+
         // Filter berdasarkan role
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
             // Lihat semua
         } elseif ($kodeJabatan === 'KABID') {
             // Lihat hanya bidangnya
-            $query->whereHas('pegawai', function($q) use ($user) {
+            $query->whereHas('pegawai', function ($q) use ($user) {
                 $q->where('bidang_id', $user->bidang_id);
             });
         } elseif ($kodeJabatan === 'KASUBAG') {
             // Lihat tugas yang diberikan sendiri atau untuk bawahannya
-            $query->where(function($q) use ($user) {
+            $query->where(function ($q) use ($user) {
                 $q->where('pemberi_tugas_id', $user->id)
-                  ->orWhereHas('pegawai', function($subQ) use ($user) {
-                      $subQ->where('atasan_langsung_id', $user->id);
-                  });
+                    ->orWhereHas('pegawai', function ($subQ) use ($user) {
+                        $subQ->where('atasan_langsung_id', $user->id);
+                    });
             });
         }
-        
+
         // Filter berdasarkan status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
+
         // Filter berdasarkan hasil validasi
         if ($request->filled('hasil_validasi')) {
             $query->where('hasil_validasi', $request->hasil_validasi);
         }
-        
+
         // Filter berdasarkan bidang
         if ($request->filled('bidang_id')) {
-            $query->whereHas('pegawai', function($q) use ($request) {
+            $query->whereHas('pegawai', function ($q) use ($request) {
                 $q->where('bidang_id', $request->bidang_id);
             });
         }
@@ -85,12 +85,12 @@ class TugasTambahanController extends Controller
             $query->where(function ($q) use ($request) {
                 $q->where('nama_tugas', 'like', "%{$request->search}%")
                     ->orWhere('deskripsi', 'like', "%{$request->search}%")
-                    ->orWhereHas('pegawai', function($subQ) use ($request) {
+                    ->orWhereHas('pegawai', function ($subQ) use ($request) {
                         $subQ->where('nama', 'like', "%{$request->search}%");
                     });
             });
         }
-        
+
         // Sort
         $sortBy = $request->get('sort_by', 'tanggal_mulai');
         $sortOrder = $request->get('sort_order', 'desc');
@@ -100,7 +100,7 @@ class TugasTambahanController extends Controller
 
         return view('penugasan::tugas-tambahan.index', compact('tugasTambahan'));
     }
-    
+
     /**
      * Menampilkan daftar tugas tambahan milik user yang sedang login
      * 
@@ -110,25 +110,25 @@ class TugasTambahanController extends Controller
     public function tugasSaya(Request $request)
     {
         $user = $request->user();
-        
+
         $query = TugasTambahan::where('pegawai_id', $user->id)
             ->with([
                 'pemberiTugas:id,nama',
                 'validator:id,nama'
             ]);
-        
+
         // Filter berdasarkan status
         $status = $request->get('status', 'all');
         if ($status !== 'all') {
             $query->where('status', $status);
         }
-        
+
         // Filter berdasarkan hasil validasi
         $hasilValidasi = $request->get('hasil_validasi');
         if ($hasilValidasi) {
             $query->where('hasil_validasi', $hasilValidasi);
         }
-        
+
         // Sort by urgency
         $query->orderByRaw("
             CASE 
@@ -138,17 +138,77 @@ class TugasTambahanController extends Controller
                 ELSE 4
             END
         ")->orderBy('tanggal_selesai', 'asc');
-        
+
         $tugasTambahan = $query->paginate(20);
-        
+
         // Group by status untuk UI yang lebih baik
         $grouped = $tugasTambahan->getCollection()->groupBy('status');
-        
+
         return view('penugasan::tugas-tambahan.tugas-saya', compact(
             'tugasTambahan',
             'grouped',
             'status'
         ));
+    }
+
+    /**
+     * Simpan tugas tambahan baru (diberikan oleh atasan ke bawahan)
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'pegawai_id' => 'required|exists:master_pegawai,id',
+                'nama_tugas' => 'required|string|max:500',
+                'deskripsi' => 'nullable|string',
+                'tanggal_mulai' => 'required|date',
+                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+                'target_value' => 'required|numeric|min:0.01',
+                'satuan' => 'required|string|max:50',
+                'nilai' => 'nullable|numeric|min:0',
+                'is_lintas_bidang' => 'nullable|boolean',
+            ]);
+
+            $user = $request->user();
+
+            // Cek apakah user adalah atasan dari pegawai yang dipilih
+            $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
+            if ($pegawai->atasan_langsung_id !== $user->id) {
+                return redirect()->back()
+                    ->with('error', 'Anda hanya dapat memberikan tugas kepada bawahan langsung Anda')
+                    ->withInput();
+            }
+
+            // Create tugas tambahan
+            $tugasTambahan = TugasTambahan::create([
+                'pegawai_id' => $validated['pegawai_id'],
+                'pemberi_tugas_id' => $user->id,
+                'nama_tugas' => $validated['nama_tugas'],
+                'deskripsi' => $validated['deskripsi'] ?? null,
+                'tanggal_mulai' => $validated['tanggal_mulai'],
+                'tanggal_selesai' => $validated['tanggal_selesai'],
+                'target_value' => $validated['target_value'],
+                'satuan' => $validated['satuan'],
+                'nilai' => $validated['nilai'] ?? 0,
+                'is_lintas_bidang' => $request->has('is_lintas_bidang') ? 1 : 0,
+                'status' => 'pending',
+                'actual_value' => 0,
+            ]);
+
+            return redirect()->route('penugasan.tim.form-berikan-tugas')
+                ->with('success', 'Tugas tambahan berhasil diberikan kepada ' . $pegawai->nama);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
@@ -168,17 +228,17 @@ class TugasTambahanController extends Controller
             'pemberiTugas.jabatan:id,nama',
             'validator:id,nama',
             'attachedFiles',
-            'progress' => function($q) {
+            'progress' => function ($q) {
                 $q->orderBy('tanggal', 'desc')->limit(10);
             },
-            'historyRevisi' => function($q) {
+            'historyRevisi' => function ($q) {
                 $q->with('direvisiOleh:id,nama')->orderBy('revisi_ke', 'desc');
             }
         ])->findOrFail($id);
-        
+
         // Authorization check
         $this->authorize('view', $tugasTambahan);
-        
+
         return view('penugasan::tugas-tambahan.show', compact('tugasTambahan'));
     }
 
@@ -301,7 +361,7 @@ class TugasTambahanController extends Controller
     public function terima(Request $request, $id)
     {
         $tugasTambahan = TugasTambahan::findOrFail($id);
-        
+
         // Authorization: Hanya pemilik tugas yang bisa terima
         if ($tugasTambahan->pegawai_id !== $request->user()->id) {
             return response()->json([
@@ -309,25 +369,25 @@ class TugasTambahanController extends Controller
                 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
             ], 403);
         }
-        
+
         if ($tugasTambahan->status !== 'pending') {
             return response()->json([
                 'success' => false,
                 'message' => 'Tugas hanya bisa diterima jika berstatus pending'
             ], 422);
         }
-        
+
         $tugasTambahan->update([
             'status' => 'dikerjakan',
             'tanggal_mulai_aktual' => now()
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Tugas tambahan berhasil diterima dan mulai dikerjakan'
         ]);
     }
-    
+
     /**
      * Tolak tugas tambahan
      * 
@@ -340,9 +400,9 @@ class TugasTambahanController extends Controller
         $validated = $request->validate([
             'alasan_penolakan' => 'required|string|max:1000'
         ]);
-        
+
         $tugasTambahan = TugasTambahan::findOrFail($id);
-        
+
         // Authorization: Hanya pemilik tugas yang bisa tolak
         if ($tugasTambahan->pegawai_id !== $request->user()->id) {
             return response()->json([
@@ -350,27 +410,27 @@ class TugasTambahanController extends Controller
                 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
             ], 403);
         }
-        
+
         if ($tugasTambahan->status !== 'pending') {
             return response()->json([
                 'success' => false,
                 'message' => 'Hanya tugas berstatus pending yang bisa ditolak'
             ], 422);
         }
-        
+
         // Soft delete dengan alasan
         $tugasTambahan->update([
             'catatan_penolakan' => $validated['alasan_penolakan'],
             'ditolak_pada' => now()
         ]);
         $tugasTambahan->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Tugas tambahan berhasil ditolak'
         ]);
     }
-    
+
     /**
      * Mulai mengerjakan tugas (deprecated - gunakan terima)
      * 
@@ -382,7 +442,7 @@ class TugasTambahanController extends Controller
     {
         return $this->terima($request, $id);
     }
-    
+
     /**
      * Submit tugas untuk validasi
      * 
@@ -393,7 +453,7 @@ class TugasTambahanController extends Controller
     public function submit(Request $request, $id)
     {
         $tugasTambahan = TugasTambahan::findOrFail($id);
-        
+
         // Authorization
         if ($tugasTambahan->pegawai_id !== $request->user()->id) {
             return response()->json([
@@ -401,7 +461,7 @@ class TugasTambahanController extends Controller
                 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
             ], 403);
         }
-        
+
         // Cek status
         if (!in_array($tugasTambahan->status, ['dikerjakan', 'revisi'])) {
             return response()->json([
@@ -409,7 +469,7 @@ class TugasTambahanController extends Controller
                 'message' => 'Tugas hanya bisa disubmit jika sedang dikerjakan atau revisi'
             ], 422);
         }
-        
+
         // Cek apakah ada bukti
         if ($tugasTambahan->attachedFiles()->count() === 0) {
             return response()->json([
@@ -417,18 +477,18 @@ class TugasTambahanController extends Controller
                 'message' => 'Harap upload bukti pengerjaan terlebih dahulu'
             ], 422);
         }
-        
+
         $tugasTambahan->update([
             'status' => 'validasi',
             'tanggal_submit' => now()
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Tugas berhasil disubmit untuk validasi'
         ]);
     }
-    
+
     /**
      * Upload bukti pengerjaan tugas
      * 

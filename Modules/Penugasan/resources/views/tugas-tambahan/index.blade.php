@@ -196,24 +196,23 @@
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ $tugas->pegawai->nama ?? 'N/A' }}</div>
-                                        @if ($tugas->pegawai && $tugas->pegawai->masterJabatan)
-                                            <small
-                                                class="text-muted">{{ $tugas->pegawai->masterJabatan->nama_jabatan }}</small>
+                                        @if ($tugas->pegawai && $tugas->pegawai->jabatan)
+                                            <small class="text-muted">{{ $tugas->pegawai->jabatan->nama_jabatan }}</small>
                                         @endif
                                     </td>
                                     <td>
-                                        @if ($tugas->pegawai && $tugas->pegawai->masterBidang)
+                                        @if ($tugas->pegawai && $tugas->pegawai->bidang)
                                             <span
-                                                class="badge bg-secondary">{{ $tugas->pegawai->masterBidang->nama_bidang }}</span>
+                                                class="badge bg-secondary">{{ $tugas->pegawai->bidang->nama_bidang }}</span>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ $tugas->pemberiTugas->nama ?? 'N/A' }}</div>
-                                        @if ($tugas->pemberiTugas && $tugas->pemberiTugas->masterJabatan)
-                                            <small
-                                                class="text-muted">{{ $tugas->pemberiTugas->masterJabatan->nama_jabatan }}</small>
+                                        @if ($tugas->pemberiTugas && $tugas->pemberiTugas->jabatan)
+                                            <br><small
+                                                class="text-muted">{{ $tugas->pemberiTugas->jabatan->nama_jabatan }}</small>
                                         @endif
                                     </td>
                                     <td class="text-center">

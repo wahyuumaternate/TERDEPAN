@@ -38,14 +38,14 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/', [TugasPokokController::class, 'index'])->name('index');
         Route::get('/saya', [TugasPokokController::class, 'tugasSaya'])->name('tugas-saya');
         Route::get('/{tugasPokok}', [TugasPokokController::class, 'show'])->name('show');
-        
+
         // Actions
         Route::post('/sinkron', [TugasPokokController::class, 'sinkronData'])->name('sinkron');
         // Route::post('/{tugasPokok}/terima', [TugasPokokController::class, 'terima'])->name('terima');
         Route::post('/{tugasPokok}/update-status', [TugasPokokController::class, 'updateStatus'])->name('update-status');
-        
+
         // Nested: Tugas Harian di bawah Tugas Pokok
-        Route::prefix('{tugasPokok}/tugas-harian')->name('tugas-harian.')->group(function() {
+        Route::prefix('{tugasPokok}/tugas-harian')->name('tugas-harian.')->group(function () {
             Route::get('/', [TugasHarianController::class, 'indexByTugasPokok'])->name('index');
             Route::post('/', [TugasHarianController::class, 'store'])->name('store');
         });
@@ -61,12 +61,12 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/buat', [TugasHarianController::class, 'create'])->name('create');
         Route::get('/{tugasHarian}', [TugasHarianController::class, 'show'])->name('show');
         Route::get('/{tugasHarian}/edit', [TugasHarianController::class, 'edit'])->name('edit');
-        
+
         // CRUD operations
         Route::post('/', [TugasHarianController::class, 'store'])->name('store');
         Route::put('/{tugasHarian}', [TugasHarianController::class, 'update'])->name('update');
         Route::delete('/{tugasHarian}', [TugasHarianController::class, 'destroy'])->name('destroy');
-        
+
         // Task actions
         Route::post('/{tugasHarian}/terima', [TugasHarianController::class, 'terima'])->name('terima');
         Route::post('/{tugasHarian}/tolak', [TugasHarianController::class, 'tolak'])->name('tolak');
@@ -74,7 +74,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::post('/{tugasHarian}/submit', [TugasHarianController::class, 'submit'])->name('submit');
         Route::post('/{tugasHarian}/upload-bukti', [TugasHarianController::class, 'uploadBukti'])->name('upload-bukti');
         Route::post('/{tugasHarian}/update-progress', [TugasHarianController::class, 'updateProgress'])->name('update-progress');
-        
+
         // History
         Route::get('/{tugasHarian}/history', [TugasHarianController::class, 'history'])->name('history');
     });
@@ -88,11 +88,12 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/saya', [TugasTambahanController::class, 'tugasSaya'])->name('tugas-saya');
         Route::get('/{tugasTambahan}', [TugasTambahanController::class, 'show'])->name('show');
         Route::get('/{tugasTambahan}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
-        
+
         // CRUD operations
+        Route::post('/', [TugasTambahanController::class, 'store'])->name('store');
         Route::put('/{tugasTambahan}', [TugasTambahanController::class, 'update'])->name('update');
         Route::delete('/{tugasTambahan}', [TugasTambahanController::class, 'destroy'])->name('destroy');
-        
+
         // Task actions
         Route::post('/{tugasTambahan}/terima', [TugasTambahanController::class, 'terima'])->name('terima');
         Route::post('/{tugasTambahan}/tolak', [TugasTambahanController::class, 'tolak'])->name('tolak');
@@ -110,16 +111,16 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/', [TeamController::class, 'index'])->name('index');
         Route::get('/overview', [TeamController::class, 'overview'])->name('overview');
         Route::get('/anggota/{pegawai}', [TeamController::class, 'detailAnggota'])->name('detail-anggota');
-        
+
         // Berikan tugas
         Route::get('/berikan-tugas', [TeamController::class, 'formBerikanTugas'])->name('form-berikan-tugas');
         Route::post('/berikan-tugas', [TeamController::class, 'berikanTugas'])->name('berikan-tugas');
-        
+
         // Validasi tugas
         Route::get('/validasi', [TeamController::class, 'daftarValidasi'])->name('daftar-validasi');
         Route::post('/validasi/{tugas}', [TeamController::class, 'validasiTugas'])->name('validasi-tugas');
         Route::post('/preview-penilaian', [TeamController::class, 'previewPenilaian'])->name('preview-penilaian');
-        
+
         // Monitoring
         Route::get('/monitoring', [TeamController::class, 'monitoring'])->name('monitoring');
         Route::post('/catatan-monitoring', [TeamController::class, 'catatanMonitoring'])->name('catatan-monitoring');
@@ -133,13 +134,14 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/statistik', [ApiController::class, 'statistik'])->name('statistik');
         Route::get('/kalender', [ApiController::class, 'kalender'])->name('kalender');
         Route::get('/notifikasi', [ApiController::class, 'notifikasi'])->name('notifikasi');
-        
+
         // Team workload
         Route::get('/workload-tim', [ApiController::class, 'workloadTim'])->name('workload-tim');
         Route::get('/progress-anggota/{pegawai}', [ApiController::class, 'progressAnggota'])->name('progress-anggota');
-    });
 
-    // ============================================
+        // Tugas Pokok by Pegawai
+        Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
+    });    // ============================================
     // LEGACY ROUTES (Backward Compatibility)
     // TODO: Remove after migration complete
     // ============================================

@@ -58,7 +58,7 @@
                                                 @foreach ($bawahanLangsung as $pegawai)
                                                     <option value="{{ $pegawai->id }}">
                                                         {{ $pegawai->nama }} -
-                                                        {{ $pegawai->masterJabatan->nama_jabatan ?? '' }}
+                                                        {{ $pegawai->jabatan->nama_jabatan ?? '' }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -143,7 +143,7 @@
                                             @foreach ($bawahanLangsung as $pegawai)
                                                 <option value="{{ $pegawai->id }}">
                                                     {{ $pegawai->nama }} -
-                                                    {{ $pegawai->masterJabatan->nama_jabatan ?? '' }}
+                                                    {{ $pegawai->jabatan->nama_jabatan ?? '' }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -302,8 +302,13 @@
             tugasPokokSelect.innerHTML = '<option value="">Loading...</option>';
 
             if (pegawaiId) {
-                fetch(`/penugasan/api/pegawai/${pegawaiId}/tugas-pokok`)
-                    .then(response => response.json())
+                fetch(`{{ url('/penugasan/api/pegawai') }}/${pegawaiId}/tugas-pokok`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.length > 0) {
                             tugasPokokSelect.innerHTML = '<option value="">Pilih Tugas Pokok</option>';
@@ -312,7 +317,8 @@
                                     `<option value="${tp.id}">${tp.nama_tugas} (${tp.progress_persen}%)</option>`;
                             });
                         } else {
-                            tugasPokokSelect.innerHTML = '<option value="">Tidak ada tugas pokok</option>';
+                            tugasPokokSelect.innerHTML =
+                                '<option value="">Tidak ada tugas pokok aktif</option>';
                         }
                     })
                     .catch(error => {
