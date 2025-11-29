@@ -177,113 +177,144 @@
             </div>
         </div>
 
-        <!-- Anggota Tim Cards -->
-        <div class="row" id="anggotaTimContainer">
-            @forelse($anggotaTim as $anggota)
-                <div class="col-xl-4 col-lg-6 mb-4 anggota-card" data-bidang="{{ $anggota->bidang_id }}"
-                    data-jabatan="{{ $anggota->jabatan_id }}" data-workload="{{ $anggota->workload_persen }}"
-                    data-nama="{{ strtolower($anggota->nama) }}">
-                    <div class="card shadow-sm h-100 border-0">
-                        <div class="card-body">
-                            <!-- Header -->
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="avatar-circle bg-primary text-white me-3"
-                                    style="width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">
-                                    {{ strtoupper(substr($anggota->nama, 0, 2)) }}
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h5 class="mb-1">{{ $anggota->nama }}</h5>
-                                    <small class="text-muted">{{ $anggota->jabatan->nama_jabatan ?? '-' }}</small>
-                                    <br>
-                                    @if ($anggota->bidang)
-                                        <span class="badge bg-secondary">{{ $anggota->bidang->nama_bidang }}</span>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <!-- Statistik Tugas -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-4">
-                                    <div class="text-center p-2 bg-light rounded">
-                                        <div class="fw-bold text-warning fs-5">{{ $anggota->tugas_pending }}</div>
-                                        <small class="text-muted">Pending</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-center p-2 bg-light rounded">
-                                        <div class="fw-bold text-primary fs-5">{{ $anggota->tugas_aktif }}</div>
-                                        <small class="text-muted">Aktif</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-center p-2 bg-light rounded">
-                                        <div class="fw-bold text-success fs-5">{{ $anggota->tugas_selesai }}</div>
-                                        <small class="text-muted">Selesai</small>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Workload Bar -->
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small class="text-muted">Workload</small>
-                                    <small class="fw-bold">{{ number_format($anggota->workload_persen, 0) }}%</small>
-                                </div>
-                                @php
-                                    $workloadClass =
-                                        $anggota->workload_persen >= 70
-                                            ? 'danger'
-                                            : ($anggota->workload_persen >= 40
-                                                ? 'warning'
-                                                : 'success');
-                                @endphp
-                                <div class="progress" style="height: 10px;">
-                                    <div class="progress-bar bg-{{ $workloadClass }}" role="progressbar"
-                                        style="width: {{ $anggota->workload_persen }}%"
-                                        aria-valuenow="{{ $anggota->workload_persen }}" aria-valuemin="0"
-                                        aria-valuemax="100">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="d-flex gap-2">
-                                <a href="{{ route('penugasan.tim.detail-anggota', $anggota->id) }}"
-                                    class="btn btn-sm btn-outline-primary flex-grow-1">
-                                    <i class="bi bi-eye me-1"></i> Detail
-                                </a>
-                                <a href="{{ route('penugasan.tim.form-berikan-tugas') }}?pegawai={{ $anggota->id }}"
-                                    class="btn btn-sm btn-primary flex-grow-1">
-                                    <i class="bi bi-send me-1"></i> Beri Tugas
-                                </a>
-                            </div>
-                        </div>
+        <!-- Anggota Tim Table -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                @if ($anggotaTim->isEmpty())
+                    <div class="text-center py-5">
+                        <i class="bi bi-people fs-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">Belum Ada Anggota Tim</h5>
+                        <p class="text-muted">Anda belum memiliki bawahan yang terdaftar dalam sistem.</p>
                     </div>
-                </div>
-            @empty
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-people fs-1 text-muted mb-3"></i>
-                            <h5 class="text-muted">Belum Ada Anggota Tim</h5>
-                            <p class="text-muted">Anda belum memiliki bawahan yang terdaftar dalam sistem.</p>
-                        </div>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="anggotaTimTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">No</th>
+                                    <th style="width: 20%;">Nama</th>
+                                    <th style="width: 15%;">Jabatan</th>
+                                    <th style="width: 12%;">Bidang</th>
+                                    <th style="width: 8%;" class="text-center">Pending</th>
+                                    <th style="width: 8%;" class="text-center">Aktif</th>
+                                    <th style="width: 8%;" class="text-center">Selesai</th>
+                                    <th style="width: 12%;">Workload</th>
+                                    <th style="width: 12%;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($anggotaTim as $index => $anggota)
+                                    <tr class="anggota-row" data-bidang="{{ $anggota->bidang_id }}"
+                                        data-jabatan="{{ $anggota->jabatan_id }}"
+                                        data-workload="{{ $anggota->workload_persen }}"
+                                        data-nama="{{ strtolower($anggota->nama) }}">
+                                        <td>{{ $index + 1 }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle bg-primary text-white me-2"
+                                                    style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold;">
+                                                    {{ strtoupper(substr($anggota->nama, 0, 2)) }}
+                                                </div>
+                                                <div>
+                                                    <div class="fw-semibold">{{ $anggota->nama }}</div>
+                                                    <small
+                                                        class="text-muted">{{ $anggota->nomor_identitas ?? '-' }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small>{{ $anggota->jabatan->nama ?? '-' }}</small>
+                                        </td>
+                                        <td>
+                                            @if ($anggota->bidang)
+                                                <span class="badge bg-secondary">{{ $anggota->bidang->nama }}</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-warning text-dark">{{ $anggota->tugas_pending }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary">{{ $anggota->tugas_aktif }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success">{{ $anggota->tugas_selesai }}</span>
+                                        </td>
+                                        <td>
+                                            @php
+                                                $workloadClass =
+                                                    $anggota->workload_persen >= 70
+                                                        ? 'danger'
+                                                        : ($anggota->workload_persen >= 40
+                                                            ? 'warning'
+                                                            : 'success');
+                                            @endphp
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                    <div class="progress-bar bg-{{ $workloadClass }}" role="progressbar"
+                                                        style="width: {{ $anggota->workload_persen }}%"
+                                                        aria-valuenow="{{ $anggota->workload_persen }}" aria-valuemin="0"
+                                                        aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                                <small
+                                                    class="fw-bold text-nowrap">{{ number_format($anggota->workload_persen, 0) }}%</small>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{{ route('penugasan.tim.detail-anggota', $anggota->id) }}"
+                                                    class="btn btn-outline-info" title="Detail">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{{ route('penugasan.tim.form-berikan-tugas') }}?pegawai={{ $anggota->id }}"
+                                                    class="btn btn-outline-primary" title="Beri Tugas">
+                                                    <i class="bi bi-send"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-            @endforelse
-        </div>
 
-        <!-- No Results Message -->
-        <div class="row d-none" id="noResultsMessage">
-            <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Tidak ada anggota tim yang sesuai dengan filter yang dipilih.
-                </div>
+                    <!-- No Results Message -->
+                    <div class="d-none text-center py-4" id="noResultsMessage">
+                        <i class="bi bi-info-circle me-2 text-info"></i>
+                        <span class="text-muted">Tidak ada anggota tim yang sesuai dengan filter yang dipilih.</span>
+                    </div>
+                @endif
             </div>
         </div>
     </section>
 @endsection
+
+@push('styles')
+    <style>
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        .btn-group-sm>.btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .avatar-circle {
+            flex-shrink: 0;
+        }
+
+        .progress {
+            min-width: 60px;
+        }
+    </style>
+@endpush
 
 @push('scripts')
     <script>
@@ -292,7 +323,7 @@
             const filterJabatan = document.getElementById('filterJabatan');
             const filterWorkload = document.getElementById('filterWorkload');
             const searchInput = document.getElementById('searchInput');
-            const anggotaCards = document.querySelectorAll('.anggota-card');
+            const anggotaRows = document.querySelectorAll('.anggota-row');
             const noResultsMessage = document.getElementById('noResultsMessage');
 
             function applyFilters() {
@@ -303,38 +334,38 @@
 
                 let visibleCount = 0;
 
-                anggotaCards.forEach(card => {
+                anggotaRows.forEach(row => {
                     let show = true;
 
                     // Filter bidang
-                    if (bidangValue && card.dataset.bidang !== bidangValue) {
+                    if (bidangValue && row.dataset.bidang !== bidangValue) {
                         show = false;
                     }
 
                     // Filter jabatan
-                    if (jabatanValue && card.dataset.jabatan !== jabatanValue) {
+                    if (jabatanValue && row.dataset.jabatan !== jabatanValue) {
                         show = false;
                     }
 
                     // Filter workload
                     if (workloadValue) {
-                        const workload = parseFloat(card.dataset.workload);
+                        const workload = parseFloat(row.dataset.workload);
                         if (workloadValue === 'ringan' && workload >= 30) show = false;
                         if (workloadValue === 'sedang' && (workload < 30 || workload > 60)) show = false;
                         if (workloadValue === 'berat' && workload <= 60) show = false;
                     }
 
                     // Filter search
-                    if (searchValue && !card.dataset.nama.includes(searchValue)) {
+                    if (searchValue && !row.dataset.nama.includes(searchValue)) {
                         show = false;
                     }
 
-                    // Show/hide card
+                    // Show/hide row
                     if (show) {
-                        card.classList.remove('d-none');
+                        row.classList.remove('d-none');
                         visibleCount++;
                     } else {
-                        card.classList.add('d-none');
+                        row.classList.add('d-none');
                     }
                 });
 
