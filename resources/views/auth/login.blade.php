@@ -339,7 +339,7 @@
                     <img src="{{ asset('assets/img/putih.webp') }}" alt="Illustration"
                         class="desktop-illustration">
                 </div>
-                <div class="mb-5">
+                <div class="mt-5">
                     <h1 class="text-4xl font-bold mb-2">TERDEPAN</h1>
                     <p class="text-xl opacity-90">Terminal Data dan e-Kinerja Perencana</p>
                 </div>

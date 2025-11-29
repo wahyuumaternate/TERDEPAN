@@ -75,7 +75,7 @@
         /* Mobile styles */
         .mobile-container {
             min-height: 100vh;
-            background-image: url('{{ asset('img/texture-login.png') }}');
+            background-image: url('{{ asset('img/texture-login2.png') }}');
             background-size: 200px;
             background-repeat: repeat;
             position: relative;
@@ -116,7 +116,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('{{ asset('img/texture-login.png') }}');
+            background-image: url('{{ asset('img/texture-login2.png') }}');
             background-size: 200px;
             background-repeat: repeat;
             opacity: 0.15;
@@ -209,22 +209,13 @@
         <!-- LEFT SIDE -->
         <div class="w-2/5 desktop-left flex items-center justify-center overflow-hidden">
             <div class="content-wrapper text-center text-white px-8 py-12 max-w-lg">
-                <div class="mb-10">
-                    <img src="{{ asset('img/logo-white.png') }}" alt="Logo TERDEPAN" class="w-24 h-24 mx-auto mb-4">
-                    <h1 class="text-4xl font-bold mb-2">TERDEPAN</h1>
-                    <p class="text-xl opacity-90">Terminal Data dan e-Kinerja Perencana</p>
-                </div>
-
-                <div class="flex justify-center items-center mt-8">
-                    <img src="{{ asset('img/login-illustration.png') }}" alt="Illustration"
+                <div class="flex justify-center items-center mb-10">
+                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Illustration"
                         class="desktop-illustration">
                 </div>
-
-                <div class="mt-12">
-                    <p class="text-white/90 text-sm leading-relaxed">
-                        Sistem terintegrasi untuk manajemen dokumen perencanaan dan monitoring kinerja pegawai di
-                        Bappeda Maluku Utara
-                    </p>
+                <div class="mt-5">
+                    <h1 class="text-4xl font-bold mt-5">TERDEPAN</h1>
+                    <p class="text-xl opacity-90">Terminal Data dan e-Kinerja Perencana</p>
                 </div>
             </div>
         </div>
