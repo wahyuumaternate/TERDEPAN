@@ -70,48 +70,51 @@ class DashboardController extends Controller
             ];
         });
 
-        // Progress tugas pokok dengan subquery untuk menghitung jumlah tugas harian
-        $tugasPokok = TugasPokok::selectRaw('
-                knj_tugas_pokok.*,
-                (SELECT COUNT(*) FROM knj_tugas_harian WHERE tugas_pokok_id = knj_tugas_pokok.id) as jumlah_tugas_harian,
-                (SELECT COUNT(*) FROM knj_tugas_harian WHERE tugas_pokok_id = knj_tugas_pokok.id AND status = ?) as selesai_count
-            ', ['selesai'])
-            ->where('pegawai_id', $user->id)
-            ->with(['indikatorPK:id,indikator_sasaran', 'perjanjianKinerja:id,periode_mulai,periode_selesai'])
-            ->orderBy('progress_persen', 'desc')
-            ->limit(5)
-            ->get();
+        // Tugas baru/pending (diberikan oleh atasan atau status pending)
+        // Tugas Harian dengan status pending atau baru (created_at < 7 hari)
+        $tugasBaruHarian = TugasHarian::where('pegawai_id', $user->id)
+            ->where('status', 'pending')
+            ->where('is_mandiri', false) // Hanya tugas yang diberikan atasan
+            ->with(['pemberiTugas:id,nama', 'tugasPokok:id,nama_tugas'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($tugas) {
+                return [
+                    'id' => $tugas->id,
+                    'nama_tugas' => $tugas->nama_tugas,
+                    'jenis' => 'harian',
+                    'status' => $tugas->status,
+                    'tanggal_selesai' => $tugas->tanggal_selesai,
+                    'pemberi_tugas' => $tugas->pemberiTugas->nama ?? '-',
+                    'created_at' => $tugas->created_at,
+                ];
+            });
 
-        // Tugas mendesak (deadline < 7 hari)
-        $tugasMendesak = TugasHarian::select(
-            'id',
-            'nama_tugas',
-            'tanggal_selesai',
-            'status',
-            'tugas_pokok_id'
-        )
-            ->where('pegawai_id', $user->id)
-            ->whereIn('status', ['pending', 'dikerjakan', 'revisi'])
-            ->where('tanggal_selesai', '<=', now()->addDays(7))
-            ->where('tanggal_selesai', '>=', now())
-            ->orderBy('tanggal_selesai')
-            ->limit(5)
-            ->get();
+        // Tugas Tambahan dengan status pending atau baru
+        $tugasBaruTambahan = TugasTambahan::where('pegawai_id', $user->id)
+            ->where('status', 'pending')
+            ->with(['pemberiTugas:id,nama'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($tugas) {
+                return [
+                    'id' => $tugas->id,
+                    'nama_tugas' => $tugas->nama_tugas,
+                    'jenis' => 'tambahan',
+                    'status' => $tugas->status,
+                    'tanggal_selesai' => $tugas->tanggal_selesai,
+                    'pemberi_tugas' => $tugas->pemberiTugas->nama ?? '-',
+                    'created_at' => $tugas->created_at,
+                ];
+            });
 
-        // Tugas tambahan mendesak
-        $tugasTambahanMendesak = TugasTambahan::select(
-            'id',
-            'nama_tugas',
-            'tanggal_selesai',
-            'status'
-        )
-            ->where('pegawai_id', $user->id)
-            ->whereIn('status', ['pending', 'dikerjakan', 'revisi'])
-            ->where('tanggal_selesai', '<=', now()->addDays(7))
-            ->where('tanggal_selesai', '>=', now())
-            ->orderBy('tanggal_selesai')
-            ->limit(3)
-            ->get();
+        // Gabungkan dan urutkan berdasarkan created_at
+        $tugasBaruPending = $tugasBaruHarian->concat($tugasBaruTambahan)
+            ->sortByDesc('created_at')
+            ->take(10)
+            ->values();
 
         // Progress mingguan (4 minggu terakhir)
         $progressMingguan = DB::table('knj_progress')
@@ -125,11 +128,18 @@ class DashboardController extends Controller
             ->orderBy('minggu')
             ->get();
 
+        // Check if view exists, if not use default dashboard view
+        if (view()->exists('dashboard')) {
+            return view('dashboard', compact(
+                'stats',
+                'tugasBaruPending',
+                'progressMingguan'
+            ));
+        }
+        
         return view('penugasan::dashboard', compact(
             'stats',
-            'tugasPokok',
-            'tugasMendesak',
-            'tugasTambahanMendesak',
+            'tugasBaruPending',
             'progressMingguan'
         ));
     }

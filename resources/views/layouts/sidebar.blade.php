@@ -160,40 +160,6 @@
              </ul>
          </li><!-- End Tugas Saya Nav -->
 
-         <!-- ========================================== -->
-         <!-- BAGIAN 2: MANAJEMEN TUGAS (Admin/Atasan)  -->
-         <!-- ========================================== -->
-         @if ($canManagePenugasan)
-             <li class="nav-item">
-                 <a class="nav-link collapsed" data-bs-target="#manajemen-tugas-nav" data-bs-toggle="collapse"
-                     href="#">
-                     <i class="bi bi-list-check"></i><span>Manajemen Tugas</span><i
-                         class="bi bi-chevron-down ms-auto"></i>
-                 </a>
-                 <ul id="manajemen-tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                     <!-- Daftar Tugas Pokok -->
-                     <li>
-                         <a href="{{ route('penugasan.tugas-pokok.index') }}">
-                             <i class="bi bi-circle"></i><span>Daftar Tugas Pokok</span>
-                         </a>
-                     </li>
-
-                     <!-- Daftar Tugas Harian -->
-                     <li>
-                         <a href="{{ route('penugasan.tugas-harian.index') }}">
-                             <i class="bi bi-circle"></i><span>Daftar Tugas Harian</span>
-                         </a>
-                     </li>
-
-                     <!-- Daftar Tugas Tambahan -->
-                     <li>
-                         <a href="{{ route('penugasan.tugas-tambahan.index') }}">
-                             <i class="bi bi-circle"></i><span>Daftar Tugas Tambahan</span>
-                         </a>
-                     </li>
-                 </ul>
-             </li><!-- End Manajemen Tugas Nav -->
-         @endif
 
          <!-- ========================================== -->
          <!-- BAGIAN 3: MANAJEMEN TIM (Atasan)          -->
@@ -202,7 +168,8 @@
              <li class="nav-item">
                  <a class="nav-link collapsed" data-bs-target="#manajemen-tim-nav" data-bs-toggle="collapse"
                      href="#">
-                     <i class="bi bi-people"></i><span>Manajemen Tim</span><i class="bi bi-chevron-down ms-auto"></i>
+                     <i class="bi bi-people"></i><span>Manajemen Penugasan</span><i
+                         class="bi bi-chevron-down ms-auto"></i>
                  </a>
                  <ul id="manajemen-tim-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                      <!-- Tim Saya -->

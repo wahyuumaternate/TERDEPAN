@@ -144,9 +144,13 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         // Tugas Pokok by Pegawai
         Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
     });    // ============================================
-    // SHARED UPLOAD ROUTE
+    // SHARED ROUTES (Used by multiple views)
     // ============================================
     Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
+    Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
+    Route::post('/buat-tugas', [PenugasanController::class, 'buatTugas'])->name('buat-tugas');
+    Route::post('/validasi-tugas/{tugas}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
+    Route::post('/preview-penilaian', [PenugasanController::class, 'previewPenilaian'])->name('preview-penilaian');
 
     // ============================================
     // LEGACY ROUTES (Backward Compatibility)

@@ -4,11 +4,10 @@ use App\Http\Controllers\Master\MasterPegawaiController;
 use App\Http\Controllers\Master\MasterBidangController;
 use App\Http\Controllers\Master\MasterJabatanController;
 use App\Http\Controllers\ProfileController;
+use Modules\Penugasan\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/e-kinerja', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('e-kinerja.index');
+Route::get('/e-kinerja', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('e-kinerja.index');
 
 Route::get('/', function () {
     return view('welcome');

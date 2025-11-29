@@ -51,7 +51,8 @@
                                 <div class="small text-muted mt-1">
                                     <span class="text-warning">{{ $stats['tugas_harian']['pending'] ?? 0 }} pending</span>
                                     <span class="mx-1">•</span>
-                                    <span class="text-primary">{{ $stats['tugas_harian']['dikerjakan'] ?? 0 }} dikerjakan</span>
+                                    <span class="text-primary">{{ $stats['tugas_harian']['dikerjakan'] ?? 0 }}
+                                        dikerjakan</span>
                                 </div>
                             </div>
                         </div>
@@ -103,70 +104,87 @@
         </div>
 
         <div class="row">
-            <!-- Tugas Pokok dengan Progress -->
+            <!-- Tugas Baru/Pending -->
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        <h5 class="card-title">Tugas Pokok - Progress</h5>
+                        <h5 class="card-title">
+                            <i class="bi bi-bell-fill text-warning me-2"></i>
+                            Tugas Baru dari Atasan
+                        </h5>
 
-                        @if (empty($tugasPokok) || $tugasPokok->isEmpty())
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle me-2"></i>
-                                Belum ada tugas pokok yang ditugaskan.
+                        @if (empty($tugasBaruPending) || $tugasBaruPending->isEmpty())
+                            <div class="alert alert-success mb-0">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Tidak ada tugas baru yang perlu ditangani.
                             </div>
                         @else
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>Nama Tugas</th>
-                                            <th class="text-center">Total Harian</th>
-                                            <th class="text-center">Selesai</th>
-                                            <th>Progress</th>
+                                            <th style="width: 40%">Nama Tugas</th>
+                                            <th>Dari</th>
+                                            <th class="text-center">Jenis</th>
+                                            <th class="text-center">Deadline</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($tugasPokok as $tp)
+                                        @foreach ($tugasBaruPending as $tugas)
                                             <tr>
                                                 <td>
-                                                    <a href="{{ route('penugasan.tugas-pokok.show', $tp->id) }}"
-                                                        class="text-decoration-none fw-semibold">
-                                                        {{ $tp->nama_tugas }}
-                                                    </a>
+                                                    <span
+                                                        class="fw-semibold">{{ Str::limit($tugas['nama_tugas'], 50) }}</span>
                                                     <br>
                                                     <small class="text-muted">
-                                                        Target: {{ $tp->target_value }} {{ $tp->satuan }}
+                                                        <i class="bi bi-clock me-1"></i>
+                                                        {{ \Carbon\Carbon::parse($tugas['created_at'])->diffForHumans() }}
                                                     </small>
                                                 </td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-secondary">{{ $tp->jumlah_tugas_harian }}</span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge bg-success">{{ $tp->selesai_count }}</span>
-                                                </td>
                                                 <td>
-                                                    @php
-                                                        $progress =
-                                                            $tp->jumlah_tugas_harian > 0
-                                                                ? ($tp->selesai_count / $tp->jumlah_tugas_harian) * 100
-                                                                : 0;
-                                                        $progressClass =
-                                                            $progress >= 75
-                                                                ? 'success'
-                                                                : ($progress >= 50
-                                                                    ? 'info'
-                                                                    : ($progress >= 25
-                                                                        ? 'warning'
-                                                                        : 'danger'));
-                                                    @endphp
-                                                    <div class="progress" style="height: 25px;">
-                                                        <div class="progress-bar bg-{{ $progressClass }}"
-                                                            role="progressbar" style="width: {{ $progress }}%;"
-                                                            aria-valuenow="{{ $progress }}" aria-valuemin="0"
-                                                            aria-valuemax="100">
-                                                            {{ number_format($progress, 0) }}%
-                                                        </div>
-                                                    </div>
+                                                    <small>{{ $tugas['pemberi_tugas'] }}</small>
+                                                </td>
+                                                <td class="text-center">
+                                                    @if ($tugas['jenis'] === 'harian')
+                                                        <span class="badge bg-info">
+                                                            <i class="bi bi-calendar-check me-1"></i>Harian
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-plus-circle me-1"></i>Tambahan
+                                                        </span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-center">
+                                                    @if ($tugas['tanggal_selesai'])
+                                                        <small>
+                                                            <i class="bi bi-calendar3 text-info me-1"></i>
+                                                            {{ \Carbon\Carbon::parse($tugas['tanggal_selesai'])->format('d M Y') }}
+                                                        </small>
+                                                    @else
+                                                        <small class="text-muted">-</small>
+                                                    @endif
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-warning">
+                                                        <i class="bi bi-clock-history me-1"></i>
+                                                        {{ ucfirst($tugas['status']) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    @if ($tugas['jenis'] === 'harian')
+                                                        <a href="{{ route('penugasan.tugas-harian.show', $tugas['id']) }}"
+                                                            class="btn btn-sm btn-primary">
+                                                            <i class="bi bi-eye me-1"></i>Lihat
+                                                        </a>
+                                                    @else
+                                                        <a href="{{ route('penugasan.tugas-tambahan.show', $tugas['id']) }}"
+                                                            class="btn btn-sm btn-primary">
+                                                            <i class="bi bi-eye me-1"></i>Lihat
+                                                        </a>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -178,10 +196,10 @@
                 </div>
             </div>
 
-            <!-- Sidebar: Quick Actions & Tugas Mendesak -->
+            <!-- Sidebar: Quick Actions -->
             <div class="col-lg-4">
                 <!-- Quick Actions -->
-                <div class="card shadow-sm border-0 mb-3">
+                <div class="card shadow-sm border-0">
                     <div class="card-body">
                         <h5 class="card-title">Aksi Cepat</h5>
                         <div class="d-grid gap-2">
@@ -190,6 +208,9 @@
                             </a>
                             <a href="{{ route('penugasan.tugas-tambahan.tugas-saya') }}" class="btn btn-outline-primary">
                                 <i class="bi bi-plus-circle me-2"></i>Lihat Tugas Tambahan
+                            </a>
+                            <a href="{{ route('penugasan.tugas-pokok.tugas-saya') }}" class="btn btn-outline-info">
+                                <i class="bi bi-file-earmark-text me-2"></i>Tugas Pokok Saya
                             </a>
 
                             @php
@@ -203,7 +224,8 @@
                             @endphp
 
                             @if ($canManageTeam)
-                                <a href="{{ route('penugasan.tim.form-berikan-tugas') }}" class="btn btn-outline-success">
+                                <a href="{{ route('penugasan.tim.form-berikan-tugas') }}"
+                                    class="btn btn-outline-success">
                                     <i class="bi bi-send me-2"></i>Berikan Tugas
                                 </a>
                                 <a href="{{ route('penugasan.tim.daftar-validasi') }}" class="btn btn-outline-warning">
@@ -211,75 +233,6 @@
                                 </a>
                             @endif
                         </div>
-                    </div>
-                </div>
-
-                <!-- Tugas Mendesak -->
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <h5 class="card-title">Tugas Mendesak</h5>
-
-                        @if ((empty($tugasMendesak) || $tugasMendesak->isEmpty()) && (empty($tugasTambahanMendesak) || $tugasTambahanMendesak->isEmpty()))
-                            <div class="alert alert-success mb-0">
-                                <i class="bi bi-check-circle me-2"></i>
-                                Tidak ada tugas mendesak.
-                            </div>
-                        @else
-                            <div class="list-group list-group-flush">
-                                @if(!empty($tugasMendesak))
-                                    @foreach ($tugasMendesak as $tugas)
-                                        <div class="list-group-item px-0">
-                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                <div class="fw-semibold small">
-                                                    <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
-                                                        class="text-decoration-none">
-                                                        {{ Str::limit($tugas->nama_tugas, 40) }}
-                                                    </a>
-                                                </div>
-                                                @php
-                                                    $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
-                                                    $urgencyClass = $daysLeft <= 2 ? 'danger' : 'warning';
-                                                @endphp
-                                                <span class="badge bg-{{ $urgencyClass }}">
-                                                    {{ abs($daysLeft) }}h
-                                                </span>
-                                            </div>
-                                            <small class="text-muted">
-                                                <i class="bi bi-calendar3"></i>
-                                                {{ $tugas->tanggal_selesai->format('d M Y') }}
-                                            </small>
-                                        </div>
-                                    @endforeach
-                                @endif
-
-                                @if(!empty($tugasTambahanMendesak))
-                                    @foreach ($tugasTambahanMendesak as $tugas)
-                                        <div class="list-group-item px-0">
-                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                <div class="fw-semibold small">
-                                                    <a href="{{ route('penugasan.tugas-tambahan.show', $tugas->id) }}"
-                                                        class="text-decoration-none">
-                                                        {{ Str::limit($tugas->nama_tugas, 40) }}
-                                                    </a>
-                                                    <span class="badge bg-info">Tambahan</span>
-                                                </div>
-                                                @php
-                                                    $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
-                                                    $urgencyClass = $daysLeft <= 2 ? 'danger' : 'warning';
-                                                @endphp
-                                                <span class="badge bg-{{ $urgencyClass }}">
-                                                    {{ abs($daysLeft) }}h
-                                                </span>
-                                            </div>
-                                            <small class="text-muted">
-                                                <i class="bi bi-calendar3"></i>
-                                                {{ $tugas->tanggal_selesai->format('d M Y') }}
-                                            </small>
-                                        </div>
-                                    @endforeach
-                                @endif
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>

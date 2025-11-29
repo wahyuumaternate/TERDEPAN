@@ -6,7 +6,11 @@
         <nav>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('e-kinerja.index') }}">E-Kinerja</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.index') }}">Penugasan</a></li>
+                @if (isset($fromTimSaya) && $fromTimSaya)
+                    <li class="breadcrumb-item"><a href="{{ route('penugasan.tim.index') }}">Tim Saya</a></li>
+                @else
+                    <li class="breadcrumb-item"><a href="{{ route('penugasan.index') }}">Penugasan</a></li>
+                @endif
                 <li class="breadcrumb-item active">{{ $pegawai->nama }}</li>
             </ol>
         </nav>
@@ -15,9 +19,15 @@
     <section class="section">
         <!-- Tombol Kembali -->
         <div class="mb-3">
-            <a href="{{ route('penugasan.index') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Kembali
-            </a>
+            @if (isset($fromTimSaya) && $fromTimSaya)
+                <a href="{{ route('penugasan.tim.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali ke Tim Saya
+                </a>
+            @else
+                <a href="{{ route('penugasan.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali
+                </a>
+            @endif
         </div>
 
         <!-- Pegawai Info with Stats -->
@@ -2256,7 +2266,7 @@
                     });
 
                     $.ajax({
-                        url: `/penugasan/validasi-tugas/${tugasId}`,
+                        url: "{{ url('penugasan/validasi-tugas') }}/" + tugasId,
                         type: 'POST',
                         data: requestData,
                         success: function(response) {
@@ -2424,10 +2434,10 @@
                                             <i class="bi bi-person"></i> ${item.direvisi_oleh ? item.direvisi_oleh.nama : 'Unknown'}
                                         </small>
                                         ${item.dokumen_lama ? `
-                                                                                                                                    <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
-                                                                                                                                        <i class="bi bi-download"></i> File Lama
-                                                                                                                                    </a>
-                                                                                                                                ` : ''}
+                                                                                                                                            <a href="/dokumen/${item.dokumen_lama.id}/download" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2">
+                                                                                                                                                <i class="bi bi-download"></i> File Lama
+                                                                                                                                            </a>
+                                                                                                                                        ` : ''}
                                     </div>
                                 </div>
                             `;

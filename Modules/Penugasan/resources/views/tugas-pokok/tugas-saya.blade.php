@@ -386,14 +386,12 @@
 
         // Sinkronisasi Tugas Pokok dari PK
         function sinkronisasiTugasPokok() {
-            if (!confirm('Sinkronisasi akan membuat tugas pokok baru dari Perjanjian Kinerja Anda. Lanjutkan?')) {
-                return;
-            }
-
-            // Show loading
-            const btn = event.target;
+            // Get button element
+            const btn = event.target.closest('button') || event.target;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sinkronisasi...';
+
+            // Show loading state
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
             btn.disabled = true;
 
             fetch('{{ route('penugasan.tugas-pokok.sinkron') }}', {
@@ -406,26 +404,87 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        const message =
-                            `Sinkronisasi berhasil!\n\nTugas baru: ${data.created}\nDiskip (sudah ada): ${data.skipped}`;
-                        alert(message);
+                        // Show success notification
+                        let message = 'Sinkronisasi berhasil!';
                         if (data.created > 0) {
-                            location.reload();
+                            message += ` ${data.created} tugas pokok baru ditambahkan.`;
                         } else {
+                            message += ' Tidak ada tugas pokok baru.';
+                        }
+
+                        // Check if Swal (SweetAlert) is available
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: message,
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            }).then(() => {
+                                if (data.created > 0) {
+                                    location.reload();
+                                } else {
+                                    btn.innerHTML = originalText;
+                                    btn.disabled = false;
+                                }
+                            });
+                        } else {
+                            // Fallback to simple notification
+                            if (data.created > 0) {
+                                location.reload();
+                            } else {
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                            }
+                        }
+                    } else {
+                        // Show error notification
+                        const errorMsg = data.message || 'Terjadi kesalahan saat sinkronisasi';
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: errorMsg,
+                                timer: 3000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            }).then(() => {
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                            });
+                        } else {
+                            alert(errorMsg);
                             btn.innerHTML = originalText;
                             btn.disabled = false;
                         }
-                    } else {
-                        alert(data.message || 'Terjadi kesalahan saat sinkronisasi');
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Terjadi kesalahan saat sinkronisasi tugas pokok');
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
+                    const errorMsg = 'Terjadi kesalahan saat sinkronisasi tugas pokok';
+
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: errorMsg,
+                            timer: 3000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        }).then(() => {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        });
+                    } else {
+                        alert(errorMsg);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
                 });
         }
 
