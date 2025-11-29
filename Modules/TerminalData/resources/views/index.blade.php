@@ -79,7 +79,7 @@
                                 <i class="bi bi-hdd"></i>
                             </div>
                             <div class="ps-3">
-                                <h6>{{ \Illuminate\Support\Number::fileSize($stats['total_size']) }}</h6>
+                                <h6>{{ \Modules\TerminalData\Helpers\FormatHelper::formatFileSize($stats['total_size']) }}</h6>
                                 <span class="text-muted small pt-2">ruang digunakan</span>
                             </div>
                         </div>
