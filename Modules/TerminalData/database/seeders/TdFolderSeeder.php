@@ -18,7 +18,7 @@ class TdFolderSeeder extends Seeder
 
         // Get only Bappeda and Sekretariat bidang
         $bidangList = DB::table('master_bidang')
-            ->whereIn('nama', ['Sekretariat'])
+            ->whereIn('kode', ['SEKRETARIAT', 'IPW'])
             ->get();
 
         if ($bidangList->isEmpty()) {
