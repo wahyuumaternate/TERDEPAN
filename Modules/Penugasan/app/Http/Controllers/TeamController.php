@@ -140,12 +140,83 @@ class TeamController extends Controller
     public function formBerikanTugas(Request $request)
     {
         $user = $request->user();
+        $kodeJabatan = $user->jabatan?->kode;
 
-        // Get daftar bawahan
-        $bawahanLangsung = MasterPegawai::where('atasan_langsung_id', $user->id)
-            ->where('status_aktif', 'Aktif')
-            ->with(['jabatan', 'bidang'])
-            ->get();
+        // Get daftar pegawai untuk tugas harian berdasarkan role
+        if (in_array($kodeJabatan, ['KABAN', 'SEKBAN'])) {
+            // KABAN dan SEKBAN bisa memberi tugas harian ke semua pegawai
+            $bawahanLangsung = MasterPegawai::where('status_aktif', 'Aktif')
+                ->where('id', '!=', $user->id)
+                ->whereHas('jabatan', function ($q) {
+                    $q->where('kode', '!=', 'GATEK'); // Exclude GATEK
+                })
+                ->with(['jabatan', 'bidang'])
+                ->orderBy('nama')
+                ->get();
+        } elseif ($kodeJabatan === 'KABID') {
+            // KABID bisa memberi tugas harian ke pegawai di bidangnya
+            $bawahanLangsung = MasterPegawai::where('status_aktif', 'Aktif')
+                ->where('id', '!=', $user->id)
+                ->where('bidang_id', $user->bidang_id)
+                ->with(['jabatan', 'bidang'])
+                ->orderBy('nama')
+                ->get();
+        } else {
+            // KASUBAG dan lainnya hanya bawahan langsung
+            $bawahanLangsung = MasterPegawai::where('atasan_langsung_id', $user->id)
+                ->where('status_aktif', 'Aktif')
+                ->with(['jabatan', 'bidang'])
+                ->orderBy('nama')
+                ->get();
+        }
+
+        // Get daftar pegawai untuk tugas tambahan berdasarkan role
+        $pegawaiTugasTambahan = collect();
+
+        if (in_array($kodeJabatan, ['KABAN', 'SEKBAN'])) {
+            // KABAN dan SEKBAN bisa memberi tugas tambahan ke siapa saja
+            $pegawaiTugasTambahan = MasterPegawai::where('status_aktif', 'Aktif')
+                ->where('id', '!=', $user->id)
+                ->whereHas('jabatan', function ($q) {
+                    $q->where('kode', '!=', 'GATEK'); // Exclude GATEK
+                })
+                ->with(['jabatan', 'bidang'])
+                ->orderBy('nama')
+                ->get();
+        } elseif ($kodeJabatan === 'KABID') {
+            // KABID bisa memberi tugas tambahan ke pegawai di bidangnya + semua GATEK
+            $pegawaiTugasTambahan = MasterPegawai::where('status_aktif', 'Aktif')
+                ->where('id', '!=', $user->id)
+                ->where(function ($q) use ($user) {
+                    // Pegawai di bidang yang sama
+                    $q->where('bidang_id', $user->bidang_id)
+                        // ATAU semua GATEK
+                        ->orWhereHas('jabatan', function ($subQ) {
+                            $subQ->where('kode', 'GATEK');
+                        });
+                })
+                ->with(['jabatan', 'bidang'])
+                ->orderBy('nama')
+                ->get();
+        } elseif ($kodeJabatan === 'KASUBAG') {
+            // KASUBAG bisa memberi tugas tambahan ke bawahan langsung + semua GATEK
+            $pegawaiTugasTambahan = MasterPegawai::where('status_aktif', 'Aktif')
+                ->where('id', '!=', $user->id)
+                ->where(function ($q) use ($user) {
+                    // Bawahan langsung
+                    $q->where('atasan_langsung_id', $user->id)
+                        // ATAU semua GATEK
+                        ->orWhereHas('jabatan', function ($subQ) {
+                            $subQ->where('kode', 'GATEK');
+                        });
+                })
+                ->with(['jabatan', 'bidang'])
+                ->orderBy('nama')
+                ->get();
+        } else {
+            // Lainnya hanya bawahan langsung
+            $pegawaiTugasTambahan = $bawahanLangsung;
+        }
 
         // Get recent assignments (7 hari terakhir)
         $recentAssignments = collect();
@@ -177,7 +248,7 @@ class TeamController extends Controller
             'avg_progress' => 0,
         ];
 
-        return view('penugasan::tim.berikan-tugas', compact('bawahanLangsung', 'recentAssignments', 'stats'));
+        return view('penugasan::tim.berikan-tugas', compact('bawahanLangsung', 'pegawaiTugasTambahan', 'recentAssignments', 'stats'));
     }
 
     /**

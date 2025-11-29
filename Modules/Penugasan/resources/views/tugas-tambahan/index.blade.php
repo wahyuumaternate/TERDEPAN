@@ -26,7 +26,7 @@
                             data-bs-target="#filterSection">
                             <i class="bi bi-funnel me-1"></i>Filter
                         </button>
-                        <a href="{{ route('penugasan.tugas-tambahan.create') }}" class="btn btn-primary">
+                        <a href="{{ route('penugasan.tim.form-berikan-tugas') }}" class="btn btn-primary">
                             <i class="bi bi-plus-circle me-1"></i>Tambah Tugas
                         </a>
                     </div>
@@ -172,7 +172,6 @@
                                 <th style="width: 13%">Pemberi Tugas</th>
                                 <th class="text-center" style="width: 10%">Deadline</th>
                                 <th class="text-center" style="width: 8%">Status</th>
-                                <th class="text-center" style="width: 8%">Target</th>
                                 <th class="text-center" style="width: 7%">Aksi</th>
                             </tr>
                         </thead>
@@ -185,11 +184,6 @@
                                             class="text-decoration-none fw-semibold text-dark">
                                             {{ $tugas->nama_tugas }}
                                         </a>
-                                        @if ($tugas->is_lintas_bidang)
-                                            <span class="badge bg-info">
-                                                <i class="bi bi-arrow-left-right"></i> Lintas Bidang
-                                            </span>
-                                        @endif
                                         @if ($tugas->deskripsi)
                                             <br><small class="text-muted">{{ Str::limit($tugas->deskripsi, 60) }}</small>
                                         @endif
@@ -202,8 +196,7 @@
                                     </td>
                                     <td>
                                         @if ($tugas->pegawai && $tugas->pegawai->bidang)
-                                            <span
-                                                class="badge bg-secondary">{{ $tugas->pegawai->bidang->nama_bidang }}</span>
+                                            <span class="badge bg-secondary">{{ $tugas->pegawai->bidang->nama }}</span>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
@@ -251,10 +244,6 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <strong>{{ $tugas->target_value }}</strong>
-                                        <br><small class="text-muted">{{ $tugas->satuan }}</small>
-                                    </td>
-                                    <td class="text-center">
                                         <a href="{{ route('penugasan.tugas-tambahan.show', $tugas->id) }}"
                                             class="btn btn-sm btn-outline-primary" title="Detail">
                                             <i class="bi bi-eye"></i>
@@ -269,7 +258,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center py-5">
+                                    <td colspan="8" class="text-center py-5">
                                         <i class="bi bi-inbox fs-1 text-muted"></i>
                                         <p class="text-muted mt-3">Tidak ada data tugas tambahan</p>
                                     </td>

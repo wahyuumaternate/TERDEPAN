@@ -26,7 +26,7 @@
                             data-bs-target="#filterSection">
                             <i class="bi bi-funnel me-1"></i>Filter
                         </button>
-                        <a href="{{ route('penugasan.tugas-harian.create') }}" class="btn btn-primary">
+                        <a href="{{ route('penugasan.tim.form-berikan-tugas') }}" class="btn btn-primary">
                             <i class="bi bi-plus-circle me-1"></i>Tambah Tugas
                         </a>
                     </div>
@@ -62,7 +62,7 @@
                                 <select class="form-select form-select-sm" id="filterBidang">
                                     <option value="">Semua Bidang</option>
                                     @foreach ($bidangList as $bidang)
-                                        <option value="{{ $bidang->id }}">{{ $bidang->nama_bidang }}</option>
+                                        <option value="{{ $bidang->id }}">{{ $bidang->nama }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -81,66 +81,22 @@
                     </div>
                 </div>
 
-                <!-- Stats Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-2">
-                        <div class="card border-start border-primary border-4 mb-0">
-                            <div class="card-body p-3">
-                                <h4 class="mb-0">{{ $stats['total'] }}</h4>
-                                <small class="text-muted">Total</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="card border-start border-warning border-4 mb-0">
-                            <div class="card-body p-3">
-                                <h4 class="mb-0">{{ $stats['pending'] }}</h4>
-                                <small class="text-muted">Pending</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="card border-start border-primary border-4 mb-0">
-                            <div class="card-body p-3">
-                                <h4 class="mb-0">{{ $stats['dikerjakan'] }}</h4>
-                                <small class="text-muted">Dikerjakan</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="card border-start border-danger border-4 mb-0">
-                            <div class="card-body p-3">
-                                <h4 class="mb-0">{{ $stats['revisi'] }}</h4>
-                                <small class="text-muted">Revisi</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="card border-start border-info border-4 mb-0">
-                            <div class="card-body p-3">
-                                <h4 class="mb-0">{{ $stats['validasi'] }}</h4>
-                                <small class="text-muted">Validasi</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="card border-start border-success border-4 mb-0">
-                            <div class="card-body p-3">
-                                <h4 class="mb-0">{{ $stats['selesai'] }}</h4>
-                                <small class="text-muted">Selesai</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Search -->
-                <div class="row mb-3">
+
+                <!-- Search & Stats -->
+                <div class="row mb-3 align-items-center">
                     <div class="col-md-6">
                         <input type="text" class="form-control" id="searchInput"
                             placeholder="Cari nama tugas atau deskripsi...">
                     </div>
                     <div class="col-md-6 text-end">
-                        <small class="text-muted">{{ $tugasHarian->total() }} tugas ditemukan</small>
+                        <small class="text-muted">
+                            Total: <strong>{{ $tugasHarian->total() }}</strong> |
+                            Pending: <span class="text-warning">{{ $stats['pending'] }}</span> |
+                            Dikerjakan: <span class="text-primary">{{ $stats['dikerjakan'] }}</span> |
+                            Validasi: <span class="text-info">{{ $stats['validasi'] }}</span> |
+                            Selesai: <span class="text-success">{{ $stats['selesai'] }}</span>
+                        </small>
                     </div>
                 </div>
 
@@ -186,8 +142,7 @@
                                     </td>
                                     <td>
                                         @if ($tugas->pegawai && $tugas->pegawai->bidang)
-                                            <span
-                                                class="badge bg-secondary">{{ $tugas->pegawai->bidang->nama_bidang }}</span>
+                                            <span class="badge bg-secondary">{{ $tugas->pegawai->bidang->nama }}</span>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif

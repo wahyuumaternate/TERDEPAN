@@ -72,6 +72,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::post('/{tugasHarian}/tolak', [TugasHarianController::class, 'tolak'])->name('tolak');
         Route::post('/{tugasHarian}/mulai', [TugasHarianController::class, 'mulai'])->name('mulai');
         Route::post('/{tugasHarian}/submit', [TugasHarianController::class, 'submit'])->name('submit');
+        Route::get('/{tugasHarian}/upload-bukti', [TugasHarianController::class, 'formUploadBukti'])->name('form-upload-bukti');
         Route::post('/{tugasHarian}/upload-bukti', [TugasHarianController::class, 'uploadBukti'])->name('upload-bukti');
         Route::post('/{tugasHarian}/update-progress', [TugasHarianController::class, 'updateProgress'])->name('update-progress');
 
@@ -86,6 +87,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         // List & view
         Route::get('/', [TugasTambahanController::class, 'index'])->name('index');
         Route::get('/saya', [TugasTambahanController::class, 'tugasSaya'])->name('tugas-saya');
+        Route::get('/create', [TugasTambahanController::class, 'create'])->name('create');
         Route::get('/{tugasTambahan}', [TugasTambahanController::class, 'show'])->name('show');
         Route::get('/{tugasTambahan}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
 
@@ -142,6 +144,11 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         // Tugas Pokok by Pegawai
         Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
     });    // ============================================
+    // SHARED UPLOAD ROUTE
+    // ============================================
+    Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
+
+    // ============================================
     // LEGACY ROUTES (Backward Compatibility)
     // TODO: Remove after migration complete
     // ============================================

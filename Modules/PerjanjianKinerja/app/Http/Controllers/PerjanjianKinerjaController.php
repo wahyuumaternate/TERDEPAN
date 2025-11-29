@@ -1721,6 +1721,14 @@ class PerjanjianKinerjaController extends Controller
 
 
     /**
+     * Generate PDF - alias untuk method generate (dipanggil dari route POST)
+     */
+    public function generatePDF($id)
+    {
+        return $this->generate($id);
+    }
+
+    /**
      * Validate data completeness before generating PDF
      */
     private function validateDataCompleteness($pk)

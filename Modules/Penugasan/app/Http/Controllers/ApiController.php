@@ -305,7 +305,7 @@ class ApiController extends Controller
             // Get tugas pokok yang masih aktif
             $tugasPokok = TugasPokok::where('pegawai_id', $id)
                 ->whereIn('status', ['dikerjakan', 'pending'])
-                ->select('id', 'nama_tugas', 'progress_persen', 'status')
+                ->select('id', 'nama_tugas', 'progress_persen', 'status', 'satuan')
                 ->orderBy('nama_tugas')
                 ->get()
                 ->map(function ($tugas) {
@@ -314,6 +314,7 @@ class ApiController extends Controller
                         'nama_tugas' => $tugas->nama_tugas,
                         'progress_persen' => $tugas->progress_persen ?? 0,
                         'status' => $tugas->status,
+                        'satuan' => $tugas->satuan ?? '',
                     ];
                 });
 

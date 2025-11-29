@@ -120,24 +120,33 @@
         </div>
 
         <!-- Tugas List -->
-        @if ($tugasHarian->isEmpty())
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-muted"></i>
-                    <p class="text-muted mt-3">Belum ada tugas harian</p>
-                    <a href="{{ route('penugasan.dashboard') }}" class="btn btn-primary">
-                        <i class="bi bi-arrow-left me-2"></i>Kembali ke Dashboard
-                    </a>
-                </div>
-            </div>
-        @else
-            <div class="row">
-                @foreach ($tugasHarian as $tugas)
-                    <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card h-100 shadow-sm border-0 hover-shadow">
-                            <div class="card-body">
-                                <!-- Status Badge -->
-                                <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="card">
+            <div class="card-body">
+                @if ($tugasHarian->isEmpty())
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                        <p class="text-muted mt-3">Belum ada tugas harian</p>
+                        <a href="{{ route('penugasan.dashboard') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left me-2"></i>Kembali ke Dashboard
+                        </a>
+                    </div>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">No</th>
+                                    <th style="width: 30%;">Nama Tugas</th>
+                                    <th style="width: 15%;">Tugas Pokok</th>
+                                    <th style="width: 12%;">Pemberi Tugas</th>
+                                    <th style="width: 10%;">Deadline</th>
+                                    <th style="width: 8%;">Target</th>
+                                    <th style="width: 10%;">Status</th>
+                                    <th style="width: 10%;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($tugasHarian as $index => $tugas)
                                     @php
                                         $statusConfig = [
                                             'pending' => ['class' => 'warning', 'icon' => 'clock'],
@@ -150,107 +159,103 @@
                                             'class' => 'secondary',
                                             'icon' => 'circle',
                                         ];
+                                        $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
+                                        $isUrgent = $daysLeft >= 0 && $daysLeft <= 3;
+                                        $isOverdue = $daysLeft < 0;
                                     @endphp
-                                    <span class="badge bg-{{ $config['class'] }}">
-                                        <i class="bi bi-{{ $config['icon'] }} me-1"></i>{{ ucfirst($tugas->status) }}
-                                    </span>
-
-                                    @if ($tugas->is_mandiri)
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-person-check me-1"></i>Mandiri
-                                        </span>
-                                    @endif
-                                </div>
-
-                                <!-- Nama Tugas -->
-                                <h6 class="card-title mb-2">
-                                    <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
-                                        class="text-decoration-none text-dark fw-bold stretched-link">
-                                        {{ Str::limit($tugas->nama_tugas, 60) }}
-                                    </a>
-                                </h6>
-
-                                <!-- Tugas Pokok Reference -->
-                                @if ($tugas->tugasPokok)
-                                    <p class="small text-muted mb-2">
-                                        <i class="bi bi-folder me-1"></i>
-                                        {{ Str::limit($tugas->tugasPokok->nama_tugas, 40) }}
-                                    </p>
-                                @endif
-
-                                <!-- Deadline -->
-                                @php
-                                    $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
-                                    $isUrgent = $daysLeft >= 0 && $daysLeft <= 3;
-                                    $isOverdue = $daysLeft < 0;
-                                @endphp
-                                <div class="mb-2">
-                                    <small class="text-muted">
-                                        <i class="bi bi-calendar-event me-1"></i>
-                                        {{ $tugas->tanggal_selesai->format('d M Y') }}
-                                    </small>
-                                    @if ($isOverdue && $tugas->status !== 'selesai')
-                                        <span class="badge bg-danger ms-2">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>Terlambat
-                                        </span>
-                                    @elseif($isUrgent && $tugas->status !== 'selesai')
-                                        <span class="badge bg-warning ms-2">
-                                            <i class="bi bi-hourglass me-1"></i>{{ $daysLeft }}h lagi
-                                        </span>
-                                    @endif
-                                </div>
-
-                                <!-- Pemberi Tugas -->
-                                @if ($tugas->pemberiTugas)
-                                    <p class="small text-muted mb-3">
-                                        <i class="bi bi-person me-1"></i>
-                                        {{ $tugas->pemberiTugas->nama }}
-                                    </p>
-                                @endif
-
-                                <!-- Quick Actions -->
-                                <div class="d-flex gap-1 position-relative" style="z-index: 1;">
-                                    @if ($tugas->status === 'pending')
-                                        <button class="btn btn-sm btn-success flex-fill"
-                                            onclick="event.preventDefault(); terimaTugas('{{ $tugas->id }}')">
-                                            <i class="bi bi-check2 me-1"></i>Terima
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger"
-                                            onclick="event.preventDefault(); tolakTugas('{{ $tugas->id }}')">
-                                            <i class="bi bi-x"></i>
-                                        </button>
-                                    @elseif(in_array($tugas->status, ['dikerjakan', 'revisi']))
-                                        <button class="btn btn-sm btn-primary flex-fill"
-                                            onclick="event.preventDefault(); window.location.href='{{ route('penugasan.tugas-harian.show', $tugas->id) }}'">
-                                            <i class="bi bi-upload me-1"></i>Upload Bukti
-                                        </button>
-                                    @elseif($tugas->status === 'validasi')
-                                        <button class="btn btn-sm btn-info flex-fill" disabled>
-                                            <i class="bi bi-hourglass-split me-1"></i>Menunggu Validasi
-                                        </button>
-                                    @elseif($tugas->status === 'selesai')
-                                        @if ($tugas->nilai_akhir)
-                                            <button class="btn btn-sm btn-success flex-fill" disabled>
-                                                <i class="bi bi-star-fill me-1"></i>Nilai: {{ $tugas->nilai_akhir }}
-                                            </button>
-                                        @else
-                                            <button class="btn btn-sm btn-success flex-fill" disabled>
-                                                <i class="bi bi-check-all me-1"></i>Selesai
-                                            </button>
-                                        @endif
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
+                                    <tr>
+                                        <td>{{ $tugasHarian->firstItem() + $index }}</td>
+                                        <td>
+                                            <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
+                                                class="text-decoration-none fw-semibold text-dark">
+                                                {{ $tugas->nama_tugas }}
+                                            </a>
+                                            @if ($tugas->is_mandiri)
+                                                <span class="badge bg-info badge-sm ms-1">
+                                                    <i class="bi bi-person-check"></i>
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($tugas->tugasPokok)
+                                                <small class="text-muted">
+                                                    <i class="bi bi-folder me-1"></i>
+                                                    {{ Str::limit($tugas->tugasPokok->nama_tugas, 30) }}
+                                                </small>
+                                            @else
+                                                <small class="text-muted">-</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($tugas->pemberiTugas)
+                                                <small>{{ Str::limit($tugas->pemberiTugas->nama, 20) }}</small>
+                                            @else
+                                                <small class="text-muted">-</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <small>{{ $tugas->tanggal_selesai->format('d M Y') }}</small>
+                                            @if ($isOverdue && $tugas->status !== 'selesai')
+                                                <br><span class="badge bg-danger badge-sm">
+                                                    <i class="bi bi-exclamation-triangle"></i> Terlambat
+                                                </span>
+                                            @elseif($isUrgent && $tugas->status !== 'selesai')
+                                                <br><span class="badge bg-warning badge-sm">
+                                                    {{ $daysLeft }}h lagi
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <small class="fw-semibold">{{ $tugas->target_value }}</small>
+                                            <small class="text-muted">{{ $tugas->satuan }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ $config['class'] }}">
+                                                <i
+                                                    class="bi bi-{{ $config['icon'] }} me-1"></i>{{ ucfirst($tugas->status) }}
+                                            </span>
+                                            @if ($tugas->status === 'selesai' && $tugas->nilai_akhir)
+                                                <br><small class="text-warning">
+                                                    <i class="bi bi-star-fill"></i> {{ $tugas->nilai_akhir }}
+                                                </small>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
+                                                    class="btn btn-outline-primary" title="Detail">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                @if ($tugas->status === 'pending')
+                                                    <button class="btn btn-outline-success"
+                                                        onclick="terimaTugas('{{ $tugas->id }}')" title="Terima">
+                                                        <i class="bi bi-check2"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger"
+                                                        onclick="tolakTugas('{{ $tugas->id }}')" title="Tolak">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                @elseif(in_array($tugas->status, ['dikerjakan', 'revisi']))
+                                                    <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
+                                                        class="btn btn-outline-primary" title="Upload Bukti">
+                                                        <i class="bi bi-upload"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
-                @endforeach
-            </div>
 
-            <!-- Pagination -->
-            <div class="d-flex justify-content-center mt-4">
-                {{ $tugasHarian->links() }}
+                    <!-- Pagination -->
+                    <div class="d-flex justify-content-center mt-3">
+                        {{ $tugasHarian->links() }}
+                    </div>
+                @endif
             </div>
-        @endif
+        </div>
     </section>
 
     <!-- Modal Tolak Tugas -->
@@ -284,15 +289,6 @@
 
 @push('styles')
     <style>
-        .hover-shadow {
-            transition: all 0.3s ease;
-        }
-
-        .hover-shadow:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-        }
-
         .nav-tabs .nav-link {
             color: #666;
         }
@@ -301,8 +297,22 @@
             font-weight: 600;
         }
 
-        .stretched-link::after {
-            z-index: 0;
+        .badge-sm {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        .btn-group-sm>.btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
         }
     </style>
 @endpush

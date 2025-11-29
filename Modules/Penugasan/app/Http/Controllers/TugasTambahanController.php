@@ -98,7 +98,75 @@ class TugasTambahanController extends Controller
 
         $tugasTambahan = $query->paginate($request->get('per_page', 20));
 
-        return view('penugasan::tugas-tambahan.index', compact('tugasTambahan'));
+        // Get filter options
+        $pegawaiList = \App\Models\MasterPegawai::where('status_aktif', 'Aktif')
+            ->orderBy('nama')
+            ->get();
+
+        // Calculate statistics
+        $statsQuery = TugasTambahan::query();
+
+        // Apply same role-based filter for stats
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            // All tugas
+        } elseif ($kodeJabatan === 'KABID') {
+            $statsQuery->whereHas('pegawai', function ($q) use ($user) {
+                $q->where('bidang_id', $user->bidang_id);
+            });
+        } elseif ($kodeJabatan === 'KASUBAG') {
+            $statsQuery->where(function ($q) use ($user) {
+                $q->where('pemberi_tugas_id', $user->id)
+                    ->orWhereHas('pegawai', function ($subQ) use ($user) {
+                        $subQ->where('atasan_langsung_id', $user->id);
+                    });
+            });
+        }
+
+        $stats = [
+            'total' => (clone $statsQuery)->count(),
+            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
+            'dikerjakan' => (clone $statsQuery)->where('status', 'dikerjakan')->count(),
+            'revisi' => (clone $statsQuery)->where('status', 'revisi')->count(),
+            'validasi' => (clone $statsQuery)->where('status', 'validasi')->count(),
+            'selesai' => (clone $statsQuery)->where('status', 'selesai')->count(),
+            'lintas_bidang' => 0, // Feature not implemented yet
+            'terlambat' => (clone $statsQuery)->where('tanggal_selesai', '<', now())
+                ->whereNotIn('status', ['selesai'])->count(),
+            'mendesak' => (clone $statsQuery)->whereBetween('tanggal_selesai', [now(), now()->addDays(3)])
+                ->whereNotIn('status', ['selesai'])->count(),
+        ];
+
+        return view('penugasan::tugas-tambahan.index', compact('tugasTambahan', 'pegawaiList', 'stats'));
+    }
+
+    /**
+     * Show form for creating new tugas tambahan
+     */
+    public function create(Request $request)
+    {
+        $user = $request->user();
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // Only atasan can create tugas tambahan
+        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG'])) {
+            abort(403, 'Tidak memiliki akses untuk membuat tugas tambahan');
+        }
+
+        // Get pegawai list based on role
+        $pegawaiQuery = \App\Models\MasterPegawai::where('status_aktif', 'Aktif')
+            ->where('id', '!=', $user->id); // Exclude self
+
+        if ($kodeJabatan === 'KABID') {
+            // Only pegawai in same bidang
+            $pegawaiQuery->where('bidang_id', $user->bidang_id);
+        } elseif ($kodeJabatan === 'KASUBAG') {
+            // Only direct subordinates
+            $pegawaiQuery->where('atasan_langsung_id', $user->id);
+        }
+
+        $pegawaiList = $pegawaiQuery->with(['jabatan', 'bidang'])->orderBy('nama')->get();
+
+        return view('penugasan::tugas-tambahan.create', compact('pegawaiList'));
     }
 
     /**
@@ -166,19 +234,36 @@ class TugasTambahanController extends Controller
                 'deskripsi' => 'nullable|string',
                 'tanggal_mulai' => 'required|date',
                 'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-                'target_value' => 'required|numeric|min:0.01',
-                'satuan' => 'required|string|max:50',
-                'nilai' => 'nullable|numeric|min:0',
-                'is_lintas_bidang' => 'nullable|boolean',
+                'alasan_penugasan' => 'nullable|string',
+                'target_penilaian' => 'nullable|numeric|min:0|max:100',
             ]);
 
             $user = $request->user();
-
-            // Cek apakah user adalah atasan dari pegawai yang dipilih
             $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
-            if ($pegawai->atasan_langsung_id !== $user->id) {
+            $kodeJabatan = $user->jabatan?->kode;
+
+            // Cek hak akses berdasarkan role
+            $hasAccess = false;
+
+            if (in_array($kodeJabatan, ['KABAN', 'SEKBAN'])) {
+                // KABAN/SEKBAN bisa memberi tugas ke semua pegawai (except self)
+                $hasAccess = ($pegawai->id !== $user->id);
+            } elseif ($kodeJabatan === 'KABID') {
+                // KABID bisa memberi tugas ke pegawai di bidang yang sama atau GATEK
+                $hasAccess = ($pegawai->bidang_id === $user->bidang_id) ||
+                    ($pegawai->jabatan?->kode === 'GATEK');
+            } elseif ($kodeJabatan === 'KASUBAG') {
+                // KASUBAG bisa memberi tugas ke bawahan langsung atau GATEK
+                $hasAccess = ($pegawai->atasan_langsung_id === $user->id) ||
+                    ($pegawai->jabatan?->kode === 'GATEK');
+            } else {
+                // Role lain hanya bisa memberi tugas ke bawahan langsung
+                $hasAccess = ($pegawai->atasan_langsung_id === $user->id);
+            }
+
+            if (!$hasAccess) {
                 return redirect()->back()
-                    ->with('error', 'Anda hanya dapat memberikan tugas kepada bawahan langsung Anda')
+                    ->with('error', 'Anda tidak memiliki hak akses untuk memberikan tugas kepada pegawai ini')
                     ->withInput();
             }
 
@@ -190,12 +275,9 @@ class TugasTambahanController extends Controller
                 'deskripsi' => $validated['deskripsi'] ?? null,
                 'tanggal_mulai' => $validated['tanggal_mulai'],
                 'tanggal_selesai' => $validated['tanggal_selesai'],
-                'target_value' => $validated['target_value'],
-                'satuan' => $validated['satuan'],
-                'nilai' => $validated['nilai'] ?? 0,
-                'is_lintas_bidang' => $request->has('is_lintas_bidang') ? 1 : 0,
+                'alasan_penugasan' => $validated['alasan_penugasan'] ?? null,
+                'target_penilaian' => $validated['target_penilaian'] ?? null,
                 'status' => 'pending',
-                'actual_value' => 0,
             ]);
 
             return redirect()->route('penugasan.tim.form-berikan-tugas')

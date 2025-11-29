@@ -55,9 +55,10 @@
                                     </button>
                                 </div>
                             @elseif(in_array($tugasHarian->status, ['dikerjakan', 'revisi']))
-                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadBuktiModal">
+                                <a href="{{ route('penugasan.tugas-harian.form-upload-bukti', $tugasHarian->id) }}"
+                                    class="btn btn-primary">
                                     <i class="bi bi-upload me-2"></i>Upload Bukti
-                                </button>
+                                </a>
                             @endif
                         </div>
                     </div>
@@ -292,10 +293,10 @@
                                     <i class="bi bi-x me-2"></i>Tolak Tugas
                                 </button>
                             @elseif(in_array($tugasHarian->status, ['dikerjakan', 'revisi']))
-                                <button class="btn btn-primary" data-bs-toggle="modal"
-                                    data-bs-target="#uploadBuktiModal">
+                                <a href="{{ route('penugasan.tugas-harian.form-upload-bukti', $tugasHarian->id) }}"
+                                    class="btn btn-primary">
                                     <i class="bi bi-upload me-2"></i>Upload Bukti
-                                </button>
+                                </a>
                                 <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#progressModal">
                                     <i class="bi bi-graph-up me-2"></i>Update Progress
                                 </button>
@@ -327,40 +328,6 @@
             </div>
         </div>
     </section>
-
-    <!-- Modal Upload Bukti -->
-    <div class="modal fade" id="uploadBuktiModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Upload Bukti Pengerjaan</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="uploadForm" enctype="multipart/form-data">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">File Bukti <span class="text-danger">*</span></label>
-                            <input type="file" class="form-control" name="file" required multiple
-                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-                            <div class="form-text">Format: PDF, Word, Excel, Image. Maks 5MB per file.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Keterangan</label>
-                            <textarea class="form-control" name="keterangan" rows="3"
-                                placeholder="Tambahkan keterangan jika diperlukan..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-upload me-2"></i>Upload
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal Update Progress -->
     <div class="modal fade" id="progressModal" tabindex="-1">
@@ -511,31 +478,6 @@
                     }
                 });
         }
-
-        // Upload Form Handler
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            formData.append('tugas_id', '{{ $tugasHarian->id }}');
-            formData.append('tipe_tugas', 'tugas_harian');
-
-            fetch('/penugasan/tugas-harian/{{ $tugasHarian->id }}/upload-bukti', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Bukti berhasil diupload!');
-                        location.reload();
-                    } else {
-                        alert(data.message || 'Terjadi kesalahan');
-                    }
-                });
-        });
 
         // Progress Form Handler
         document.getElementById('progressForm').addEventListener('submit', function(e) {

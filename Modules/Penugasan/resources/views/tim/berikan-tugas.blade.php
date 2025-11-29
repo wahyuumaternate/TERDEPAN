@@ -50,6 +50,19 @@
                                         Tugas harian harus terkait dengan tugas pokok pegawai.
                                     </div>
 
+                                    @if ($errors->any())
+                                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                            <i class="bi bi-exclamation-triangle me-2"></i>
+                                            <strong>Error!</strong>
+                                            <ul class="mb-0 mt-2">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        </div>
+                                    @endif
+
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label">Pegawai <span class="text-danger">*</span></label>
@@ -57,11 +70,25 @@
                                                 <option value="">Pilih Pegawai</option>
                                                 @foreach ($bawahanLangsung as $pegawai)
                                                     <option value="{{ $pegawai->id }}">
-                                                        {{ $pegawai->nama }} -
-                                                        {{ $pegawai->jabatan->nama_jabatan ?? '' }}
+                                                        {{ $pegawai->nama }} - {{ $pegawai->jabatan->nama ?? '' }}
+                                                        @if ($pegawai->bidang)
+                                                            ({{ $pegawai->bidang->nama }})
+                                                        @endif
                                                     </option>
                                                 @endforeach
                                             </select>
+                                            <small class="text-muted">
+                                                @php
+                                                    $kodeJabatan = auth()->user()->jabatan?->kode;
+                                                @endphp
+                                                @if (in_array($kodeJabatan, ['KABAN', 'SEKBAN']))
+                                                    Anda dapat memberikan tugas harian ke semua pegawai
+                                                @elseif($kodeJabatan === 'KABID')
+                                                    Anda dapat memberikan tugas harian ke pegawai di bidang Anda
+                                                @else
+                                                    Hanya bawahan langsung Anda
+                                                @endif
+                                            </small>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Tugas Pokok <span class="text-danger">*</span></label>
@@ -104,8 +131,9 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" name="satuan"
-                                                placeholder="dokumen, kegiatan, dll" required>
+                                            <input type="text" class="form-control" name="satuan" id="satuanInput"
+                                                placeholder="dokumen, kegiatan, dll" required readonly>
+                                            <small class="text-muted">Satuan otomatis mengikuti tugas pokok</small>
                                         </div>
                                     </div>
 
@@ -136,29 +164,47 @@
                                         Tugas tambahan tidak terikat dengan tugas pokok dan bisa diberikan lintas bidang.
                                     </div>
 
+                                    @if ($errors->any())
+                                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                            <i class="bi bi-exclamation-triangle me-2"></i>
+                                            <strong>Error!</strong>
+                                            <ul class="mb-0 mt-2">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        </div>
+                                    @endif
+
                                     <div class="mb-3">
                                         <label class="form-label">Pegawai <span class="text-danger">*</span></label>
                                         <select class="form-select" name="pegawai_id" required>
                                             <option value="">Pilih Pegawai</option>
-                                            @foreach ($bawahanLangsung as $pegawai)
+                                            @foreach ($pegawaiTugasTambahan as $pegawai)
                                                 <option value="{{ $pegawai->id }}">
-                                                    {{ $pegawai->nama }} -
-                                                    {{ $pegawai->jabatan->nama_jabatan ?? '' }}
+                                                    {{ $pegawai->nama }} - {{ $pegawai->jabatan->nama ?? '' }}
+                                                    @if ($pegawai->bidang)
+                                                        ({{ $pegawai->bidang->nama }})
+                                                    @endif
                                                 </option>
                                             @endforeach
                                         </select>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" name="is_lintas_bidang"
-                                                id="lintasBidangCheck" value="1">
-                                            <label class="form-check-label" for="lintasBidangCheck">
-                                                Tugas Lintas Bidang
-                                            </label>
-                                        </div>
-                                        <small class="text-muted">Centang jika tugas ini melibatkan pegawai dari bidang
-                                            lain</small>
+                                        <small class="text-muted">
+                                            @php
+                                                $kodeJabatan = auth()->user()->jabatan?->kode;
+                                            @endphp
+                                            @if (in_array($kodeJabatan, ['KABAN', 'SEKBAN']))
+                                                Anda dapat memberikan tugas tambahan ke semua pegawai
+                                            @elseif($kodeJabatan === 'KABID')
+                                                Anda dapat memberikan tugas tambahan ke pegawai di bidang Anda dan semua
+                                                GATEK
+                                            @elseif($kodeJabatan === 'KASUBAG')
+                                                Anda dapat memberikan tugas tambahan ke bawahan langsung dan semua GATEK
+                                            @else
+                                                Anda dapat memberikan tugas tambahan ke bawahan langsung
+                                            @endif
+                                        </small>
                                     </div>
 
                                     <div class="mb-3">
@@ -184,25 +230,17 @@
                                         </div>
                                     </div>
 
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Target Value <span
-                                                    class="text-danger">*</span></label>
-                                            <input type="number" class="form-control" name="target_value"
-                                                step="0.01" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" name="satuan"
-                                                placeholder="dokumen, kegiatan, dll" required>
-                                        </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Alasan Penugasan</label>
+                                        <textarea class="form-control" name="alasan_penugasan" rows="2"
+                                            placeholder="Opsional - Jelaskan alasan mengapa pegawai ini yang ditugaskan"></textarea>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label">Nilai (Bobot)</label>
-                                        <input type="number" class="form-control" name="nilai" step="0.01"
-                                            placeholder="Opsional">
-                                        <small class="text-muted">Nilai/bobot untuk penilaian kinerja</small>
+                                        <label class="form-label">Target Penilaian</label>
+                                        <input type="number" class="form-control" name="target_penilaian"
+                                            step="0.01" placeholder="Opsional - Score target 0-100">
+                                        <small class="text-muted">Target skor penilaian untuk tugas tambahan ini</small>
                                     </div>
 
                                     <div class="d-flex justify-content-end gap-2">
@@ -294,6 +332,36 @@
 
 @push('scripts')
     <script>
+        // Show success message with SweetAlert
+        @if (session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: '{{ session('success') }}',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        @endif
+
+        // Show error message with SweetAlert
+        @if (session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: '{{ session('error') }}',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#d33'
+            });
+        @endif
+
+        // Auto-fill satuan when tugas pokok is selected
+        document.getElementById('tugasPokokSelect').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const satuan = selectedOption.dataset.satuan || '';
+            document.getElementById('satuanInput').value = satuan;
+        });
+
         // Load Tugas Pokok based on selected Pegawai
         document.getElementById('pegawaiHarian').addEventListener('change', function() {
             const pegawaiId = this.value;
@@ -313,8 +381,11 @@
                         if (data.length > 0) {
                             tugasPokokSelect.innerHTML = '<option value="">Pilih Tugas Pokok</option>';
                             data.forEach(tp => {
-                                tugasPokokSelect.innerHTML +=
-                                    `<option value="${tp.id}">${tp.nama_tugas} (${tp.progress_persen}%)</option>`;
+                                const option = document.createElement('option');
+                                option.value = tp.id;
+                                option.textContent = `${tp.nama_tugas} (${tp.progress_persen}%)`;
+                                option.dataset.satuan = tp.satuan || '';
+                                tugasPokokSelect.appendChild(option);
                             });
                         } else {
                             tugasPokokSelect.innerHTML =
