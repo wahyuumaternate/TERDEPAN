@@ -381,8 +381,11 @@
                     </div>
                 @endif
 
+                
                 <!-- QR CODE + FORM CONTAINER -->
                 <div class="flex flex-row gap-8 mb-6">
+                    <!-- ENVIRONMENT INDICATOR -->
+                    @if (app()->environment('local'))
                     <!-- QR CODE -->
                     <div class="qrcode-fixed">
                         <div
@@ -393,6 +396,7 @@
                             Scan kode QR dengan<br>Aplikasi TERDEPAN di HP Anda
                         </p>
                     </div>
+                    @endif
 
                     <!-- FORM -->
                     <div class="flex-grow">
@@ -404,7 +408,8 @@
                             <div>
                                 <label for="nomor_identitas-desktop"
                                     class="block text-sm font-medium text-gray-700 mb-1">
-                                    NIP / NIK
+                                    NIP / ID 
+                                    <span class="text-muted">(Gatek)</span>
                                 </label>
                                 <input id="nomor_identitas-desktop" type="text" name="nomor_identitas" required
                                     placeholder="Isikan NIP atau NIK Anda"
