@@ -203,14 +203,24 @@
     <div class="md:hidden">
         <div class="mobile-container">
             <div class="mobile-card bg-white p-6 sm:p-8">
+                <!-- LOGO -->
+                <div class="flex justify-center mb-6">
+                    <img src="{{ asset('assets/img/logo.webp') }}" alt="Logo TERDEPAN" class="h-20 w-auto">
+                </div>
+                <div class="mb-5 mt-3 text-center">
+                    <h1 class="text-3xl font-bold">TERDEPAN</h1>
+                    <p class="text-lg opacity-90">Terminal Data dan e-Kinerja Perencana</p>
+                </div>
+
                 <!-- HEADER -->
                 <div class="text-center mb-6">
-                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Masuk TERDEPAN</h1>
+                    {{-- <h1 class="text-2xl font-bold text-gray-900 mb-2">Masuk TERDEPAN</h1> --}}
+                    <p class="text-sm text-gray-600">Masukkan kredensial Anda untuk masuk ke sistem</p>
                     {{-- <p class="text-gray-500 text-sm">Belum punya akun? <a href="{{ route('register') }}"
                             class="text-primary-600 font-medium">Registrasi</a></p> --}}
                 </div>
 
-                <!-- QR CODE -->
+                {{-- <!-- QR CODE -->
                 <div class="flex justify-center mb-6">
                     <div
                         class="qr-container bg-white p-3 rounded-xl shadow-sm border w-52 h-52 flex items-center justify-center">
@@ -220,7 +230,7 @@
 
                 <p class="text-center text-gray-500 text-sm mb-6">
                     Scan kode QR dengan<br>Aplikasi TERDEPAN di HP Anda
-                </p>
+                </p> --}}
 
                 <!-- ALERTS -->
                 @if (session('status'))
@@ -336,8 +346,7 @@
         <div class="w-2/5 desktop-left flex items-center justify-center overflow-hidden">
             <div class="content-wrapper text-center text-white px-8 py-12 max-w-lg">
                 <div class="flex justify-center items-center mb-10">
-                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Illustration"
-                        class="desktop-illustration">
+                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Illustration" class="desktop-illustration">
                 </div>
                 <div class="mt-5">
                     <h1 class="text-4xl font-bold mb-2">TERDEPAN</h1>
@@ -381,13 +390,13 @@
                     </div>
                 @endif
 
-                
+
                 <!-- QR CODE + FORM CONTAINER -->
                 <div class="flex flex-row gap-8 mb-6">
                     <!-- ENVIRONMENT INDICATOR -->
                     @if (app()->environment('local'))
-                    <!-- QR CODE -->
-                    <div class="qrcode-fixed">
+                        <!-- QR CODE -->
+                        {{-- <div class="qrcode-fixed">
                         <div
                             class="bg-white p-3 rounded-xl shadow-sm border w-full h-full flex items-center justify-center">
                             <img src="{{ asset('img/qrcode.png') }}" alt="QR Code" class="w-full h-auto">
@@ -395,7 +404,7 @@
                         <p class="text-center text-gray-500 text-sm mb-6">
                             Scan kode QR dengan<br>Aplikasi TERDEPAN di HP Anda
                         </p>
-                    </div>
+                    </div> --}}
                     @endif
 
                     <!-- FORM -->
@@ -408,7 +417,7 @@
                             <div>
                                 <label for="nomor_identitas-desktop"
                                     class="block text-sm font-medium text-gray-700 mb-1">
-                                    NIP / ID 
+                                    NIP / ID
                                     <span class="text-muted">(Gatek)</span>
                                 </label>
                                 <input id="nomor_identitas-desktop" type="text" name="nomor_identitas" required

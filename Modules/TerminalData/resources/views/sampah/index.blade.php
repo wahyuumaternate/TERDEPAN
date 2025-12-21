@@ -33,7 +33,8 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body">
                         <!-- Header with actions -->
-                        <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div
+                            class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
                             <div>
                                 <h5 class="card-title mb-0">
                                     <i class="bi bi-folder-x me-2 text-danger"></i>Item yang Dihapus
@@ -42,21 +43,23 @@
                                     Kelola folder dan file yang telah dihapus
                                 </p>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-outline-danger" id="btnEmptyTrash">
-                                    <i class="bi bi-trash3 me-2"></i>Kosongkan Sampah
+                            <div class="d-flex gap-2 w-100 w-md-auto">
+                                <button class="btn btn-outline-danger flex-fill flex-md-grow-0" id="btnEmptyTrash">
+                                    <i class="bi bi-trash3 me-1 me-md-2"></i><span class="d-none d-sm-inline">Kosongkan
+                                        Sampah</span><span class="d-inline d-sm-none">Kosongkan</span>
                                 </button>
                             </div>
                         </div>
 
                         <!-- Info Alert -->
                         @if ($trashedFolders->count() + $trashedFiles->count() > 0)
-                            <div class="alert alert-info d-flex align-items-center" role="alert">
-                                <i class="bi bi-info-circle me-2"></i>
-                                <div>
+                            <div class="alert alert-info d-flex align-items-start" role="alert">
+                                <i class="bi bi-info-circle me-2 mt-1 flex-shrink-0"></i>
+                                <div class="small">
                                     <strong>{{ $trashedFolders->count() + $trashedFiles->count() }}</strong> item dalam
                                     sampah.
-                                    Item akan otomatis terhapus permanen setelah 30 hari.
+                                    <span class="d-none d-sm-inline">Item akan otomatis terhapus permanen setelah 30
+                                        hari.</span>
                                 </div>
                             </div>
                         @endif
@@ -66,14 +69,14 @@
                             <table class="table table-hover align-middle" id="trashTable">
                                 <thead class="table-light">
                                     <tr>
-                                        <th width="40">
+                                        <th width="40" class="d-none d-md-table-cell">
                                             <input type="checkbox" class="form-check-input" id="selectAll">
                                         </th>
                                         <th>Nama</th>
-                                        <th width="150">Pemilik</th>
-                                        <th width="150">Tanggal Dihapus</th>
-                                        <th width="100">Ukuran</th>
-                                        <th width="250">Lokasi Awal</th>
+                                        <th width="150" class="d-none d-lg-table-cell">Pemilik</th>
+                                        <th width="150" class="d-none d-md-table-cell">Tanggal Dihapus</th>
+                                        <th width="100" class="d-none d-lg-table-cell">Ukuran</th>
+                                        <th width="250" class="d-none d-xl-table-cell">Lokasi Awal</th>
                                         <th width="120" class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
@@ -124,31 +127,36 @@
                                             }
                                         @endphp
                                         <tr data-item-id="{{ $item['id'] }}" data-item-type="{{ $itemType }}">
-                                            <td>
+                                            <td class="d-none d-md-table-cell">
                                                 <input type="checkbox" class="form-check-input item-checkbox"
                                                     value="{{ $item['id'] }}" data-type="{{ $itemType }}">
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <i class="bi {{ $icon }} fs-4 me-2"></i>
-                                                    <div>
+                                                    <i class="bi {{ $icon }} fs-4 me-2 flex-shrink-0"></i>
+                                                    <div class="text-truncate" style="max-width: 200px;">
                                                         <div class="fw-medium">{{ $itemName }}</div>
                                                         @if (!$isFolder && isset($item['original_name']) && $item['original_name'] !== $itemName)
-                                                            <small class="text-muted">{{ $item['original_name'] }}</small>
+                                                            <small
+                                                                class="text-muted d-none d-sm-block">{{ $item['original_name'] }}</small>
                                                         @endif
+                                                        <!-- Mobile info -->
+                                                        <div class="d-md-none">
+                                                            <small class="text-muted d-block">{{ $itemDeletedAt }}</small>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td class="d-none d-lg-table-cell">
                                                 <span class="text-muted">{{ $itemOwner }}</span>
                                             </td>
-                                            <td>
+                                            <td class="d-none d-md-table-cell">
                                                 <span class="text-muted">{{ $itemDeletedAt }}</span>
                                             </td>
-                                            <td>
+                                            <td class="d-none d-lg-table-cell">
                                                 <span class="badge bg-light text-dark">{{ $itemSize }}</span>
                                             </td>
-                                            <td>
+                                            <td class="d-none d-xl-table-cell">
                                                 <div class="d-flex align-items-center text-muted">
                                                     <i class="bi bi-folder me-1"></i>
                                                     <span>{{ $originalLocation }}</span>
@@ -219,6 +227,39 @@
             font-size: 1.1rem;
             font-weight: 600;
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 1rem !important;
+            }
+
+            .card-title {
+                font-size: 1rem;
+            }
+
+            .table {
+                font-size: 0.875rem;
+            }
+
+            .btn-group .btn {
+                padding: 0.35rem 0.6rem;
+            }
+
+            .bi.fs-4 {
+                font-size: 1.25rem !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .pagetitle h1 {
+                font-size: 1.5rem;
+            }
+
+            .alert {
+                padding: 0.75rem;
+            }
+        }
     </style>
 @endpush
 
@@ -237,7 +278,7 @@
             // Initialize DataTable only if there are data rows (not empty state)
             const hasEmptyState = $('#trashTable tbody tr.empty-state-row').length > 0;
             const hasDataRows = $('#trashTable tbody tr:not(.empty-state-row)').length > 0;
-            
+
             if (hasDataRows && !hasEmptyState) {
                 dataTable = $('#trashTable').DataTable({
                     responsive: true,

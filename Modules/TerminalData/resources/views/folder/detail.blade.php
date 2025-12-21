@@ -19,7 +19,7 @@
 @section('main')
     <div class="pagetitle mb-3">
         <nav aria-label="breadcrumb">
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center flex-wrap">
                 <!-- Breadcrumb Navigation -->
                 <div class="d-flex align-items-center flex-wrap" style="gap: 8px; font-size: 1.1rem;">
                     @if (isset($folder))
@@ -141,39 +141,45 @@
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
                         <!-- Header -->
-                        <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div
+                            class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-4 gap-3">
                             <!-- View Toggle -->
                             <div>
-                                <div class="btn-group shadow-sm" role="group">
+                                <div class="btn-group shadow-sm w-100" role="group">
                                     <input type="radio" class="btn-check" name="viewMode" id="viewGrid" checked>
-                                    <label class="btn btn-outline-primary px-4" for="viewGrid">
-                                        <i class="bi bi-grid-3x3-gap me-2"></i>Grid View
+                                    <label class="btn btn-outline-primary px-3 px-md-4" for="viewGrid">
+                                        <i class="bi bi-grid-3x3-gap me-1 me-md-2"></i><span
+                                            class="d-none d-sm-inline">Grid</span>
                                     </label>
                                     <input type="radio" class="btn-check" name="viewMode" id="viewTable">
-                                    <label class="btn btn-outline-primary px-4" for="viewTable">
-                                        <i class="bi bi-table me-2"></i>Table View
+                                    <label class="btn btn-outline-primary px-3 px-md-4" for="viewTable">
+                                        <i class="bi bi-table me-1 me-md-2"></i><span
+                                            class="d-none d-sm-inline">Table</span>
                                     </label>
                                 </div>
                             </div>
-                            <div>
+                            <div class="d-flex flex-column flex-sm-row gap-2">
                                 @can('create', \Modules\TerminalData\Models\TdFolder::class)
-                                    <button type="button" class="btn btn-success shadow-sm me-2" data-bs-toggle="modal"
+                                    <button type="button" class="btn btn-success shadow-sm" data-bs-toggle="modal"
                                         data-bs-target="#modalTambahFolder">
-                                        <i class="bi bi-folder-plus me-2"></i>Folder Baru
+                                        <i class="bi bi-folder-plus me-1 me-md-2"></i><span class="d-none d-sm-inline">Folder
+                                            Baru</span><span class="d-inline d-sm-none">Folder</span>
                                     </button>
                                 @endcan
 
                                 @can('upload', [$folder])
-                                    <form id="formUploadDokumen" style="display: inline-block;">
+                                    <form id="formUploadDokumen" style="display: inline-block; width: 100%;">
                                         @csrf
                                         <input type="hidden" name="folder_id" value="{{ $folder->id }}">
                                         <input type="file" id="fileUpload" name="file" style="display: none;"
                                             accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.bmp,.svg,.webp"
                                             multiple>
-                                        <button type="button" class="btn btn-primary shadow-sm" id="btnTriggerUpload"
+                                        <button type="button" class="btn btn-primary shadow-sm w-100" id="btnTriggerUpload"
                                             data-bs-toggle="tooltip" data-bs-placement="top"
                                             title="Upload dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll). Maksimal 50MB">
-                                            <i class="bi bi-cloud-upload me-2"></i>Upload Dokumen
+                                            <i class="bi bi-cloud-upload me-1 me-md-2"></i><span
+                                                class="d-none d-sm-inline">Upload Dokumen</span><span
+                                                class="d-inline d-sm-none">Upload</span>
                                         </button>
                                     </form>
                                 @endcan
@@ -689,6 +695,38 @@
             <!-- Upload items will be added here dynamically -->
         </div>
     </div>
+
+    <!-- Modal PDF Preview -->
+    <div class="modal fade" id="modalPdfPreview" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title" id="pdfPreviewTitle">
+                        <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
+                        <span id="pdfFileName">Preview PDF</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 80vh;">
+                    <div id="pdfPreviewLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Memuat PDF...</p>
+                    </div>
+                    <iframe id="pdfPreviewFrame" style="width: 100%; height: 100%; border: none; display: none;"
+                        frameborder="0">
+                    </iframe>
+                </div>
+                <div class="modal-footer border-0">
+                    <a id="btnDownloadPdf" href="#" class="btn btn-primary" download>
+                        <i class="bi bi-download me-1"></i> Download
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -701,6 +739,31 @@
 
         .pagetitle .d-flex {
             align-items: center;
+            gap: 4px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 576px) {
+            .pagetitle {
+                font-size: 0.9rem;
+            }
+
+            .card-body {
+                padding: 1rem !important;
+            }
+
+            .file-card-header .file-card-title {
+                font-size: 12px;
+            }
+
+            .file-extension {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+
+            .file-icon-preview i {
+                font-size: 48px;
+            }
         }
 
         .pagetitle a {
@@ -2097,8 +2160,8 @@
                                     <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                 </a></li>
                                 ${folder.permissions?.rename ? `<li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
-                                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                            </a></li>` : ''}
+                                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                    </a></li>` : ''}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${folder.id}'); return false;">
                                     <i class="bi bi-link-45deg me-2"></i>Salin Link
@@ -2107,10 +2170,10 @@
                                     <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                 </a></li>
                                 ${folder.permissions?.delete ? `
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
-                                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                            </a></li>` : ''}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
+                                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                    </a></li>` : ''}
                             </ul>
                         </td>
                     </tr>
@@ -2183,20 +2246,20 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 ${doc.permissions?.download !== false ? `<li><a class="dropdown-item" href="{{ url('terminal-data/api/files') }}/${doc.id}/download" onclick="event.stopPropagation()">
-                                                <i class="bi bi-download me-2"></i>Unduh
-                                            </a></li>` : ''}
+                                                        <i class="bi bi-download me-2"></i>Unduh
+                                                    </a></li>` : ''}
                                 ${doc.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${doc.id}'); return false;">
-                                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                            </a></li>` : ''}
+                                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                    </a></li>` : ''}
                                 ${(doc.permissions?.download !== false || doc.permissions?.update) ? `<li><hr class="dropdown-divider"></li>` : ''}
                                 <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${doc.id}'); return false;">
                                     <i class="bi bi-info-circle me-2"></i>Info File
                                 </a></li>
                                 ${doc.permissions?.delete ? `
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
-                                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                            </a></li>` : ''}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
+                                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                    </a></li>` : ''}
                             </ul>
                         </td>
                     </tr>
@@ -2719,9 +2782,9 @@
                                         <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                     </a></li>
                                     ${folder.permissions?.rename ? `
-                                                <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
-                                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                </a></li>` : ''}
+                                                        <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
+                                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                        </a></li>` : ''}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${folder.id}'); return false;">
                                         <i class="bi bi-link-45deg me-2"></i>Salin Link
@@ -2730,10 +2793,10 @@
                                         <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                     </a></li>
                                     ${folder.permissions?.delete ? `
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
-                                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                </a></li>` : ''}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
+                                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                        </a></li>` : ''}
                                 </ul>
                             </div>
                         </div>
@@ -2807,10 +2870,11 @@
 
                 const serveUrl = `{{ url('terminal-data/api/files') }}/${file.id}/serve`;
                 const downloadUrl = `{{ url('terminal-data/api/files') }}/${file.id}/download`;
+                const isPdf = extension.toLowerCase() === 'pdf';
 
                 html += `
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
-                    <div class="file-card" onclick="showFileDetail('${file.id}')">
+                    <div class="file-card" onclick="${isPdf ? `showPdfPreview('${file.id}', '${fileName.replace(/'/g, "\\'")}')"` : `showFileDetail('${file.id}')"` }">
                         <div class="file-card-header">
                             <div class="file-card-title" title="${fileName}">
                                 ${fileName}
@@ -2821,37 +2885,37 @@
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow">
                                     ${file.permissions?.download !== false ? `<li><a class="dropdown-item" href="${downloadUrl}" onclick="event.stopPropagation()">
-                                                    <i class="bi bi-download me-2"></i>Unduh
-                                                </a></li>` : ''}
+                                                            <i class="bi bi-download me-2"></i>Unduh
+                                                        </a></li>` : ''}
                                     ${file.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
-                                                    <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                </a></li>` : ''}
+                                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                        </a></li>` : ''}
                                     ${(file.permissions?.download !== false || file.permissions?.update) ? `<li><hr class="dropdown-divider"></li>` : ''}
                                     <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${file.id}'); return false;">
                                         <i class="bi bi-info-circle me-2"></i>Info File
                                     </a></li>
                                     ${file.permissions?.delete ? `
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
-                                                    <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                </a></li>` : ''}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
+                                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                        </a></li>` : ''}
                                 </ul>
                             </div>
                         </div>
                         <div class="file-card-preview">
                             ${isImage ? `
-                                                <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
-                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                <div class="file-icon-preview" data-type="image" style="display: none;">
-                                                    <i class="bi bi-image"></i>
-                                                    <div class="file-extension">${extension.toUpperCase()}</div>
-                                                </div>
-                                            ` : `
-                                                <div class="file-icon-preview" data-type="${dataType}">
-                                                    <i class="bi ${fileIcon}"></i>
-                                                    <div class="file-extension">${extension.toUpperCase()}</div>
-                                                </div>
-                                            `}
+                                                        <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
+                                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                        <div class="file-icon-preview" data-type="image" style="display: none;">
+                                                            <i class="bi bi-image"></i>
+                                                            <div class="file-extension">${extension.toUpperCase()}</div>
+                                                        </div>
+                                                    ` : `
+                                                        <div class="file-icon-preview" data-type="${dataType}">
+                                                            <i class="bi ${fileIcon}"></i>
+                                                            <div class="file-extension">${extension.toUpperCase()}</div>
+                                                        </div>
+                                                    `}
                         </div>
                     </div>
                 </div>
@@ -3125,5 +3189,49 @@
                 }
             });
         }
+
+        /**
+         * Show PDF preview in modal
+         * @param {string} id - File ID
+         * @param {string} fileName - File name
+         */
+        function showPdfPreview(id, fileName) {
+            // Set file name in modal title
+            $('#pdfFileName').text(fileName);
+
+            // Show loading state
+            $('#pdfPreviewLoading').show();
+            $('#pdfPreviewFrame').hide();
+
+            // Show modal
+            $('#modalPdfPreview').modal('show');
+
+            // Get serve URL
+            const serveUrl = `{{ url('terminal-data/api/files') }}/${id}/serve`;
+            const downloadUrl = `{{ url('terminal-data/api/files') }}/${id}/download`;
+
+            // Set iframe source
+            $('#pdfPreviewFrame').attr('src', serveUrl);
+
+            // Set download button
+            $('#btnDownloadPdf').attr('href', downloadUrl);
+            $('#btnDownloadPdf').attr('download', fileName);
+
+            // Hide loading and show iframe after a short delay
+            setTimeout(() => {
+                $('#pdfPreviewLoading').hide();
+                $('#pdfPreviewFrame').show();
+            }, 800);
+        }
+
+        // Reset PDF preview when modal is closed
+        $('#modalPdfPreview').on('hidden.bs.modal', function() {
+            $('#pdfPreviewFrame').attr('src', '');
+            $('#pdfPreviewLoading').show();
+            $('#pdfPreviewFrame').hide();
+        });
+
+        // Make showPdfPreview available globally
+        window.showPdfPreview = showPdfPreview;
     </script>
 @endpush

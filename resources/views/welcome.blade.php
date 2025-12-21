@@ -157,10 +157,11 @@
                 <!-- HEADER -->
                 <div class="text-center mb-8">
                     <div class="mb-4">
-                        <img src="{{ asset('img/logo-white.png') }}" alt="Logo TERDEPAN" class="w-20 h-20 mx-auto mb-3">
+                        <img src="{{ asset('assets/img/putih.webp') }}" alt="Logo TERDEPAN"
+                            class="w-20 h-20 mx-auto mb-3">
                     </div>
                     <h1 class="text-3xl font-bold text-white mb-2">TERDEPAN</h1>
-                    <p class="text-white/90 text-sm">Pilih Aplikasi yang Ingin Anda Gunakan</p>
+                    <p class="text-white/90 text-sm">Pilih Dashboard yang akan digunakan</p>
                 </div>
 
                 <!-- MENU CARDS -->
@@ -168,31 +169,43 @@
                     <!-- Terminal Data -->
                     <a href="{{ route('terminaldata.index') }}" class="menu-card block">
                         <div class="menu-icon bg-blue-100">
-                            <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor"
+                            <svg class="w-12 h-12 text-blue-600" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2 text-center">Terminal Data</h3>
-                        <p class="text-gray-600 text-sm text-center">
-                            Manajemen dokumen dan file perencanaan pembangunan daerah
-                        </p>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-3 text-center">Terminal Data</h3>
+                        <div class="mt-4 flex justify-center">
+                            <span class="inline-flex items-center text-primary-600 font-medium">
+                                Buka Terminal Data
+                                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </span>
+                        </div>
                     </a>
 
                     <!-- E-Kinerja -->
                     <a href="{{ route('perjanjian-kinerja.index') }}" class="menu-card block">
                         <div class="menu-icon bg-green-100">
-                            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor"
+                            <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2 text-center">E-Kinerja Pegawai</h3>
-                        <p class="text-gray-600 text-sm text-center">
-                            Perjanjian kinerja dan monitoring capaian pegawai
-                        </p>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-3 text-center">E-Kinerja Perencana</h3>
+                        <div class="mt-4 flex justify-center">
+                            <span class="inline-flex items-center text-primary-600 font-medium">
+                                Buka E-Kinerja
+                                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </span>
+                        </div>
                     </a>
                 </div>
 
@@ -210,8 +223,7 @@
         <div class="w-2/5 desktop-left flex items-center justify-center overflow-hidden">
             <div class="content-wrapper text-center text-white px-8 py-12 max-w-lg">
                 <div class="flex justify-center items-center mb-10">
-                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Illustration"
-                        class="desktop-illustration">
+                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Illustration" class="desktop-illustration">
                 </div>
                 <div class="mt-5">
                     <h1 class="text-4xl font-bold mt-5">TERDEPAN</h1>
