@@ -2231,8 +2231,8 @@
                                     <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                 </a></li>
                                 ${folder.permissions?.rename ? `<li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
-                                                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                                    </a></li>` : ''}
+                                                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                                        </a></li>` : ''}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${folder.id}'); return false;">
                                     <i class="bi bi-link-45deg me-2"></i>Salin Link
@@ -2241,10 +2241,10 @@
                                     <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                 </a></li>
                                 ${folder.permissions?.delete ? `
-                                                                    <li><hr class="dropdown-divider"></li>
-                                                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
-                                                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                                    </a></li>` : ''}
+                                                                        <li><hr class="dropdown-divider"></li>
+                                                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteFolder('${folder.id}', '${folder.name}'); return false;">
+                                                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                                        </a></li>` : ''}
                             </ul>
                         </td>
                     </tr>
@@ -2317,20 +2317,20 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 ${doc.permissions?.download !== false ? `<li><a class="dropdown-item" href="{{ url('terminal-data/api/files') }}/${doc.id}/download" onclick="event.stopPropagation()">
-                                                                        <i class="bi bi-download me-2"></i>Unduh
-                                                                    </a></li>` : ''}
+                                                                            <i class="bi bi-download me-2"></i>Unduh
+                                                                        </a></li>` : ''}
                                 ${doc.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${doc.id}'); return false;">
-                                                                        <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                                    </a></li>` : ''}
+                                                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                                        </a></li>` : ''}
                                 ${(doc.permissions?.download !== false || doc.permissions?.update) ? `<li><hr class="dropdown-divider"></li>` : ''}
                                 <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${doc.id}'); return false;">
                                     <i class="bi bi-info-circle me-2"></i>Info File
                                 </a></li>
                                 ${doc.permissions?.delete ? `
-                                                                    <li><hr class="dropdown-divider"></li>
-                                                                    <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
-                                                                        <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                                    </a></li>` : ''}
+                                                                        <li><hr class="dropdown-divider"></li>
+                                                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${doc.id}', '${fileName}'); return false;">
+                                                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                                        </a></li>` : ''}
                             </ul>
                         </td>
                     </tr>
@@ -2853,9 +2853,9 @@
                                         <i class="bi bi-box-arrow-in-right me-2"></i>Buka
                                     </a></li>
                                     ${folder.permissions?.rename ? `
-                                                                        <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
-                                                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                                        </a></li>` : ''}
+                                                                            <li><a class="dropdown-item" href="#" onclick="renameFolder('${folder.id}', '${folder.name}'); return false;">
+                                                                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                                            </a></li>` : ''}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="#" onclick="copyFolderLink('${folder.id}'); return false;">
                                         <i class="bi bi-link-45deg me-2"></i>Salin Link
@@ -2864,10 +2864,10 @@
                                         <i class="bi bi-info-circle me-2"></i>Informasi Folder
                                     </a></li>
                                     ${folder.permissions?.delete ? `
-                                                                        <li><hr class="dropdown-divider"></li>
-                                                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
-                                                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                                        </a></li>` : ''}
+                                                                            <li><hr class="dropdown-divider"></li>
+                                                                            <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFolder('${folder.id}', '${folder.name}'); return false;">
+                                                                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                                            </a></li>` : ''}
                                 </ul>
                             </div>
                         </div>
@@ -2968,37 +2968,37 @@
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow">
                                     ${file.permissions?.download !== false ? `<li><a class="dropdown-item" href="${downloadUrl}" onclick="event.stopPropagation()">
-                                                                            <i class="bi bi-download me-2"></i>Unduh
-                                                                        </a></li>` : ''}
+                                                                                <i class="bi bi-download me-2"></i>Unduh
+                                                                            </a></li>` : ''}
                                     ${file.permissions?.update ? `<li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
-                                                                            <i class="bi bi-pencil-square me-2"></i>Ganti Nama
-                                                                        </a></li>` : ''}
+                                                                                <i class="bi bi-pencil-square me-2"></i>Ganti Nama
+                                                                            </a></li>` : ''}
                                     ${(file.permissions?.download !== false || file.permissions?.update) ? `<li><hr class="dropdown-divider"></li>` : ''}
                                     <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); showFileDetail('${file.id}'); return false;">
                                         <i class="bi bi-info-circle me-2"></i>Info File
                                     </a></li>
                                     ${file.permissions?.delete ? `
-                                                                        <li><hr class="dropdown-divider"></li>
-                                                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
-                                                                            <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
-                                                                        </a></li>` : ''}
+                                                                            <li><hr class="dropdown-divider"></li>
+                                                                            <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); deleteFile('${file.id}', '${fileName.replace(/'/g, "\\'")}'); return false;">
+                                                                                <i class="bi bi-trash me-2"></i>Pindahkan ke Sampah
+                                                                            </a></li>` : ''}
                                 </ul>
                             </div>
                         </div>
                         <div class="file-card-preview">
                             ${isImage ? `
-                                                                        <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
-                                                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                                        <div class="file-icon-preview" data-type="image" style="display: none;">
-                                                                            <i class="bi bi-image"></i>
-                                                                            <div class="file-extension">${extension.toUpperCase()}</div>
-                                                                        </div>
-                                                                    ` : `
-                                                                        <div class="file-icon-preview" data-type="${dataType}">
-                                                                            <i class="bi ${fileIcon}"></i>
-                                                                            <div class="file-extension">${extension.toUpperCase()}</div>
-                                                                        </div>
-                                                                    `}
+                                                                            <img src="${serveUrl}" alt="${fileName}" class="file-thumbnail-img" 
+                                                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                                            <div class="file-icon-preview" data-type="image" style="display: none;">
+                                                                                <i class="bi bi-image"></i>
+                                                                                <div class="file-extension">${extension.toUpperCase()}</div>
+                                                                            </div>
+                                                                        ` : `
+                                                                            <div class="file-icon-preview" data-type="${dataType}">
+                                                                                <i class="bi ${fileIcon}"></i>
+                                                                                <div class="file-extension">${extension.toUpperCase()}</div>
+                                                                            </div>
+                                                                        `}
                         </div>
                     </div>
                 </div>
@@ -3375,96 +3375,41 @@
         window.showImagePreview = showImagePreview;
 
         /**
-         * Show Office Document preview in modal (Word, Excel, PowerPoint)
-         * Using Microsoft Office Online Viewer or GroupDocs
+         * Download Office Document directly (Word, Excel, PowerPoint)
+         * Since preview requires publicly accessible URL, we'll download the file instead
          * @param {string} id - File ID
          * @param {string} fileName - File name
          * @param {string} extension - File extension
          */
         function showOfficePreview(id, fileName, extension) {
-            // Set file name in modal title
-            $('#officeFileName').text(fileName);
-
-            // Set appropriate icon based on file type
-            let iconClass = 'bi-file-earmark-text-fill text-primary';
-            if (['doc', 'docx'].includes(extension.toLowerCase())) {
-                iconClass = 'bi-file-earmark-word-fill text-primary';
-            } else if (['xls', 'xlsx'].includes(extension.toLowerCase())) {
-                iconClass = 'bi-file-earmark-excel-fill text-success';
-            } else if (['ppt', 'pptx'].includes(extension.toLowerCase())) {
-                iconClass = 'bi-file-earmark-slides-fill text-danger';
-            }
-            $('#officePreviewIcon').attr('class', `bi ${iconClass} me-2`);
-
-            // Show loading state
-            $('#officePreviewLoading').show();
-            $('#officePreviewFrame').hide();
-            $('#officePreviewError').hide();
-
-            // Show modal
-            $('#modalOfficePreview').modal('show');
-
-            // Get file URL
-            const serveUrl = `{{ url('terminal-data/api/files') }}/${id}/serve`;
+            // Get download URL
             const downloadUrl = `{{ url('terminal-data/api/files') }}/${id}/download`;
-            const publicUrl = `{{ url('terminal-data/files') }}/${id}/view`;
 
-            // Build full URL for external viewers
-            const fullUrl = window.location.origin + '/terminal-data/api/files/' + id + '/serve';
+            // Show notification
+            let fileType = 'Dokumen Office';
+            if (['doc', 'docx'].includes(extension.toLowerCase())) {
+                fileType = 'Dokumen Word';
+            } else if (['xls', 'xlsx'].includes(extension.toLowerCase())) {
+                fileType = 'Dokumen Excel';
+            } else if (['ppt', 'pptx'].includes(extension.toLowerCase())) {
+                fileType = 'Dokumen PowerPoint';
+            }
 
-            // Option 1: Microsoft Office Online Viewer (works for publicly accessible URLs)
-            const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullUrl)}`;
-
-            // Option 2: Google Docs Viewer (alternative)
-            // const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`;
-
-            // Set iframe source
-            const frame = $('#officePreviewFrame');
-            frame.attr('src', officeViewerUrl);
-
-            // Set download button
-            $('#btnDownloadOffice').attr('href', downloadUrl);
-            $('#btnDownloadOffice').attr('download', fileName);
-
-            // Handle iframe load
-            frame.off('load').on('load', function() {
-                // Check if iframe loaded successfully
-                try {
-                    const iframeDoc = this.contentDocument || this.contentWindow.document;
-                    if (iframeDoc.body && iframeDoc.body.innerHTML.length > 0) {
-                        $('#officePreviewLoading').hide();
-                        $('#officePreviewFrame').show();
-                    }
-                } catch (e) {
-                    // Cross-origin, assume it loaded if no error
-                    $('#officePreviewLoading').hide();
-                    $('#officePreviewFrame').show();
-                }
+            // Show toast notification
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: `Mengunduh ${fileType}`,
+                text: `File "${fileName}" akan segera diunduh`,
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
             });
 
-            // Hide loading after timeout (in case load event doesn't fire)
-            setTimeout(() => {
-                if ($('#officePreviewLoading').is(':visible')) {
-                    $('#officePreviewLoading').hide();
-                    $('#officePreviewFrame').show();
-                }
-            }, 3000);
-
-            // Handle errors
-            frame.off('error').on('error', function() {
-                $('#officePreviewLoading').hide();
-                $('#officePreviewFrame').hide();
-                $('#officePreviewError').show();
-            });
+            // Trigger download
+            window.location.href = downloadUrl;
         }
-
-        // Reset Office preview when modal is closed
-        $('#modalOfficePreview').on('hidden.bs.modal', function() {
-            $('#officePreviewFrame').attr('src', '');
-            $('#officePreviewLoading').show();
-            $('#officePreviewFrame').hide();
-            $('#officePreviewError').hide();
-        });
 
         // Make showOfficePreview available globally
         window.showOfficePreview = showOfficePreview;

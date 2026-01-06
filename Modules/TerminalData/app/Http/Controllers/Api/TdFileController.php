@@ -130,7 +130,8 @@ class TdFileController extends Controller
                 abort(404, 'File tidak ditemukan');
             }
 
-            return Storage::download($file->storage_path, $file->name);
+            // Use original_name for download to preserve extension and full name
+            return Storage::download($file->storage_path, $file->original_name);
         } catch (\Exception $e) {
             abort(500, 'Gagal mendownload file: ' . $e->getMessage());
         }
