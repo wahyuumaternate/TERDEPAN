@@ -760,6 +760,44 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Office Document Preview (Word, Excel, PowerPoint) -->
+    <div class="modal fade" id="modalOfficePreview" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title" id="officePreviewTitle">
+                        <i class="bi bi-file-earmark-text-fill text-primary me-2" id="officePreviewIcon"></i>
+                        <span id="officeFileName">Preview Dokumen</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 80vh;">
+                    <div id="officePreviewLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Memuat preview dokumen...</p>
+                        <small class="text-muted d-block mt-2">Menggunakan Microsoft Office Online Viewer</small>
+                    </div>
+                    <iframe id="officePreviewFrame" style="width: 100%; height: 100%; border: none; display: none;"
+                        frameborder="0">
+                    </iframe>
+                    <div id="officePreviewError" style="display: none;" class="text-center py-5">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 48px;"></i>
+                        <p class="mt-3 text-muted">Preview tidak tersedia untuk file ini</p>
+                        <small class="text-muted">Silakan download file untuk melihat isinya</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <a id="btnDownloadOffice" href="#" class="btn btn-primary" download>
+                        <i class="bi bi-download me-1"></i> Download
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -2904,6 +2942,7 @@
                 const serveUrl = `{{ url('terminal-data/api/files') }}/${file.id}/serve`;
                 const downloadUrl = `{{ url('terminal-data/api/files') }}/${file.id}/download`;
                 const isPdf = extension.toLowerCase() === 'pdf';
+                const isOfficeDoc = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension.toLowerCase());
 
                 // Determine click action based on file type
                 let onClickAction = `showFileDetail('${file.id}')`;
@@ -2911,6 +2950,8 @@
                     onClickAction = `showPdfPreview('${file.id}', '${fileName.replace(/'/g, "\\'")}')`;
                 } else if (isImage) {
                     onClickAction = `showImagePreview('${file.id}', '${fileName.replace(/'/g, "\\'")}')`;
+                } else if (isOfficeDoc) {
+                    onClickAction = `showOfficePreview('${file.id}', '${fileName.replace(/'/g, "\\'")}', '${extension}')`;
                 }
 
                 html += `
@@ -3331,5 +3372,100 @@
 
         // Make showImagePreview available globally
         window.showImagePreview = showImagePreview;
+
+        /**
+         * Show Office Document preview in modal (Word, Excel, PowerPoint)
+         * Using Microsoft Office Online Viewer or GroupDocs
+         * @param {string} id - File ID
+         * @param {string} fileName - File name
+         * @param {string} extension - File extension
+         */
+        function showOfficePreview(id, fileName, extension) {
+            // Set file name in modal title
+            $('#officeFileName').text(fileName);
+
+            // Set appropriate icon based on file type
+            let iconClass = 'bi-file-earmark-text-fill text-primary';
+            if (['doc', 'docx'].includes(extension.toLowerCase())) {
+                iconClass = 'bi-file-earmark-word-fill text-primary';
+            } else if (['xls', 'xlsx'].includes(extension.toLowerCase())) {
+                iconClass = 'bi-file-earmark-excel-fill text-success';
+            } else if (['ppt', 'pptx'].includes(extension.toLowerCase())) {
+                iconClass = 'bi-file-earmark-slides-fill text-danger';
+            }
+            $('#officePreviewIcon').attr('class', `bi ${iconClass} me-2`);
+
+            // Show loading state
+            $('#officePreviewLoading').show();
+            $('#officePreviewFrame').hide();
+            $('#officePreviewError').hide();
+
+            // Show modal
+            $('#modalOfficePreview').modal('show');
+
+            // Get file URL
+            const serveUrl = `{{ url('terminal-data/api/files') }}/${id}/serve`;
+            const downloadUrl = `{{ url('terminal-data/api/files') }}/${id}/download`;
+            const publicUrl = `{{ url('terminal-data/files') }}/${id}/view`;
+
+            // Build full URL for external viewers
+            const fullUrl = window.location.origin + '/terminal-data/api/files/' + id + '/serve';
+
+            // Option 1: Microsoft Office Online Viewer (works for publicly accessible URLs)
+            const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullUrl)}`;
+
+            // Option 2: Google Docs Viewer (alternative)
+            // const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`;
+
+            // Set iframe source
+            const frame = $('#officePreviewFrame');
+            frame.attr('src', officeViewerUrl);
+
+            // Set download button
+            $('#btnDownloadOffice').attr('href', downloadUrl);
+            $('#btnDownloadOffice').attr('download', fileName);
+
+            // Handle iframe load
+            frame.off('load').on('load', function() {
+                // Check if iframe loaded successfully
+                try {
+                    const iframeDoc = this.contentDocument || this.contentWindow.document;
+                    if (iframeDoc.body && iframeDoc.body.innerHTML.length > 0) {
+                        $('#officePreviewLoading').hide();
+                        $('#officePreviewFrame').show();
+                    }
+                } catch (e) {
+                    // Cross-origin, assume it loaded if no error
+                    $('#officePreviewLoading').hide();
+                    $('#officePreviewFrame').show();
+                }
+            });
+
+            // Hide loading after timeout (in case load event doesn't fire)
+            setTimeout(() => {
+                if ($('#officePreviewLoading').is(':visible')) {
+                    $('#officePreviewLoading').hide();
+                    $('#officePreviewFrame').show();
+                }
+            }, 3000);
+
+            // Handle errors
+            frame.off('error').on('error', function() {
+                $('#officePreviewLoading').hide();
+                $('#officePreviewFrame').hide();
+                $('#officePreviewError').show();
+            });
+        }
+
+        // Reset Office preview when modal is closed
+        $('#modalOfficePreview').on('hidden.bs.modal', function() {
+            $('#officePreviewFrame').attr('src', '');
+            $('#officePreviewLoading').show();
+            $('#officePreviewFrame').hide();
+            $('#officePreviewError').hide();
+        });
+
+        // Make showOfficePreview available globally
+        window.showOfficePreview = showOfficePreview;
     </script>
 @endpush
