@@ -12,6 +12,54 @@
     </div>
 
     <section class="section">
+        <!-- Informasi Periode -->
+        @if(isset($periodeAktif))
+            <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-calendar-check fs-3 text-info"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="alert-heading mb-2">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            Periode Pengisian PK Sedang Aktif
+                        </h5>
+                        <div class="d-flex flex-wrap gap-3 small">
+                            <div>
+                                <i class="bi bi-calendar-event me-1"></i>
+                                <strong>Mulai:</strong> {{ \Carbon\Carbon::parse($periodeAktif->tanggal_mulai)->format('d M Y') }}
+                            </div>
+                            <div>
+                                <i class="bi bi-calendar-x me-1"></i>
+                                <strong>Selesai:</strong> {{ \Carbon\Carbon::parse($periodeAktif->tanggal_selesai)->format('d M Y') }}
+                            </div>
+                        </div>
+                        @if($periodeAktif->keterangan)
+                            <div class="mt-2 small text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                {{ $periodeAktif->keterangan }}
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-exclamation-triangle fs-3 text-warning"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="alert-heading mb-1">
+                            <i class="bi bi-x-circle-fill text-warning"></i>
+                            Periode Pengisian PK Belum Aktif
+                        </h5>
+                        <p class="mb-0">Akan diinformasikan jika periode pengisian PK telah di buka</p>
+                    </div> 
+                </div>
+            </div>
+        @endif
+
         <!-- Dashboard Stats -->
         <div class="row mb-4">
             <div class="col-lg-3 col-md-6">

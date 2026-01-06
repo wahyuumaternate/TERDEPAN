@@ -15,6 +15,7 @@ use Modules\PerjanjianKinerja\Models\PkProgram;
 use Modules\PerjanjianKinerja\Models\PkKegiatan;        // ✅ PASTIKAN INI ADA
 use Modules\PerjanjianKinerja\Models\PkSubKegiatan;     // ✅ PASTIKAN INI ADA
 use Modules\PerjanjianKinerja\Models\PkTemplate;
+use Modules\PerjanjianKinerja\Models\PkPeriode;
 use App\Models\MasterPegawai;
 use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
@@ -180,11 +181,15 @@ class PerjanjianKinerjaController extends Controller
             'selesai' => PkPerjanjianKinerja::where('pegawai_id', $user->id)->where('tahun', $tahun)->where('status_dokumen', 'Selesai')->count(),
         ];
 
+        // Get periode aktif
+        $periodeAktif = PkPeriode::getPeriodeAktif($tahun);
+
         return view('perjanjiankinerja::pk-saya', compact(
             'perjanjians',
             'tahuns',
             'tahun',
-            'stats'
+            'stats',
+            'periodeAktif'
         ));
     }
 
