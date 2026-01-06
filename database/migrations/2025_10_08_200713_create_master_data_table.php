@@ -48,7 +48,7 @@ return new class extends Migration
         Schema::create('master_pegawai', function (Blueprint $table) {
             $table->id();
             $table->string('nomor_identitas', 18)->unique()->comment('NIP 18 digit atau NIK 16 digit, untuk login');
-            $table->enum('tipe_identitas', ['NIP', 'NIK'])->comment('NIP atau NIK');
+            $table->enum('tipe_identitas', ['NIP', 'ID'])->comment('NIP atau ID');
             $table->string('nama', 100)->comment('Nama lengkap tanpa gelar');
             $table->foreignId('jabatan_id')->constrained('master_jabatan');
             $table->foreignId('bidang_id')->constrained('master_bidang');

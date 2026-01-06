@@ -10,9 +10,9 @@ class MasterPegawaiSeeder extends Seeder
     public function run()
     {
         MasterPegawai::create([
-            'nomor_identitas' => '197001011990011001',
-            'tipe_identitas' => 'NIP',
-            'nama' => 'Admin Utama',
+            'nomor_identitas' => 'ADMIN',
+            'tipe_identitas' => 'ID',
+            'nama' => 'Admin Sistem',
             'jabatan_id' => 1, // pastikan id jabatan 1 ada
             'bidang_id' => 1, // pastikan id bidang 1 ada
             'jenis_kelamin' => 'L',

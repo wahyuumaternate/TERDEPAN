@@ -23,7 +23,8 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             // PegawaiWithAtasanSeeder::class,
             // PegawaiSeeder::class,
-            TestPegawaiSeeder::class,
+            // TestPegawaiSeeder::class,
+            DataPegawaiSeeder::class,
 
             TerminalDataDatabaseSeeder::class,
             PerjanjianKinerjaDatabaseSeeder::class,
