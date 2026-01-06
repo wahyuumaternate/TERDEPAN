@@ -32,12 +32,12 @@ class TdFileController extends Controller
             'file' => [
                 'required',
                 'file',
-                'max:51200', // 50MB max
+                'max:102400', // 100MB max
                 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,bmp,svg,webp'
             ],
         ], [
             'file.mimes' => 'File harus berupa dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll)',
-            'file.max' => 'Ukuran file maksimal 50MB',
+            'file.max' => 'Ukuran file maksimal 100MB',
         ]);
 
         try {

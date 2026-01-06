@@ -56,4 +56,36 @@ class StoreTdFolderRequest extends FormRequest
     {
         return true;
     }
+
+    /**
+     * Prepare data for validation
+     */
+    protected function prepareForValidation()
+    {
+        /** @var \App\Models\MasterPegawai $user */
+        $user = $this->user();
+        $kodeJabatan = $user->jabatan?->kode;
+
+        // Jika bukan ADMIN, KABAN, atau SEKBAN, force bidang_id ke bidang user
+        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            // Jika parent_id ada, ambil bidang_id dari parent
+            if ($this->has('parent_id') && $this->parent_id) {
+                $parent = \Modules\TerminalData\Models\TdFolder::find($this->parent_id);
+                if ($parent) {
+                    // Validasi bahwa parent folder bidangnya sesuai dengan bidang user
+                    if ($parent->bidang_id !== $user->bidang_id) {
+                        abort(403, 'Anda hanya dapat membuat folder di bidang Anda sendiri.');
+                    }
+                    $this->merge([
+                        'bidang_id' => $parent->bidang_id,
+                    ]);
+                }
+            } else {
+                // Jika tidak ada parent, set ke bidang user
+                $this->merge([
+                    'bidang_id' => $user->bidang_id,
+                ]);
+            }
+        }
+    }
 }
