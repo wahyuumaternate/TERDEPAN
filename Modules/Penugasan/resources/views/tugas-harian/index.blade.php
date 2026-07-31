@@ -136,13 +136,13 @@
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ $tugas->pegawai->nama ?? 'N/A' }}</div>
-                                        @if ($tugas->pegawai && $tugas->pegawai->jabatan)
-                                            <small class="text-muted">{{ $tugas->pegawai->jabatan->nama_jabatan }}</small>
+                                        @if ($tugas->pegawai && $tugas->pegawai->profile->jabatan)
+                                            <small class="text-muted">{{ $tugas->pegawai->profile->jabatan->nama_jabatan }}</small>
                                         @endif
                                     </td>
                                     <td>
-                                        @if ($tugas->pegawai && $tugas->pegawai->bidang)
-                                            <span class="badge bg-secondary">{{ $tugas->pegawai->bidang->nama }}</span>
+                                        @if ($tugas->pegawai && $tugas->pegawai->profile->bidang)
+                                            <span class="badge bg-secondary">{{ $tugas->pegawai->profile->bidang->nama }}</span>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif

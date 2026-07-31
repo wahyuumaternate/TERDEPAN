@@ -2,10 +2,10 @@
 
 namespace Modules\PerjanjianKinerja\Models;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\MasterPegawai;
 
 class PkPeriode extends Model
 {
@@ -40,7 +40,7 @@ class PkPeriode extends Model
      */
     public function pembuka()
     {
-        return $this->belongsTo(MasterPegawai::class, 'dibuka_oleh');
+        return $this->belongsTo(User::class, 'dibuka_oleh');
     }
 
     /**
@@ -48,7 +48,7 @@ class PkPeriode extends Model
      */
     public function penutup()
     {
-        return $this->belongsTo(MasterPegawai::class, 'ditutup_oleh');
+        return $this->belongsTo(User::class, 'ditutup_oleh');
     }
 
     /**
@@ -90,7 +90,7 @@ class PkPeriode extends Model
      */
     public function isDitutup()
     {
-        return $this->status === 'Ditutup' || !$this->is_active;
+        return $this->status === 'Ditutup' || ! $this->is_active;
     }
 
     /**
@@ -107,6 +107,7 @@ class PkPeriode extends Model
     public static function getPeriodeAktif($tahun = null)
     {
         $tahun = $tahun ?? date('Y');
+
         return self::where('tahun', $tahun)
             ->where('is_active', true)
             ->where('status', 'Aktif')

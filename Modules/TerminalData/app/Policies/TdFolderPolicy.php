@@ -2,9 +2,9 @@
 
 namespace Modules\TerminalData\Policies;
 
-use App\Models\MasterPegawai;
-use Modules\TerminalData\Models\TdFolder;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\TerminalData\Models\TdFolder;
 
 class TdFolderPolicy
 {
@@ -13,16 +13,16 @@ class TdFolderPolicy
     /**
      * Determine if user can view any folders
      */
-    public function viewAny(MasterPegawai $user): bool
+    public function viewAny(User $user): bool
     {
         // Semua pegawai bisa view folders sesuai level mereka
-        return $user->jabatan !== null;
+        return $user->profile?->jabatan !== null;
     }
 
     /**
      * Determine if user can view specific folder
      */
-    public function view(MasterPegawai $user, TdFolder $folder): bool
+    public function view(User $user, TdFolder $folder): bool
     {
         // Semua user yang terautentikasi bisa melihat folder
         return true;
@@ -31,25 +31,25 @@ class TdFolderPolicy
     /**
      * Determine if user can create folders
      */
-    public function create(MasterPegawai $user): bool
+    public function create(User $user): bool
     {
         // Semua pegawai bisa create folder
-        return $user->jabatan !== null;
+        return $user->profile?->jabatan !== null;
     }
 
-    public function createInParent(MasterPegawai $user, ?TdFolder $parentFolder): bool
+    public function createInParent(User $user, ?TdFolder $parentFolder): bool
     {
         // Basic check - user harus punya jabatan
-        if (!$user->jabatan) {
+        if (! $user->profile?->jabatan) {
             return false;
         }
 
         // Jika tidak ada parent folder, return true (general check)
-        if (!$parentFolder) {
+        if (! $parentFolder) {
             return true;
         }
 
-        $kodeJabatan = $user->jabatan->kode;
+        $kodeJabatan = $user->profile->jabatan->kode;
 
         // ADMIN, KABAN, SEKBAN - bisa create di mana saja
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -58,7 +58,7 @@ class TdFolderPolicy
 
         // KABID - hanya bisa create di folder bidangnya
         if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
-            return $parentFolder->bidang_id === $user->bidang_id;
+            return $parentFolder->bidang_id === $user->profile?->bidang_id;
         }
 
         return false;
@@ -67,9 +67,9 @@ class TdFolderPolicy
     /**
      * Determine if user can update folder (general update)
      */
-    public function update(MasterPegawai $user, TdFolder $folder): bool
+    public function update(User $user, TdFolder $folder): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -78,7 +78,7 @@ class TdFolderPolicy
 
         // KABID - Edit folder bidangnya
         if (in_array($kodeJabatan, ['KABID'])) {
-            return $folder->bidang_id === $user->bidang_id;
+            return $folder->bidang_id === $user->profile?->bidang_id;
         }
 
         // KASUBAG, PELAKSANA, JAFUNG, GATEK - Edit folder sendiri
@@ -93,9 +93,9 @@ class TdFolderPolicy
      * Determine if user can rename folder
      * KABID bisa rename semua folder di bidangnya, bukan hanya milik sendiri
      */
-    public function rename(MasterPegawai $user, TdFolder $folder): bool
+    public function rename(User $user, TdFolder $folder): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -104,7 +104,7 @@ class TdFolderPolicy
 
         // KABID - Rename semua folder bidangnya
         if (in_array($kodeJabatan, ['KABID'])) {
-            return $folder->bidang_id === $user->bidang_id;
+            return $folder->bidang_id === $user->profile?->bidang_id;
         }
 
         // KASUBAG, PELAKSANA, JAFUNG, GATEK - Rename folder sendiri
@@ -118,9 +118,9 @@ class TdFolderPolicy
     /**
      * Determine if user can delete folder
      */
-    public function delete(MasterPegawai $user, TdFolder $folder): bool
+    public function delete(User $user, TdFolder $folder): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -138,14 +138,14 @@ class TdFolderPolicy
     /**
      * Determine if user can upload files to folder
      */
-    public function upload(MasterPegawai $user, TdFolder $folder): bool
+    public function upload(User $user, TdFolder $folder): bool
     {
         // Basic check - user harus punya jabatan
-        if (!$user->jabatan) {
+        if (! $user->profile?->jabatan) {
             return false;
         }
 
-        $kodeJabatan = $user->jabatan->kode;
+        $kodeJabatan = $user->profile->jabatan->kode;
 
         // ADMIN, KABAN, SEKBAN - bisa upload di mana saja
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -154,7 +154,7 @@ class TdFolderPolicy
 
         // KABID, KASUBAG, PELAKSANA, JAFUNG, GATEK - hanya bisa upload di folder bidangnya
         if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
-            return $folder->bidang_id === $user->bidang_id;
+            return $folder->bidang_id === $user->profile?->bidang_id;
         }
 
         return false;
@@ -165,9 +165,9 @@ class TdFolderPolicy
      * ADMIN, KABAN, SEKBAN bisa lihat semua sampah
      * User lain hanya bisa lihat sampah mereka sendiri
      */
-    public function viewTrashed(MasterPegawai $user): bool
+    public function viewTrashed(User $user): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - bisa lihat semua sampah
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
@@ -176,9 +176,9 @@ class TdFolderPolicy
     /**
      * Determine if user can restore folder
      */
-    public function restore(MasterPegawai $user, TdFolder $folder): bool
+    public function restore(User $user, TdFolder $folder): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -192,9 +192,9 @@ class TdFolderPolicy
     /**
      * Determine if user can force delete folder
      */
-    public function forceDelete(MasterPegawai $user, TdFolder $folder): bool
+    public function forceDelete(User $user, TdFolder $folder): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {

@@ -2,16 +2,16 @@
 
 namespace Modules\Penugasan\Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\MasterPegawai;
-use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
-use Modules\Penugasan\Models\TugasHarian;
-use Modules\Penugasan\Models\TugasTambahan;
-use Modules\Penugasan\Models\TugasPokok;
+use App\Models\MasterJabatan;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
+use Modules\Penugasan\Models\TugasHarian;
+use Modules\Penugasan\Models\TugasPokok;
+use Modules\Penugasan\Models\TugasTambahan;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class PenugasanPermissionTest extends TestCase
 {
@@ -54,6 +54,38 @@ class PenugasanPermissionTest extends TestCase
                 $jabatan
             );
         }
+    }
+
+    // ==================== TUGAS POKOK MANDIRI TEST ====================
+
+    /**
+     * Tugas Pokok harus bisa dibuat mandiri tanpa Perjanjian Kinerja,
+     * karena modul PerjanjianKinerja untuk sementara dinonaktifkan.
+     */
+    #[Test]
+    public function test_can_create_tugas_pokok_manually_without_perjanjian_kinerja()
+    {
+        $pegawai = $this->createUserWithJabatan('PELAKSANA');
+
+        $response = $this->actingAs($pegawai)
+            ->postJson(route('penugasan.tugas-pokok.store'), [
+                'pegawai_id' => $pegawai->id,
+                'nama_tugas' => 'Tugas Pokok Mandiri',
+                'deskripsi' => 'Dibuat tanpa Perjanjian Kinerja',
+                'bobot_persen' => 65,
+                'target_value' => 100,
+                'satuan' => 'dokumen',
+                'tanggal_mulai' => now()->toDateString(),
+                'tanggal_selesai' => now()->addMonths(3)->toDateString(),
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('knj_tugas_pokok', [
+            'pegawai_id' => $pegawai->id,
+            'nama_tugas' => 'Tugas Pokok Mandiri',
+            'perjanjian_kinerja_id' => null,
+            'indikator_id' => null,
+        ]);
     }
 
     // ==================== TUGAS HARIAN TESTS ====================
@@ -139,7 +171,7 @@ class PenugasanPermissionTest extends TestCase
                 'satuan' => $tugas->satuan ?? 'dokumen',
             ]);
 
-        $this->assertEquals(403, $response->status(), "Other user should NOT be able to update");
+        $this->assertEquals(403, $response->status(), 'Other user should NOT be able to update');
     }
 
     /**
@@ -182,7 +214,7 @@ class PenugasanPermissionTest extends TestCase
                 'status' => 'dikerjakan',
             ]);
 
-        $this->assertContains($response->status(), [200, 302], "Pegawai should be able to update status");
+        $this->assertContains($response->status(), [200, 302], 'Pegawai should be able to update status');
 
         // Test: Atasan tidak bisa update status (ini hak pegawai)
         $tugas2 = $this->createTugasHarian($atasan, $bawahan, 'pending');
@@ -191,7 +223,7 @@ class PenugasanPermissionTest extends TestCase
                 'status' => 'dikerjakan',
             ]);
 
-        $this->assertEquals(403, $response->status(), "Atasan should NOT be able to update status");
+        $this->assertEquals(403, $response->status(), 'Atasan should NOT be able to update status');
 
         // Test: User lain tidak bisa update status
         $tugas3 = $this->createTugasHarian($atasan, $bawahan, 'pending');
@@ -200,7 +232,7 @@ class PenugasanPermissionTest extends TestCase
                 'status' => 'dikerjakan',
             ]);
 
-        $this->assertEquals(403, $response->status(), "Other user should NOT be able to update status");
+        $this->assertEquals(403, $response->status(), 'Other user should NOT be able to update status');
     }
 
     /**
@@ -230,7 +262,7 @@ class PenugasanPermissionTest extends TestCase
         $response = $this->actingAs($otherUser)
             ->get(route('penugasan.tugas-harian.upload-eviden', $tugas->id));
 
-        $this->assertContains($response->status(), [403, 302], "Other user should NOT access upload page");
+        $this->assertContains($response->status(), [403, 302], 'Other user should NOT access upload page');
     }
 
     /**
@@ -255,7 +287,7 @@ class PenugasanPermissionTest extends TestCase
                 'progress_update_type' => 'otomatis',
             ]);
 
-        $this->assertContains($response->status(), [200, 302], "Atasan should be able to validate");
+        $this->assertContains($response->status(), [200, 302], 'Atasan should be able to validate');
 
         // Test: Pegawai tidak bisa validasi tugasnya sendiri
         $tugas2 = $this->createTugasHarian($atasan, $bawahan, 'validasi');
@@ -267,7 +299,7 @@ class PenugasanPermissionTest extends TestCase
                 'progress_update_type' => 'otomatis',
             ]);
 
-        $this->assertEquals(403, $response->status(), "Pegawai should NOT validate own task");
+        $this->assertEquals(403, $response->status(), 'Pegawai should NOT validate own task');
 
         // Test: Atasan lain tidak bisa validasi
         $tugas3 = $this->createTugasHarian($atasan, $bawahan, 'validasi');
@@ -279,7 +311,7 @@ class PenugasanPermissionTest extends TestCase
                 'progress_update_type' => 'otomatis',
             ]);
 
-        $this->assertEquals(403, $response->status(), "Other atasan should NOT validate");
+        $this->assertEquals(403, $response->status(), 'Other atasan should NOT validate');
     }
 
     // ==================== TUGAS TAMBAHAN TESTS ====================
@@ -417,75 +449,39 @@ class PenugasanPermissionTest extends TestCase
 
     // ==================== HELPER METHODS ====================
 
-    protected function createUserWithJabatan(string $kodeJabatan): MasterPegawai
+    protected function createUserWithJabatan(string $kodeJabatan): User
     {
         $jabatan = MasterJabatan::where('kode', $kodeJabatan)->firstOrFail();
         $bidang = MasterBidang::firstOrFail(); // Gunakan bidang pertama yang pasti ada
-        $nip = '1990' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT) . '001';
+        $nip = '1990'.str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT).'001';
 
-        return MasterPegawai::create([
+        $user = User::create([
+            'nama' => "User {$kodeJabatan}",
+            'email' => strtolower($kodeJabatan).rand(1000, 9999).'@test.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $user->profile()->create([
             'nomor_identitas' => $nip,
             'tipe_identitas' => 'NIP',
-            'nama' => "User {$kodeJabatan}",
             'jenis_kelamin' => 'L',
             'status_kepegawaian' => 'PNS',
-            'email' => strtolower($kodeJabatan) . rand(1000, 9999) . '@test.com',
-            'password' => bcrypt('password'),
+            'status_aktif' => 'Aktif',
             'jabatan_id' => $jabatan->id,
             'bidang_id' => $bidang->id,
         ]);
+
+        return $user->fresh('profile');
     }
 
-    protected function createTugasPokok(MasterPegawai $pegawai): TugasPokok
+    protected function createTugasPokok(User $pegawai): TugasPokok
     {
-        // Create dummy Perjanjian Kinerja hierarchy for testing
-        // atasan_id is required - use atasan_langsung_id if exists, otherwise use pegawai itself (for top level)
-        $atasanId = $pegawai->atasan_langsung_id ?? $pegawai->id;
-
-        // Create dummy PK template with unique kode
-        $randomId = rand(1000, 9999);
-        $template = \Modules\PerjanjianKinerja\Models\PkTemplate::create([
-            'kode_template' => 'TPK-TEST-' . now()->year . '-' . $pegawai->jabatan_id . '-' . $randomId,
-            'jabatan_id' => $pegawai->jabatan_id,
-            'tahun' => now()->year,
-            'nama_template' => 'Template Test ' . now()->year,
-            'kop_surat_html' => '<div>Kop Surat Test</div>',
-            'header_template' => 'Header Test',
-            'pernyataan_pembuka' => 'Pembuka Test',
-            'pernyataan_penutup' => 'Penutup Test',
-            'footer_template' => 'Footer Test',
-            'is_active' => true,
-        ]);
-
-        $pk = \Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja::create([
-            'nomor_perjanjian' => 'PK/TEST/' . now()->year . '/' . str_pad($pegawai->id, 4, '0', STR_PAD_LEFT) . '-' . uniqid(),
-            'pegawai_id' => $pegawai->id,
-            'atasan_id' => $atasanId,
-            'template_id' => $template->id,
-            'tahun' => now()->year,
-            'periode_mulai' => now()->startOfYear(),
-            'periode_selesai' => now()->endOfYear(),
-            'status_dokumen' => 'Draft',
-            'is_locked' => false,
-        ]);
-
-        $sasaran = \Modules\PerjanjianKinerja\Models\PkSasaran::create([
-            'perjanjian_kinerja_id' => $pk->id,
-            'sasaran_strategis' => 'Sasaran Test',
-            'urutan' => 1,
-        ]);
-
-        $indikator = \Modules\PerjanjianKinerja\Models\PkIndikator::create([
-            'sasaran_id' => $sasaran->id,
-            'indikator_sasaran' => 'Indikator Test',
-            'target_value' => 100,
-            'satuan' => 'dokumen',
-        ]);
-
+        // Tugas Pokok dibuat mandiri (tanpa Perjanjian Kinerja) — modul
+        // PerjanjianKinerja untuk sementara dinonaktifkan (lihat modules_statuses.json).
         return TugasPokok::create([
             'pegawai_id' => $pegawai->id,
-            'perjanjian_kinerja_id' => $pk->id,
-            'indikator_id' => $indikator->id,
+            'perjanjian_kinerja_id' => null,
+            'indikator_id' => null,
             'nama_tugas' => 'Tugas Pokok Test',
             'deskripsi' => 'Test Description',
             'bobot_persen' => 60,
@@ -497,7 +493,7 @@ class PenugasanPermissionTest extends TestCase
         ]);
     }
 
-    protected function createTugasHarian(MasterPegawai $atasan, MasterPegawai $bawahan, string $status): TugasHarian
+    protected function createTugasHarian(User $atasan, User $bawahan, string $status): TugasHarian
     {
         $tugasPokok = $this->createTugasPokok($bawahan);
 
@@ -516,7 +512,7 @@ class PenugasanPermissionTest extends TestCase
         ]);
     }
 
-    protected function createTugasTambahan(MasterPegawai $atasan, MasterPegawai $bawahan, string $status): TugasTambahan
+    protected function createTugasTambahan(User $atasan, User $bawahan, string $status): TugasTambahan
     {
         return TugasTambahan::create([
             'pegawai_id' => $bawahan->id,

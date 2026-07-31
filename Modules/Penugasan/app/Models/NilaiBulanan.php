@@ -2,9 +2,10 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 // use Modules\Penugasan\Database\Factories\NilaiBulananFactory;
 
 class NilaiBulanan extends Model
@@ -37,12 +38,12 @@ class NilaiBulanan extends Model
     // Relationships
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
     }
 
     public function penilai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'penilai_id');
+        return $this->belongsTo(\App\Models\User::class, 'penilai_id');
     }
 
     // Scopes

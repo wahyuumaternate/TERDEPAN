@@ -4,17 +4,18 @@ namespace Modules\TerminalData\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Modules\TerminalData\Http\Requests\GetFoldersRequest;
-use Modules\TerminalData\Http\Resources\TdFolderResource;
-use Modules\TerminalData\Models\TdFolder;
-use Modules\TerminalData\Models\TdFile;
-use Modules\TerminalData\Services\TdFolderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
+use Modules\TerminalData\Http\Requests\GetFoldersRequest;
+use Modules\TerminalData\Http\Resources\TdFolderResource;
+use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Models\TdFolder;
+use Modules\TerminalData\Services\TdFolderService;
 
 class TerminalDataController extends Controller
 {
     use AuthorizesRequests;
+
     public function __construct(
         protected TdFolderService $folderService
     ) {}
@@ -24,116 +25,116 @@ class TerminalDataController extends Controller
      */
     public function index(): View
     {
-        /** @var \App\Models\MasterPegawai $user */
+        /** @var \App\Models\User $user */
         $user = request()->user();
-        
+
         // Get statistics accessible to user based on their role
         $stats = $this->getDashboardStats($user);
-        
+
         return view('terminaldata::index', compact('stats'));
     }
-    
+
     /**
      * Get dashboard statistics based on user role
      */
     private function getDashboardStats($user): array
     {
-        $kodeJabatan = $user->jabatan?->kode;
-        
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         // Query scope based on role
         $folderQuery = TdFolder::query();
         $fileQuery = TdFile::query();
-        
+
         // Apply scope based on role
-        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+        if (! in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
             // Non-admin: only see their bidang data
-            $folderQuery->where('bidang_id', $user->bidang_id);
-            $fileQuery->where('bidang_id', $user->bidang_id);
+            $folderQuery->where('bidang_id', $user->profile?->bidang_id);
+            $fileQuery->where('bidang_id', $user->profile?->bidang_id);
         }
-        
+
         return [
             // Basic stats
             'total_folders' => $folderQuery->count(),
             'total_files' => $fileQuery->count(),
             'total_size' => $fileQuery->sum('size'),
-            
+
             // Monthly stats per bidang (last 6 months)
-            'monthly_uploads' => $this->getMonthlyUploadsByBidang($kodeJabatan, $user->bidang_id),
-            
+            'monthly_uploads' => $this->getMonthlyUploadsByBidang($kodeJabatan, $user->profile?->bidang_id),
+
             // File type distribution
             'file_types' => $this->getFileTypeDistribution($user),
-            
+
             // User info
             'user_name' => $user->nama,
-            'user_jabatan' => $user->jabatan?->nama,
+            'user_jabatan' => $user->profile?->jabatan?->nama,
             'user_bidang' => $user->bidang?->nama,
         ];
     }
-    
+
     /**
      * Get monthly upload statistics per bidang
      */
     private function getMonthlyUploadsByBidang($kodeJabatan, $bidangId): array
     {
         $months = [];
-        
+
         // Generate month labels
         for ($i = 5; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $months[] = $date->format('M');
         }
-        
+
         // Get all bidang
         $bidangList = \App\Models\MasterBidang::orderBy('nama')->get();
-        
+
         // Prepare series data
         $series = [];
-        
+
         foreach ($bidangList as $bidang) {
             // Skip if user is not admin and this is not their bidang
-            if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']) && $bidang->id != $bidangId) {
+            if (! in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']) && $bidang->id != $bidangId) {
                 continue;
             }
-            
+
             $monthlyData = [];
-            
+
             for ($i = 5; $i >= 0; $i--) {
                 $date = now()->subMonths($i);
-                
+
                 $count = TdFile::where('bidang_id', $bidang->id)
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
                     ->count();
-                
+
                 $monthlyData[] = $count;
             }
-            
+
             $series[] = [
                 'name' => $bidang->kode,
                 'data' => $monthlyData,
             ];
         }
-        
+
         return [
             'labels' => $months,
             'series' => $series,
         ];
     }
-    
+
     /**
      * Get file type distribution
      */
     private function getFileTypeDistribution($user): array
     {
-        $kodeJabatan = $user->jabatan?->kode;
-        
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         $query = TdFile::query();
-        
+
         // Apply scope based on role
-        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
-            $query->where('bidang_id', $user->bidang_id);
+        if (! in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            $query->where('bidang_id', $user->profile?->bidang_id);
         }
-        
+
         $distribution = $query
             ->selectRaw("
                 CASE 
@@ -148,7 +149,7 @@ class TerminalDataController extends Controller
             ->groupBy('type')
             ->pluck('count', 'type')
             ->toArray();
-        
+
         return $distribution;
     }
 
@@ -158,7 +159,7 @@ class TerminalDataController extends Controller
     public function folderIndex(GetFoldersRequest $request): View|JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             // Authorize viewAny folders
@@ -175,7 +176,7 @@ class TerminalDataController extends Controller
                 return response()->json([
                     'success' => true,
                     'data' => TdFolderResource::collection($folders)->toArray($request),
-                    'message' => 'Data folder berhasil dimuat'
+                    'message' => 'Data folder berhasil dimuat',
                 ]);
             }
 
@@ -185,7 +186,7 @@ class TerminalDataController extends Controller
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ], 403);
             }
 
@@ -194,24 +195,24 @@ class TerminalDataController extends Controller
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                    'message' => 'Terjadi kesalahan: '.$e->getMessage(),
                 ], 500);
             }
 
-            abort(500, 'Terjadi kesalahan: ' . $e->getMessage());
+            abort(500, 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
     public function folderDetail($folderId)
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get folder by ID using service
             $folder = $this->folderService->getFolderById($folderId, $user);
 
-            if (!$folder) {
+            if (! $folder) {
                 abort(404, 'Folder tidak ditemukan');
             }
 
@@ -236,6 +237,7 @@ class TerminalDataController extends Controller
                     'delete' => $user->can('delete', $file),
                     'download' => $user->can('download', $file),
                 ];
+
                 return $file;
             });
 
@@ -243,7 +245,7 @@ class TerminalDataController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             abort(403, $e->getMessage());
         } catch (\Exception $e) {
-            abort(500, 'Terjadi kesalahan: ' . $e->getMessage());
+            abort(500, 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
@@ -253,16 +255,16 @@ class TerminalDataController extends Controller
     public function getFolderChildren($folderId)
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get folder by ID using service
             $folder = $this->folderService->getFolderById($folderId, $user);
 
-            if (!$folder) {
+            if (! $folder) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Folder tidak ditemukan'
+                    'message' => 'Folder tidak ditemukan',
                 ], 404);
             }
 
@@ -279,12 +281,12 @@ class TerminalDataController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -297,7 +299,7 @@ class TerminalDataController extends Controller
     public function sampahIndex()
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get trashed folders and files with permission filtering
@@ -315,7 +317,7 @@ class TerminalDataController extends Controller
 
             return view('terminaldata::sampah.index', compact('trashedFolders', 'trashedFiles'));
         } catch (\Exception $e) {
-            abort(500, 'Terjadi kesalahan: ' . $e->getMessage());
+            abort(500, 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 }

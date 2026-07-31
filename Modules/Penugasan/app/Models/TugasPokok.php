@@ -2,15 +2,15 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 use Modules\PerjanjianKinerja\Models\PkIndikator;
 use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
-use Illuminate\Support\Str;
 
 // use Modules\Penugasan\Database\Factories\TugasPokokFactory;
 
@@ -19,7 +19,9 @@ class TugasPokok extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'knj_tugas_pokok';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /**
@@ -60,7 +62,7 @@ class TugasPokok extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -70,8 +72,11 @@ class TugasPokok extends Model
 
     // Status constants (sama dengan migrasi)
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_DIKERJAKAN = 'dikerjakan';
+
     public const STATUS_SELESAI = 'selesai';
+
     public const STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_DIKERJAKAN,
@@ -86,7 +91,7 @@ class TugasPokok extends Model
 
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
     }
 
     public function indikatorPK(): BelongsTo

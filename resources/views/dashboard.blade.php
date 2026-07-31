@@ -214,7 +214,7 @@
                             </a>
 
                             @php
-                                $canManageTeam = in_array(auth()->user()->jabatan?->kode, [
+                                $canManageTeam = in_array(auth()->user()->profile?->jabatan?->kode, [
                                     'ADMIN',
                                     'KABAN',
                                     'SEKBAN',

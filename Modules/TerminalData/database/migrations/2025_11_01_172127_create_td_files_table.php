@@ -63,8 +63,8 @@ return new class extends Migration
             $table->json('extracted_content')->nullable()->comment('OCR/extracted text for search');
 
             // Ownership
-            $table->foreignId('created_by')->constrained('master_pegawai')->restrictOnDelete();
-            $table->foreignId('updated_by')->nullable()->constrained('master_pegawai')->restrictOnDelete();
+            $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->restrictOnDelete();
 
             $table->timestamps();
             $table->softDeletes();

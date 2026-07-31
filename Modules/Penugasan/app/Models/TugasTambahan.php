@@ -2,11 +2,11 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 // use Modules\Penugasan\Database\Factories\TugasTambahanFactory;
@@ -16,7 +16,9 @@ class TugasTambahan extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'knj_tugas_tambahan';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /**
@@ -56,7 +58,7 @@ class TugasTambahan extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -66,11 +68,15 @@ class TugasTambahan extends Model
 
     // Status constants (sesuai migration - Bahasa Indonesia)
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_DIKERJAKAN = 'dikerjakan';
+
     public const STATUS_VALIDASI = 'validasi';
+
     public const STATUS_REVISI = 'revisi';
+
     public const STATUS_SELESAI = 'selesai';
-    
+
     public const STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_DIKERJAKAN,
@@ -81,23 +87,25 @@ class TugasTambahan extends Model
 
     // Hasil validasi constants
     public const VALIDASI_DITERIMA = 'diterima';
+
     public const VALIDASI_REVISI = 'revisi';
+
     public const VALIDASI_DITOLAK = 'ditolak';
 
     // Relationships
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
     }
 
     public function pemberiTugas(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pemberi_tugas_id');
+        return $this->belongsTo(\App\Models\User::class, 'pemberi_tugas_id');
     }
 
     public function validator(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'validator_id');
+        return $this->belongsTo(\App\Models\User::class, 'validator_id');
     }
 
     /**

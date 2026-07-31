@@ -204,8 +204,8 @@
                             </thead>
                             <tbody>
                                 @foreach ($anggotaTim as $index => $anggota)
-                                    <tr class="anggota-row" data-bidang="{{ $anggota->bidang_id }}"
-                                        data-jabatan="{{ $anggota->jabatan_id }}"
+                                    <tr class="anggota-row" data-bidang="{{ $anggota->profile->bidang_id }}"
+                                        data-jabatan="{{ $anggota->profile->jabatan_id }}"
                                         data-workload="{{ $anggota->workload_persen }}"
                                         data-nama="{{ strtolower($anggota->nama) }}">
                                         <td>{{ $index + 1 }}</td>
@@ -218,16 +218,16 @@
                                                 <div>
                                                     <div class="fw-semibold">{{ $anggota->nama }}</div>
                                                     <small
-                                                        class="text-muted">{{ $anggota->nomor_identitas ?? '-' }}</small>
+                                                        class="text-muted">{{ $anggota->profile->nomor_identitas ?? '-' }}</small>
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <small>{{ $anggota->jabatan->nama ?? '-' }}</small>
+                                            <small>{{ $anggota->profile->jabatan->nama ?? '-' }}</small>
                                         </td>
                                         <td>
-                                            @if ($anggota->bidang)
-                                                <span class="badge bg-secondary">{{ $anggota->bidang->nama }}</span>
+                                            @if ($anggota->profile->bidang)
+                                                <span class="badge bg-secondary">{{ $anggota->profile->bidang->nama }}</span>
                                             @else
                                                 <span class="text-muted">-</span>
                                             @endif

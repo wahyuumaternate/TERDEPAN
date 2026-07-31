@@ -39,8 +39,8 @@ return new class extends Migration
             $table->json('settings')->nullable()->comment('Custom folder settings');
 
             // Ownership
-            $table->foreignId('created_by')->constrained('master_pegawai')->restrictOnDelete();
-            $table->foreignId('updated_by')->nullable()->constrained('master_pegawai')->restrictOnDelete();
+            $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->restrictOnDelete();
 
             $table->timestamps();
             $table->softDeletes();

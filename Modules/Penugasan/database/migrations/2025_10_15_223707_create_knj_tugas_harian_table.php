@@ -17,8 +17,8 @@ return new class extends Migration
             // Relasi
             $table->foreignUuid('tugas_pokok_id')->constrained('knj_tugas_pokok')
                 ->comment('Parent tugas pokok');
-            $table->foreignId('pegawai_id')->constrained('master_pegawai');
-            $table->foreignId('pemberi_tugas_id')->nullable()->constrained('master_pegawai')->comment('NULL jika self-initiated');
+            $table->foreignId('pegawai_id')->constrained('users');
+            $table->foreignId('pemberi_tugas_id')->nullable()->constrained('users')->comment('NULL jika self-initiated');
 
             // Khusus penugasan mandiri
             $table->boolean('is_mandiri')->default(false)
@@ -38,17 +38,17 @@ return new class extends Migration
             $table->decimal('target_value', 10, 2);
             $table->string('satuan', 30);
 
-            // Status 
+            // Status
             $table->enum('status', [
                 'pending',      // Baru dibuat
                 'dikerjakan',  // Sedang dikerjakan
                 'validasi',    // menunggu di validasi
                 'revisi',     // Perlu revisi
-                'selesai'     // Selesai & divalidasi
+                'selesai',     // Selesai & divalidasi
             ])->default('pending');
 
             // Field validasi berjenjang
-            $table->foreignId('validator_id')->nullable()->constrained('master_pegawai')
+            $table->foreignId('validator_id')->nullable()->constrained('users')
                 ->comment('Atasan yang validasi');
             $table->enum('hasil_validasi', ['diterima', 'revisi', 'ditolak'])->nullable();
             $table->text('catatan_validasi')->nullable();

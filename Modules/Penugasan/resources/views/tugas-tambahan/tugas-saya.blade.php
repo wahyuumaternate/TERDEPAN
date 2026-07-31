@@ -130,7 +130,7 @@
                                                         <div class="small fw-semibold">{{ $tugas->pemberiTugas->nama }}
                                                         </div>
                                                         <small
-                                                            class="text-muted">{{ $tugas->pemberiTugas->jabatan?->nama }}</small>
+                                                            class="text-muted">{{ $tugas->pemberiTugas->profile->jabatan?->nama }}</small>
                                                     </div>
                                                 </div>
                                             @else

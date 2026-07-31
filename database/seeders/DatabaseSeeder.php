@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
             DataPegawaiSeeder::class,
 
             TerminalDataDatabaseSeeder::class,
-            PerjanjianKinerjaDatabaseSeeder::class,
+            // PerjanjianKinerjaDatabaseSeeder::class, // Modul PerjanjianKinerja nonaktif sementara (lihat modules_statuses.json)
             PenugasanDatabaseSeeder::class,
         ]);
         // User::factory(10)->create();

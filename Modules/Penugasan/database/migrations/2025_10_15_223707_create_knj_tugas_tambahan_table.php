@@ -15,8 +15,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
 
             // Relasi
-            $table->foreignId('pegawai_id')->constrained('master_pegawai');
-            $table->foreignId('pemberi_tugas_id')->constrained('master_pegawai')
+            $table->foreignId('pegawai_id')->constrained('users');
+            $table->foreignId('pemberi_tugas_id')->constrained('users')
                 ->comment('Wajib ada - always from supervisor');
 
             // Detail tugas
@@ -27,17 +27,17 @@ return new class extends Migration
             $table->date('tanggal_mulai')->comment('Tanggal mulai tugas');
             $table->date('tanggal_selesai')->comment('Deadline tugas');
 
-            // Status 
+            // Status
             $table->enum('status', [
                 'pending',      // Baru dibuat
                 'dikerjakan',  // Sedang dikerjakan
                 'validasi',    // menunggu di validasi
                 'revisi',     // Perlu revisi
-                'selesai'     // Selesai & divalidasi
+                'selesai',     // Selesai & divalidasi
             ])->default('pending');
 
             // Field validasi berjenjang
-            $table->foreignId('validator_id')->nullable()->constrained('master_pegawai');
+            $table->foreignId('validator_id')->nullable()->constrained('users');
             $table->enum('hasil_validasi', ['diterima', 'revisi', 'ditolak'])->nullable();
             $table->text('catatan_validasi')->nullable();
             $table->tinyInteger('penilaian_kualitas')->nullable()

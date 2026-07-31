@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
 
             // Period & Employee
-            $table->foreignId('pegawai_id')->constrained('master_pegawai');
+            $table->foreignId('pegawai_id')->constrained('users');
             $table->year('tahun');
             $table->tinyInteger('bulan')->comment('1-12');
 
@@ -39,14 +39,14 @@ return new class extends Migration
                 'Baik',           // 80-90
                 'Cukup',          // 70-80
                 'Kurang',         // 60-70
-                'Sangat_Kurang'   // < 60
+                'Sangat_Kurang',   // < 60
             ])->nullable();
 
             // Approval
             $table->boolean('is_approved')->default(false);
             $table->boolean('is_finalized')->default(false)
                 ->comment('TRUE = locked, cannot be changed');
-            $table->foreignId('approved_by')->nullable()->constrained('master_pegawai');
+            $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->text('catatan_atasan')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('finalized_at')->nullable();

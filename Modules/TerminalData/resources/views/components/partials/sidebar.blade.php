@@ -48,7 +48,7 @@
          <!-- Monitoring Nav -->
          @can('viewAny', \Modules\TerminalData\Models\TdFolder::class)
              @php
-                 $kodeJabatan = auth()->user()->jabatan?->kode;
+                 $kodeJabatan = auth()->user()->profile?->jabatan?->kode;
                  $canViewMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
              @endphp
 
@@ -67,7 +67,7 @@
 
          <!-- Sistem Nav -->
          @php
-             $kodeJabatan = auth()->user()->jabatan?->kode;
+             $kodeJabatan = auth()->user()->profile?->jabatan?->kode;
              $isAdmin = $kodeJabatan === 'ADMIN';
          @endphp
 

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\MasterPegawai;
 use App\Models\MasterBidang;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MasterBidangPolicy
@@ -14,9 +14,10 @@ class MasterBidangPolicy
      * Determine if user can view any bidang
      * Hanya ADMIN, KABAN, SEKBAN yang bisa melihat master data
      */
-    public function viewAny(MasterPegawai $user): bool
+    public function viewAny(User $user): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 
@@ -24,9 +25,10 @@ class MasterBidangPolicy
      * Determine if user can view specific bidang
      * Hanya ADMIN, KABAN, SEKBAN yang bisa melihat master data
      */
-    public function view(MasterPegawai $user, MasterBidang $bidang): bool
+    public function view(User $user, MasterBidang $bidang): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 
@@ -34,9 +36,10 @@ class MasterBidangPolicy
      * Determine if user can create bidang
      * Hanya ADMIN, KABAN, SEKBAN yang bisa mengelola master data
      */
-    public function create(MasterPegawai $user): bool
+    public function create(User $user): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 
@@ -44,9 +47,10 @@ class MasterBidangPolicy
      * Determine if user can update bidang
      * Hanya ADMIN, KABAN, SEKBAN yang bisa mengelola master data
      */
-    public function update(MasterPegawai $user, MasterBidang $bidang): bool
+    public function update(User $user, MasterBidang $bidang): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 
@@ -54,9 +58,10 @@ class MasterBidangPolicy
      * Determine if user can delete bidang
      * Hanya ADMIN, KABAN, SEKBAN yang bisa mengelola master data
      */
-    public function delete(MasterPegawai $user, MasterBidang $bidang): bool
+    public function delete(User $user, MasterBidang $bidang): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 }

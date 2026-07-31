@@ -98,7 +98,7 @@
                                         <div>
                                             <div class="fw-semibold">{{ $tugasHarian->pemberiTugas->nama }}</div>
                                             <small
-                                                class="text-muted">{{ $tugasHarian->pemberiTugas->jabatan?->nama }}</small>
+                                                class="text-muted">{{ $tugasHarian->pemberiTugas->profile->jabatan?->nama }}</small>
                                         </div>
                                     </div>
                                 </div>

@@ -23,105 +23,114 @@
          <!-- E-Kinerja -->
          <li class="nav-heading">E-Kinerja Perencana</li>
 
-         <!-- Perjanjian Kinerja Nav -->
          @php
-             $kodeJabatan = auth()->user()->jabatan?->kode;
-             $fullAccessPK = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
-             $kabidAccess = $kodeJabatan === 'KABID';
-             $limitedAccessPK = in_array($kodeJabatan, ['KASUBAG', 'JF', 'PELAKSANA', 'GATEK']);
+             // Variabel ini dipakai lintas menu (Master Data, Monitoring, Sistem di bawah),
+             // jadi tetap dihitung di sini terlepas dari status modul PerjanjianKinerja.
+             $kodeJabatan = auth()->user()->profile?->jabatan?->kode;
              $canAccessMasterData = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
              $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
              $canAccessSistem = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
-             $canManagePeriode = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
-             $canValidatePK = in_array($kodeJabatan, ['KABAN', 'SEKBAN', 'KABID']);
-
-             // Cek periode aktif
-             $periodeAktif = \Modules\PerjanjianKinerja\Models\PkPeriode::getPeriodeAktif();
-
-             // Count pending validations for current user
-             $pendingValidasiCount = 0;
-             if ($canValidatePK) {
-                 $pendingValidasiCount = \Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja::where(
-                     'atasan_id',
-                     auth()->id(),
-                 )
-                     ->where('status_validasi', 'Menunggu')
-                     ->count();
-             }
          @endphp
 
-         <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#pk-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-file-earmark-text"></i><span>Perjanjian Kinerja</span><i
-                     class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="pk-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <!-- PK Saya - Semua role bisa akses -->
-                 <li>
-                     <a href="{{ route('perjanjian-kinerja.pk-saya') }}"
-                         class="{{ Request::is('perjanjian-kinerja/pk-saya') ? 'active' : '' }}">
-                         <i class="bi bi-circle"></i><span>PK Saya</span>
-                     </a>
-                 </li>
+         {{-- Perjanjian Kinerja Nav — modul untuk sementara dinonaktifkan (lihat modules_statuses.json).
+              Route module tidak ter-register saat nonaktif, jadi seluruh menu ini disembunyikan
+              agar tidak memicu RouteNotFoundException. --}}
+         @if (\Route::has('perjanjian-kinerja.pk-saya'))
+             @php
+                 $fullAccessPK = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+                 $kabidAccess = $kodeJabatan === 'KABID';
+                 $limitedAccessPK = in_array($kodeJabatan, ['KASUBAG', 'JF', 'PELAKSANA', 'GATEK']);
+                 $canManagePeriode = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+                 $canValidatePK = in_array($kodeJabatan, ['KABAN', 'SEKBAN', 'KABID']);
 
-                 <!-- Buat PK - Semua pegawai bisa buat jika periode aktif -->
-                 @if ($periodeAktif)
-                     <li>
-                         <a href="{{ route('perjanjian-kinerja.create') }}"
-                             class="{{ Request::is('perjanjian-kinerja/create') ? 'active' : '' }}">
-                             <i class="bi bi-circle"></i><span>Buat PK Baru</span>
-                             <span class="badge bg-success badge-number ms-2">Aktif</span>
-                         </a>
-                     </li>
-                 @endif
+                 // Cek periode aktif
+                 $periodeAktif = \Modules\PerjanjianKinerja\Models\PkPeriode::getPeriodeAktif();
 
-                 @if ($canValidatePK)
-                     <!-- Validasi PK - Atasan (Admin, Kaban, Sekban, Kabid, Kasubag) -->
-                     <li>
-                         <a href="{{ route('perjanjian-kinerja.daftar-validasi') }}"
-                             class="{{ Request::is('perjanjian-kinerja/validasi') ? 'active' : '' }}">
-                             <i class="bi bi-circle"></i><span>Validasi PK</span>
-                             @if ($pendingValidasiCount > 0)
-                                 <span class="badge bg-danger badge-number ms-3">{{ $pendingValidasiCount }}</span>
-                             @endif
-                         </a>
-                     </li>
-                 @endif
+                 // Count pending validations for current user
+                 $pendingValidasiCount = 0;
+                 if ($canValidatePK) {
+                     $pendingValidasiCount = \Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja::where(
+                         'atasan_id',
+                         auth()->id(),
+                     )
+                         ->where('status_validasi', 'Menunggu')
+                         ->count();
+                 }
+             @endphp
 
-                 @if ($fullAccessPK || $kabidAccess)
-                     <!-- Daftar PK - Admin, Kaban, Sekban, Kabid -->
+             <li class="nav-item">
+                 <a class="nav-link collapsed" data-bs-target="#pk-nav" data-bs-toggle="collapse" href="#">
+                     <i class="bi bi-file-earmark-text"></i><span>Perjanjian Kinerja</span><i
+                         class="bi bi-chevron-down ms-auto"></i>
+                 </a>
+                 <ul id="pk-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                     <!-- PK Saya - Semua role bisa akses -->
                      <li>
-                         <a href="{{ route('perjanjian-kinerja.index') }}"
-                             class="{{ Request::is('perjanjian-kinerja') && !Request::is('perjanjian-kinerja/*') ? 'active' : '' }}">
-                             <i class="bi bi-circle"></i><span>Daftar Semua PK</span>
-                         </a>
-                     </li>
-                 @endif
-
-                 @if ($canManagePeriode)
-                     <!-- Periode PK - Hanya Admin, Kaban, Sekban -->
-                     <li>
-                         <a href="{{ route('perjanjian-kinerja.periode.index') }}"
-                             class="{{ Request::is('perjanjian-kinerja/periode*') ? 'active' : '' }}">
-                             <i class="bi bi-circle"></i><span>Kelola Periode</span>
-                             @if ($periodeAktif)
-                                 <span class="badge bg-success badge-number ms-2">
-                                     <i class="bi bi-circle-fill" style="font-size: 6px;"></i>
-                                 </span>
-                             @endif
+                         <a href="{{ route('perjanjian-kinerja.pk-saya') }}"
+                             class="{{ Request::is('perjanjian-kinerja/pk-saya') ? 'active' : '' }}">
+                             <i class="bi bi-circle"></i><span>PK Saya</span>
                          </a>
                      </li>
 
-                     <!-- Template PK - Hanya Admin, Kaban, Sekban -->
-                     <li>
-                         <a href="{{ route('perjanjian-kinerja.template.index') }}"
-                             class="{{ Request::is('perjanjian-kinerja/template*') ? 'active' : '' }}">
-                             <i class="bi bi-circle"></i><span>Kelola Template</span>
-                         </a>
-                     </li>
-                 @endif
-             </ul>
-         </li><!-- End Perjanjian Kinerja Nav -->
+                     <!-- Buat PK - Semua pegawai bisa buat jika periode aktif -->
+                     @if ($periodeAktif)
+                         <li>
+                             <a href="{{ route('perjanjian-kinerja.create') }}"
+                                 class="{{ Request::is('perjanjian-kinerja/create') ? 'active' : '' }}">
+                                 <i class="bi bi-circle"></i><span>Buat PK Baru</span>
+                                 <span class="badge bg-success badge-number ms-2">Aktif</span>
+                             </a>
+                         </li>
+                     @endif
+
+                     @if ($canValidatePK)
+                         <!-- Validasi PK - Atasan (Admin, Kaban, Sekban, Kabid, Kasubag) -->
+                         <li>
+                             <a href="{{ route('perjanjian-kinerja.daftar-validasi') }}"
+                                 class="{{ Request::is('perjanjian-kinerja/validasi') ? 'active' : '' }}">
+                                 <i class="bi bi-circle"></i><span>Validasi PK</span>
+                                 @if ($pendingValidasiCount > 0)
+                                     <span class="badge bg-danger badge-number ms-3">{{ $pendingValidasiCount }}</span>
+                                 @endif
+                             </a>
+                         </li>
+                     @endif
+
+                     @if ($fullAccessPK || $kabidAccess)
+                         <!-- Daftar PK - Admin, Kaban, Sekban, Kabid -->
+                         <li>
+                             <a href="{{ route('perjanjian-kinerja.index') }}"
+                                 class="{{ Request::is('perjanjian-kinerja') && !Request::is('perjanjian-kinerja/*') ? 'active' : '' }}">
+                                 <i class="bi bi-circle"></i><span>Daftar Semua PK</span>
+                             </a>
+                         </li>
+                     @endif
+
+                     @if ($canManagePeriode)
+                         <!-- Periode PK - Hanya Admin, Kaban, Sekban -->
+                         <li>
+                             <a href="{{ route('perjanjian-kinerja.periode.index') }}"
+                                 class="{{ Request::is('perjanjian-kinerja/periode*') ? 'active' : '' }}">
+                                 <i class="bi bi-circle"></i><span>Kelola Periode</span>
+                                 @if ($periodeAktif)
+                                     <span class="badge bg-success badge-number ms-2">
+                                         <i class="bi bi-circle-fill" style="font-size: 6px;"></i>
+                                     </span>
+                                 @endif
+                             </a>
+                         </li>
+
+                         <!-- Template PK - Hanya Admin, Kaban, Sekban -->
+                         <li>
+                             <a href="{{ route('perjanjian-kinerja.template.index') }}"
+                                 class="{{ Request::is('perjanjian-kinerja/template*') ? 'active' : '' }}">
+                                 <i class="bi bi-circle"></i><span>Kelola Template</span>
+                             </a>
+                         </li>
+                     @endif
+                 </ul>
+             </li><!-- End Perjanjian Kinerja Nav -->
+         @endif
 
          <!-- Penugasan Nav -->
          @php

@@ -242,23 +242,23 @@
                                                         <div>
                                                             <div class="fw-semibold text-dark">{{ $pegawai->nama }}</div>
                                                             <small
-                                                                class="text-muted">{{ $pegawai->nomor_identitas ?? '-' }}</small>
+                                                                class="text-muted">{{ $pegawai->profile->nomor_identitas ?? '-' }}</small>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td class="align-middle">
                                                     <div>
-                                                        @if ($pegawai->bidang)
+                                                        @if ($pegawai->profile->bidang)
                                                             <span class="badge mb-1"
-                                                                style="background-color: {{ $pegawai->bidang->warna ?? '#6c757d' }};">
-                                                                {{ $pegawai->bidang->kode }}
+                                                                style="background-color: {{ $pegawai->profile->bidang->warna ?? '#6c757d' }};">
+                                                                {{ $pegawai->profile->bidang->kode }}
                                                             </span>
                                                         @else
                                                             <span class="badge bg-secondary mb-1">-</span>
                                                         @endif
                                                         <br>
                                                         <small
-                                                            class="text-muted">{{ $pegawai->jabatan->nama ?? '-' }}</small>
+                                                            class="text-muted">{{ $pegawai->profile->jabatan->nama ?? '-' }}</small>
                                                     </div>
                                                 </td>
                                                 <td class="text-center align-middle">
@@ -311,16 +311,16 @@
                                                     </div>
                                                     <div class="flex-grow-1">
                                                         <h6 class="mb-1 fw-bold">{{ $pegawai->nama }}</h6>
-                                                        <p class="text-muted mb-1 small">{{ $pegawai->nomor_identitas ?? '-' }}</p>
+                                                        <p class="text-muted mb-1 small">{{ $pegawai->profile->nomor_identitas ?? '-' }}</p>
                                                         <span
-                                                            class="badge bg-info text-white">{{ $pegawai->jabatan->nama ?? '-' }}</span>
+                                                            class="badge bg-info text-white">{{ $pegawai->profile->jabatan->nama ?? '-' }}</span>
                                                     </div>
                                                 </div>
 
                                                 <div class="mb-3">
                                                     <small class="text-muted d-flex align-items-center">
                                                         <i class="bi bi-building me-2"></i>
-                                                        <span>{{ $pegawai->bidang->kode ?? '-' }}</span>
+                                                        <span>{{ $pegawai->profile->bidang->kode ?? '-' }}</span>
                                                     </small>
                                                 </div>
 

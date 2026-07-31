@@ -6,10 +6,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Modules\TerminalData\Jobs\ProcessFileUpload;
 use Modules\TerminalData\Models\TdFile;
 use Modules\TerminalData\Models\TdFolder;
 
@@ -33,7 +32,7 @@ class TdFileController extends Controller
                 'required',
                 'file',
                 'max:102400', // 100MB max
-                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,bmp,svg,webp'
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,bmp,svg,webp',
             ],
         ], [
             'file.mimes' => 'File harus berupa dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll)',
@@ -41,7 +40,7 @@ class TdFileController extends Controller
         ]);
 
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             // Check if folder exists
@@ -60,7 +59,7 @@ class TdFileController extends Controller
             $extension = $uploadedFile->getClientOriginalExtension();
 
             // Generate unique filename
-            $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '_' . time() . '.' . $extension;
+            $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)).'_'.time().'.'.$extension;
 
             // Define storage path
             $storagePath = "terminal-data/{$folder->bidang_id}/{$folder->id}";
@@ -97,19 +96,19 @@ class TdFileController extends Controller
                 'data' => [
                     'id' => $file->id,
                     'name' => $file->name,
-                    'size' => round($file->size / 1024, 2) . ' KB',
-                ]
+                    'size' => round($file->size / 1024, 2).' KB',
+                ],
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk upload file ke folder ini. ' .
-                    'Pastikan folder sesuai dengan bidang/sub bidang Anda atau Anda adalah pemilik folder.'
+                'message' => 'Anda tidak memiliki izin untuk upload file ke folder ini. '.
+                    'Pastikan folder sesuai dengan bidang/sub bidang Anda atau Anda adalah pemilik folder.',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengupload file: ' . $e->getMessage()
+                'message' => 'Gagal mengupload file: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -126,14 +125,14 @@ class TdFileController extends Controller
             $this->authorize('download', $file);
 
             // Check if file exists in storage
-            if (!$file->storage_path || !Storage::exists($file->storage_path)) {
+            if (! $file->storage_path || ! Storage::exists($file->storage_path)) {
                 abort(404, 'File tidak ditemukan');
             }
 
             // Use original_name for download to preserve extension and full name
             return Storage::download($file->storage_path, $file->original_name);
         } catch (\Exception $e) {
-            abort(500, 'Gagal mendownload file: ' . $e->getMessage());
+            abort(500, 'Gagal mendownload file: '.$e->getMessage());
         }
     }
 
@@ -162,17 +161,17 @@ class TdFileController extends Controller
                 'data' => [
                     'id' => $file->id,
                     'name' => $file->name,
-                ]
+                ],
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk mengubah file ini'
+                'message' => 'Anda tidak memiliki izin untuk mengubah file ini',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengubah nama file: ' . $e->getMessage()
+                'message' => 'Gagal mengubah nama file: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -189,7 +188,7 @@ class TdFileController extends Controller
             $this->authorize('view', $file);
 
             // Check if file exists in storage (local disk = storage/app/private)
-            if (!Storage::exists($file->storage_path)) {
+            if (! Storage::exists($file->storage_path)) {
                 abort(404, 'File tidak ditemukan di storage');
             }
 
@@ -197,7 +196,7 @@ class TdFileController extends Controller
             $filePath = Storage::path($file->storage_path);
 
             // Check if file physically exists
-            if (!file_exists($filePath)) {
+            if (! file_exists($filePath)) {
                 abort(404, 'File tidak ditemukan');
             }
 
@@ -224,12 +223,12 @@ class TdFileController extends Controller
             // Return file response with appropriate headers
             return response()->file($filePath, [
                 'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . $file->original_name . '"',
+                'Content-Disposition' => 'inline; filename="'.$file->original_name.'"',
                 'Cache-Control' => 'public, max-age=31536000',
             ]);
         } catch (\Exception $e) {
-            Log::error('Error serving file: ' . $e->getMessage());
-            abort(404, 'File tidak dapat diakses: ' . $e->getMessage());
+            Log::error('Error serving file: '.$e->getMessage());
+            abort(404, 'File tidak dapat diakses: '.$e->getMessage());
         }
     }
 
@@ -254,18 +253,18 @@ class TdFileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'File berhasil dipindahkan ke sampah'
+                'message' => 'File berhasil dipindahkan ke sampah',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak dapat menghapus file. ' .
-                    'File di folder Eviden Kinerja tidak dapat dihapus atau Anda tidak memiliki izin.'
+                'message' => 'Tidak dapat menghapus file. '.
+                    'File di folder Eviden Kinerja tidak dapat dihapus atau Anda tidak memiliki izin.',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memindahkan file ke sampah: ' . $e->getMessage()
+                'message' => 'Gagal memindahkan file ke sampah: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -291,17 +290,17 @@ class TdFileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'File berhasil dipulihkan'
+                'message' => 'File berhasil dipulihkan',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk memulihkan file ini'
+                'message' => 'Anda tidak memiliki izin untuk memulihkan file ini',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memulihkan file: ' . $e->getMessage()
+                'message' => 'Gagal memulihkan file: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -332,17 +331,17 @@ class TdFileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'File berhasil dihapus permanen'
+                'message' => 'File berhasil dihapus permanen',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk menghapus file ini secara permanen'
+                'message' => 'Anda tidak memiliki izin untuk menghapus file ini secara permanen',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus file permanen: ' . $e->getMessage()
+                'message' => 'Gagal menghapus file permanen: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -390,12 +389,12 @@ class TdFileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => implode(' dan ', $message) . ' berhasil dihapus permanen'
+                'message' => implode(' dan ', $message).' berhasil dihapus permanen',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengosongkan sampah: ' . $e->getMessage()
+                'message' => 'Gagal mengosongkan sampah: '.$e->getMessage(),
             ], 500);
         }
     }

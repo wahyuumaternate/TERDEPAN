@@ -31,8 +31,8 @@ return new class extends Migration
             $table->decimal('penalty_nilai', 5, 2)->default(0);
 
             // Aktor
-            $table->foreignId('direvisi_oleh')->constrained('master_pegawai')->comment('Atasan yang minta revisi');
-            $table->foreignId('pegawai_id')->nullable()->constrained('master_pegawai')->comment('Pegawai yang merevisi');
+            $table->foreignId('direvisi_oleh')->constrained('users')->comment('Atasan yang minta revisi');
+            $table->foreignId('pegawai_id')->nullable()->constrained('users')->comment('Pegawai yang merevisi');
 
             // Tanggal submit revisi
             $table->timestamp('submitted_at')->nullable()->comment('Waktu submit revisi');

@@ -2,12 +2,12 @@
 
 namespace Modules\TerminalData\Services;
 
-use Modules\TerminalData\Models\TdFolder;
-use Modules\TerminalData\Repositories\TdFolderRepository;
-use Modules\TerminalData\Events\FolderAccessed;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Auth\Access\AuthorizationException;
+use Modules\TerminalData\Events\FolderAccessed;
+use Modules\TerminalData\Models\TdFolder;
+use Modules\TerminalData\Repositories\TdFolderRepository;
 
 class TdFolderService
 {
@@ -21,7 +21,7 @@ class TdFolderService
     public function getFolders(array $filters, $user): Collection
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
+        if (! Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk melihat folder.');
         }
 
@@ -42,7 +42,7 @@ class TdFolderService
     public function getRootFolders($user): Collection
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
+        if (! Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk melihat folder.');
         }
 
@@ -55,6 +55,7 @@ class TdFolderService
         })->map(function ($folder) {
             // Hitung subfolder count
             $folder->subfolders_count = $folder->subfolders()->count();
+
             return $folder;
         });
 
@@ -71,12 +72,12 @@ class TdFolderService
     {
         $folder = $this->repository->findById($id);
 
-        if (!$folder) {
+        if (! $folder) {
             return null;
         }
 
         // Check authorization
-        if (!Gate::forUser($user)->allows('view', $folder)) {
+        if (! Gate::forUser($user)->allows('view', $folder)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk melihat folder ini.');
         }
 
@@ -92,7 +93,7 @@ class TdFolderService
     public function createFolder(array $data, $user): TdFolder
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('create', TdFolder::class)) {
+        if (! Gate::forUser($user)->allows('create', TdFolder::class)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk membuat folder.');
         }
 
@@ -100,8 +101,8 @@ class TdFolderService
         $data['created_by'] = $user->id;
 
         // If no bidang_id provided, use user's bidang
-        if (!isset($data['bidang_id']) && $user->bidang_id) {
-            $data['bidang_id'] = $user->bidang_id;
+        if (! isset($data['bidang_id']) && $user->profile?->bidang_id) {
+            $data['bidang_id'] = $user->profile?->bidang_id;
         }
 
         // Create folder
@@ -119,7 +120,7 @@ class TdFolderService
     public function updateFolder(TdFolder $folder, array $data, $user): TdFolder
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('update', $folder)) {
+        if (! Gate::forUser($user)->allows('update', $folder)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk mengubah folder ini.');
         }
 
@@ -144,7 +145,7 @@ class TdFolderService
     public function deleteFolder(TdFolder $folder, $user): bool
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('delete', $folder)) {
+        if (! Gate::forUser($user)->allows('delete', $folder)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk menghapus folder ini.');
         }
 
@@ -161,12 +162,12 @@ class TdFolderService
     public function moveFolder(TdFolder $folder, ?TdFolder $newParent, $user): TdFolder
     {
         // Check authorization for source folder
-        if (!Gate::forUser($user)->allows('update', $folder)) {
+        if (! Gate::forUser($user)->allows('update', $folder)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk memindahkan folder ini.');
         }
 
         // Check authorization for new parent folder
-        if ($newParent && !Gate::forUser($user)->allows('update', $newParent)) {
+        if ($newParent && ! Gate::forUser($user)->allows('update', $newParent)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk menempatkan folder di dalam folder tujuan.');
         }
 
@@ -184,10 +185,10 @@ class TdFolderService
     /**
      * Get folders by bidang
      */
-    public function getFoldersByBidang(int $bidangId, $user, int $level = null): Collection
+    public function getFoldersByBidang(int $bidangId, $user, ?int $level = null): Collection
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
+        if (! Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk melihat folder.');
         }
 
@@ -205,7 +206,7 @@ class TdFolderService
     public function getStatistics($user): array
     {
         // Check authorization
-        if (!Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
+        if (! Gate::forUser($user)->allows('viewAny', TdFolder::class)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk melihat statistik.');
         }
 
@@ -218,11 +219,11 @@ class TdFolderService
     public function toggleStar(TdFolder $folder, $user): TdFolder
     {
         // Check if user can view the folder
-        if (!Gate::forUser($user)->allows('view', $folder)) {
+        if (! Gate::forUser($user)->allows('view', $folder)) {
             throw new AuthorizationException('Anda tidak memiliki izin untuk folder ini.');
         }
 
-        $folder->is_starred = !$folder->is_starred;
+        $folder->is_starred = ! $folder->is_starred;
         $folder->save();
 
         // Fire event

@@ -188,7 +188,7 @@
                     </a>
 
                     <!-- E-Kinerja -->
-                    <a href="{{ route('perjanjian-kinerja.index') }}" class="menu-card block">
+                    <a href="{{ route('e-kinerja.index') }}" class="menu-card block">
                         <div class="menu-icon bg-green-100">
                             <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">

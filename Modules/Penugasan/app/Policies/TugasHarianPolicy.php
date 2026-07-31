@@ -2,9 +2,9 @@
 
 namespace Modules\Penugasan\Policies;
 
-use App\Models\MasterPegawai;
-use Modules\Penugasan\Models\TugasHarian;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\Penugasan\Models\TugasHarian;
 
 class TugasHarianPolicy
 {
@@ -13,7 +13,7 @@ class TugasHarianPolicy
     /**
      * Determine if user can view any tugas harian (list)
      */
-    public function viewAny(MasterPegawai $user): bool
+    public function viewAny(User $user): bool
     {
         // Semua user yang authenticated bisa melihat daftar tugas
         return true;
@@ -22,7 +22,7 @@ class TugasHarianPolicy
     /**
      * Determine if user can view specific tugas harian
      */
-    public function view(MasterPegawai $user, TugasHarian $tugas): bool
+    public function view(User $user, TugasHarian $tugas): bool
     {
         // Bisa dilihat oleh:
         // 1. Pegawai penerima tugas
@@ -30,16 +30,16 @@ class TugasHarianPolicy
         // 3. Atasan langsung pegawai
         return $user->id === $tugas->pegawai_id
             || $user->id === $tugas->pemberi_tugas_id
-            || $user->id === $tugas->pegawai->atasan_langsung_id;
+            || $user->id === $tugas->pegawai->profile?->atasan_langsung_id;
     }
 
     /**
      * Determine if user can create tugas harian
      * Hanya atasan yang bisa memberikan tugas
      */
-    public function create(MasterPegawai $user): bool
+    public function create(User $user): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Semua jabatan struktural bisa memberikan tugas
         // Kecuali PELAKSANA, JAFUNG, GATEK
@@ -50,7 +50,7 @@ class TugasHarianPolicy
      * Determine if user can update tugas harian
      * Hanya atasan pemberi tugas yang bisa edit (jika status masih pending)
      */
-    public function update(MasterPegawai $user, TugasHarian $tugas): bool
+    public function update(User $user, TugasHarian $tugas): bool
     {
         // Hanya pemberi tugas yang bisa edit
         if ($user->id !== $tugas->pemberi_tugas_id) {
@@ -65,7 +65,7 @@ class TugasHarianPolicy
      * Determine if user can delete tugas harian
      * Hanya atasan pemberi tugas yang bisa hapus (jika status masih pending)
      */
-    public function delete(MasterPegawai $user, TugasHarian $tugas): bool
+    public function delete(User $user, TugasHarian $tugas): bool
     {
         // Sama dengan update - hanya pemberi tugas dan status pending
         return $user->id === $tugas->pemberi_tugas_id && $tugas->status === 'pending';
@@ -75,7 +75,7 @@ class TugasHarianPolicy
      * Determine if user can update status tugas (terima/tolak, mulai kerjakan)
      * Hanya pegawai penerima tugas
      */
-    public function updateStatus(MasterPegawai $user, TugasHarian $tugas): bool
+    public function updateStatus(User $user, TugasHarian $tugas): bool
     {
         return $user->id === $tugas->pegawai_id;
     }
@@ -84,7 +84,7 @@ class TugasHarianPolicy
      * Determine if user can upload eviden kinerja
      * Hanya pegawai penerima tugas (status: dikerjakan atau revisi)
      */
-    public function uploadEviden(MasterPegawai $user, TugasHarian $tugas): bool
+    public function uploadEviden(User $user, TugasHarian $tugas): bool
     {
         if ($user->id !== $tugas->pegawai_id) {
             return false;
@@ -97,7 +97,7 @@ class TugasHarianPolicy
      * Determine if user can validate tugas
      * Hanya atasan pemberi tugas (status: validasi)
      */
-    public function validate(MasterPegawai $user, TugasHarian $tugas): bool
+    public function validate(User $user, TugasHarian $tugas): bool
     {
         if ($user->id !== $tugas->pemberi_tugas_id) {
             return false;
@@ -110,7 +110,7 @@ class TugasHarianPolicy
      * Determine if user can give revision notes
      * Hanya atasan pemberi tugas (saat validasi)
      */
-    public function revise(MasterPegawai $user, TugasHarian $tugas): bool
+    public function revise(User $user, TugasHarian $tugas): bool
     {
         return $this->validate($user, $tugas);
     }
@@ -119,7 +119,7 @@ class TugasHarianPolicy
      * Determine if user can give rating/nilai
      * Hanya atasan pemberi tugas (status: selesai)
      */
-    public function rate(MasterPegawai $user, TugasHarian $tugas): bool
+    public function rate(User $user, TugasHarian $tugas): bool
     {
         if ($user->id !== $tugas->pemberi_tugas_id) {
             return false;
@@ -132,7 +132,7 @@ class TugasHarianPolicy
      * Determine if user can accept task (terima)
      * Hanya pegawai penerima tugas (status: pending)
      */
-    public function terima(MasterPegawai $user, TugasHarian $tugas): bool
+    public function terima(User $user, TugasHarian $tugas): bool
     {
         if ($user->id !== $tugas->pegawai_id) {
             return false;
@@ -145,7 +145,7 @@ class TugasHarianPolicy
      * Determine if user can reject task (tolak)
      * Hanya pegawai penerima tugas (status: pending)
      */
-    public function tolak(MasterPegawai $user, TugasHarian $tugas): bool
+    public function tolak(User $user, TugasHarian $tugas): bool
     {
         if ($user->id !== $tugas->pegawai_id) {
             return false;
@@ -158,7 +158,7 @@ class TugasHarianPolicy
      * Determine if user can submit task for validation
      * Hanya pegawai penerima tugas (status: dikerjakan atau revisi)
      */
-    public function submit(MasterPegawai $user, TugasHarian $tugas): bool
+    public function submit(User $user, TugasHarian $tugas): bool
     {
         if ($user->id !== $tugas->pegawai_id) {
             return false;

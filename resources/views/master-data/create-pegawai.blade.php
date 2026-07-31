@@ -330,10 +330,10 @@
                                     <select class="form-select @error('atasan_langsung_id') is-invalid @enderror"
                                         name="atasan_langsung_id">
                                         <option value="">Pilih Atasan Langsung</option>
-                                        @foreach (App\Models\MasterPegawai::all() as $atasan)
+                                        @foreach (App\Models\User::with('profile.jabatan')->get() as $atasan)
                                             <option value="{{ $atasan->id }}"
                                                 {{ old('atasan_langsung_id') == $atasan->id ? 'selected' : '' }}>
-                                                {{ $atasan->nama }} - {{ $atasan->jabatan->nama ?? '' }}
+                                                {{ $atasan->nama }} - {{ $atasan->profile?->jabatan->nama ?? '' }}
                                             </option>
                                         @endforeach
                                     </select>

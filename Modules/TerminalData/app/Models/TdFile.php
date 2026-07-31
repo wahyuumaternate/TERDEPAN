@@ -2,15 +2,15 @@
 
 namespace Modules\TerminalData\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
-use App\Models\MasterPegawai;
 use App\Models\MasterBidang;
 use App\Models\MasterSubBidang;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Modules\TerminalData\Database\Factories\TdFileFactory;
 
 class TdFile extends Model
@@ -18,7 +18,9 @@ class TdFile extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'td_files';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -145,12 +147,12 @@ class TdFile extends Model
 
     public function creator()
     {
-        return $this->belongsTo(MasterPegawai::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function updater()
     {
-        return $this->belongsTo(MasterPegawai::class, 'updated_by');
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function bidang()
@@ -171,7 +173,7 @@ class TdFile extends Model
     public function sharedWith()
     {
         return $this->belongsToMany(
-            MasterPegawai::class,
+            User::class,
             'td_file_shares',
             'file_id',
             'pegawai_id'
@@ -264,7 +266,7 @@ class TdFile extends Model
      * Scope untuk filter file berdasarkan akses user
      * Digunakan untuk permission-based filtering
      */
-    public function scopeForUser($query, MasterPegawai $user)
+    public function scopeForUser($query, User $user)
     {
         // Semua user yang terautentikasi bisa melihat semua file
         return $query;
@@ -273,9 +275,9 @@ class TdFile extends Model
     /**
      * Scope untuk file yang bisa diedit oleh user
      */
-    public function scopeEditableBy($query, MasterPegawai $user)
+    public function scopeEditableBy($query, User $user)
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - edit semua
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -285,9 +287,9 @@ class TdFile extends Model
         // KABID - edit file bidangnya
         if ($kodeJabatan === 'KABID') {
             return $query->where(function ($q) use ($user) {
-                $q->where('bidang_id', $user->bidang_id)
+                $q->where('bidang_id', $user->profile?->bidang_id)
                     ->orWhereHas('folder', function ($fq) use ($user) {
-                        $fq->where('bidang_id', $user->bidang_id);
+                        $fq->where('bidang_id', $user->profile?->bidang_id);
                     });
             });
         }
@@ -303,9 +305,9 @@ class TdFile extends Model
     /**
      * Scope untuk file yang bisa dihapus oleh user
      */
-    public function scopeDeletableBy($query, MasterPegawai $user)
+    public function scopeDeletableBy($query, User $user)
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - delete semua
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -315,9 +317,9 @@ class TdFile extends Model
         // KABID - delete file bidangnya
         if ($kodeJabatan === 'KABID') {
             return $query->where(function ($q) use ($user) {
-                $q->where('bidang_id', $user->bidang_id)
+                $q->where('bidang_id', $user->profile?->bidang_id)
                     ->orWhereHas('folder', function ($fq) use ($user) {
-                        $fq->where('bidang_id', $user->bidang_id);
+                        $fq->where('bidang_id', $user->profile?->bidang_id);
                     });
             });
         }
@@ -333,7 +335,7 @@ class TdFile extends Model
     /**
      * Scope untuk file yang bisa didownload oleh user
      */
-    public function scopeDownloadableBy($query, MasterPegawai $user)
+    public function scopeDownloadableBy($query, User $user)
     {
         // Semua user yang terautentikasi bisa download semua file
         return $query;
@@ -349,13 +351,15 @@ class TdFile extends Model
     {
         $bytes = $this->size;
 
-        if ($bytes == 0) return '0 Bytes';
+        if ($bytes == 0) {
+            return '0 Bytes';
+        }
 
         $k = 1024;
         $sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         $i = floor(log($bytes) / log($k));
 
-        return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
+        return round($bytes / pow($k, $i), 2).' '.$sizes[$i];
     }
 
     /**
@@ -368,7 +372,7 @@ class TdFile extends Model
 
     public function getFullPath()
     {
-        return $this->folder->path . '/' . $this->name;
+        return $this->folder->path.'/'.$this->name;
     }
 
     public function incrementViews()
@@ -385,7 +389,10 @@ class TdFile extends Model
 
     public function isLocked()
     {
-        if (!$this->lock) return false;
+        if (! $this->lock) {
+            return false;
+        }
+
         return $this->lock->expires_at->isFuture();
     }
 
@@ -481,26 +488,26 @@ class TdFile extends Model
         $basePermission = $permissionMap[$permission] ?? 'td_file_view';
 
         // Check permissions hierarchy: all > bidang > sub_bidang > own
-        if ($user->hasPermissionTo($basePermission . '_all')) {
+        if ($user->hasPermissionTo($basePermission.'_all')) {
             return true;
         }
 
         if (
-            $user->hasPermissionTo($basePermission . '_bidang') &&
-            $this->bidang_id === $user->bidang_id
+            $user->hasPermissionTo($basePermission.'_bidang') &&
+            $this->bidang_id === $user->profile?->bidang_id
         ) {
             return true;
         }
 
         if (
-            $user->hasPermissionTo($basePermission . '_sub_bidang') &&
-            $this->sub_bidang_id === $user->sub_bidang_id
+            $user->hasPermissionTo($basePermission.'_sub_bidang') &&
+            $this->sub_bidang_id === $user->profile?->sub_bidang_id
         ) {
             return true;
         }
 
         if (
-            $user->hasPermissionTo($basePermission . '_own') &&
+            $user->hasPermissionTo($basePermission.'_own') &&
             $this->created_by === $user->id
         ) {
             return true;
@@ -532,7 +539,7 @@ class TdFile extends Model
         $newFile = $this->replicate();
         $newFile->id = (string) Str::uuid();
         $newFile->folder_id = $newFolderId ?? $this->folder_id;
-        $newFile->name = $newName ?? $this->name . ' (Copy)';
+        $newFile->name = $newName ?? $this->name.' (Copy)';
         $newFile->original_file_id = null;
         $newFile->version = 1;
         $newFile->is_latest_version = true;
@@ -568,11 +575,11 @@ class TdFile extends Model
 
     public function belongsToUserBidang($user)
     {
-        return $this->bidang_id && $this->bidang_id === $user->bidang_id;
+        return $this->bidang_id && $this->bidang_id === $user->profile?->bidang_id;
     }
 
     public function belongsToUserSubBidang($user)
     {
-        return $this->sub_bidang_id && $this->sub_bidang_id === $user->sub_bidang_id;
+        return $this->sub_bidang_id && $this->sub_bidang_id === $user->profile?->sub_bidang_id;
     }
 }

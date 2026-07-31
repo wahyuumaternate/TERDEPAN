@@ -85,7 +85,7 @@
                                                 <div>
                                                     <div class="small fw-semibold">{{ $tugas->pegawai->nama }}</div>
                                                     <small
-                                                        class="text-muted">{{ $tugas->pegawai->jabatan?->nama ?? '-' }}</small>
+                                                        class="text-muted">{{ $tugas->pegawai->profile->jabatan?->nama ?? '-' }}</small>
                                                 </div>
                                             </div>
                                         </td>

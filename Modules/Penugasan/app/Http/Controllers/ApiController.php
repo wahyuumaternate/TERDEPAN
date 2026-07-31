@@ -3,17 +3,17 @@
 namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterPegawai;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Modules\Penugasan\Models\TugasPokok;
 use Modules\Penugasan\Models\TugasHarian;
+use Modules\Penugasan\Models\TugasPokok;
 use Modules\Penugasan\Models\TugasTambahan;
 
 /**
  * ApiController
- * 
+ *
  * Menyediakan API endpoints untuk AJAX calls
  * Response format: JSON
  */
@@ -21,8 +21,7 @@ class ApiController extends Controller
 {
     /**
      * Mendapatkan statistik dashboard pengguna
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function statistik(Request $request)
@@ -62,14 +61,13 @@ class ApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $stats
+            'data' => $stats,
         ]);
     }
 
     /**
      * Mendapatkan data kalender tugas
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function kalender(Request $request)
@@ -116,14 +114,13 @@ class ApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $events
+            'data' => $events,
         ]);
     }
 
     /**
      * Mendapatkan notifikasi pengguna
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function notifikasi(Request $request)
@@ -191,14 +188,13 @@ class ApiController extends Controller
         return response()->json([
             'success' => true,
             'data' => $notifikasi,
-            'count' => count($notifikasi)
+            'count' => count($notifikasi),
         ]);
     }
 
     /**
      * Mendapatkan workload tim (untuk atasan)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function workloadTim(Request $request)
@@ -206,8 +202,8 @@ class ApiController extends Controller
         $user = $request->user();
 
         // Get anggota tim
-        $anggotaTim = MasterPegawai::where('atasan_langsung_id', $user->id)
-            ->where('status_aktif', 'Aktif')
+        $anggotaTim = User::whereRelation('profile', 'atasan_langsung_id', $user->id)
+            ->whereRelation('profile', 'status_aktif', 'Aktif')
             ->select('id', 'nama', 'jabatan_id')
             ->with('jabatan:id,nama')
             ->withCount([
@@ -221,10 +217,11 @@ class ApiController extends Controller
             ->get()
             ->map(function ($anggota) {
                 $workload = ($anggota->tugas_aktif + $anggota->tugas_pending) * 10;
+
                 return [
                     'id' => $anggota->id,
                     'nama' => $anggota->nama,
-                    'jabatan' => $anggota->jabatan->nama ?? '-',
+                    'jabatan' => $anggota->profile->jabatan->nama ?? '-',
                     'tugas_aktif' => $anggota->tugas_aktif,
                     'tugas_pending' => $anggota->tugas_pending,
                     'workload_persen' => min($workload, 100),
@@ -233,14 +230,13 @@ class ApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $anggotaTim
+            'data' => $anggotaTim,
         ]);
     }
 
     /**
      * Mendapatkan progress anggota tim
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -249,8 +245,8 @@ class ApiController extends Controller
         $user = $request->user();
 
         // Cek apakah pegawai adalah bawahan
-        $pegawai = MasterPegawai::where('id', $id)
-            ->where('atasan_langsung_id', $user->id)
+        $pegawai = User::where('id', $id)
+            ->whereRelation('profile', 'atasan_langsung_id', $user->id)
             ->firstOrFail();
 
         // Progress 30 hari terakhir
@@ -258,7 +254,7 @@ class ApiController extends Controller
             ->select([
                 DB::raw('DATE(tanggal) as tanggal'),
                 DB::raw('AVG(progress_persen) as avg_progress'),
-                DB::raw('COUNT(*) as jumlah_update')
+                DB::raw('COUNT(*) as jumlah_update'),
             ])
             ->where('pegawai_id', $id)
             ->where('tanggal', '>=', now()->subDays(30))
@@ -273,16 +269,15 @@ class ApiController extends Controller
                     'id' => $pegawai->id,
                     'nama' => $pegawai->nama,
                 ],
-                'progress' => $progress
-            ]
+                'progress' => $progress,
+            ],
         ]);
     }
 
     /**
      * Mendapatkan daftar tugas pokok berdasarkan pegawai
      * Digunakan untuk dropdown saat memberikan tugas harian
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -292,13 +287,13 @@ class ApiController extends Controller
             $user = $request->user();
 
             // Cek apakah pegawai adalah bawahan atau user sendiri yang memiliki akses
-            $pegawai = MasterPegawai::where('id', $id)->firstOrFail();
+            $pegawai = User::where('id', $id)->firstOrFail();
 
             // Authorization: hanya atasan langsung atau pegawai itu sendiri yang bisa akses
-            if ($pegawai->atasan_langsung_id !== $user->id && $pegawai->id !== $user->id) {
+            if ($pegawai->profile?->atasan_langsung_id !== $user->id && $pegawai->id !== $user->id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak memiliki akses'
+                    'message' => 'Tidak memiliki akses',
                 ], 403);
             }
 
@@ -322,19 +317,19 @@ class ApiController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pegawai tidak ditemukan'
+                'message' => 'Pegawai tidak ditemukan',
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Helper: Get color based on status
-     * 
+     *
      * @param  string  $status
      * @return string
      */

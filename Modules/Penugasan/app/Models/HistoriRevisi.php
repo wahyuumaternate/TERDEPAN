@@ -2,20 +2,22 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
-use App\Models\MasterPegawai;
 
 class HistoriRevisi extends Model
 {
     use HasFactory;
 
     protected $table = 'knj_histori_revisi';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -45,7 +47,7 @@ class HistoriRevisi extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -55,9 +57,11 @@ class HistoriRevisi extends Model
 
     // Status constants
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_DIKIRIM = 'dikirim';
+
     public const STATUS_DITERIMA = 'diterima';
-    
+
     public const STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_DIKIRIM,
@@ -77,7 +81,7 @@ class HistoriRevisi extends Model
      */
     public function direvisiOleh(): BelongsTo
     {
-        return $this->belongsTo(MasterPegawai::class, 'direvisi_oleh');
+        return $this->belongsTo(User::class, 'direvisi_oleh');
     }
 
     /**
@@ -85,7 +89,7 @@ class HistoriRevisi extends Model
      */
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(User::class, 'pegawai_id');
     }
 
     /**

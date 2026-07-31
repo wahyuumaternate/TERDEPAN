@@ -44,10 +44,10 @@
                                     </div>
                                     <div>
                                         <h4 class="mb-1 fw-bold">{{ $pegawai->nama }}</h4>
-                                        <p class="text-muted mb-1 small">NIP: {{ $pegawai->nomor_identitas ?? '-' }}</p>
+                                        <p class="text-muted mb-1 small">NIP: {{ $pegawai->profile->nomor_identitas ?? '-' }}</p>
                                         <div class="d-flex gap-2">
-                                            <span class="badge bg-primary">{{ $pegawai->jabatan->nama ?? '-' }}</span>
-                                            <span class="badge bg-info">{{ $pegawai->bidang->nama ?? '-' }}</span>
+                                            <span class="badge bg-primary">{{ $pegawai->profile->jabatan->nama ?? '-' }}</span>
+                                            <span class="badge bg-info">{{ $pegawai->profile->bidang->nama ?? '-' }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -121,7 +121,7 @@
                                         // Cek apakah user melihat tugasnya sendiri
                                         $isOwnTask = $pegawai->id == auth()->id();
                                         // Cek apakah user adalah atasan langsung dari pegawai ini
-                                        $isAtasanLangsung = $pegawai->atasan_langsung_id == auth()->id();
+                                        $isAtasanLangsung = $pegawai->profile?->atasan_langsung_id == auth()->id();
                                         // User bisa memberikan tugas jika bukan tugas sendiri dan adalah atasan langsung
                                         $canBerikanTugas = !$isOwnTask && $isAtasanLangsung;
                                     @endphp

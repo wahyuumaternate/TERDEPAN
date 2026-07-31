@@ -2,23 +2,27 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use App\Models\MasterPegawai;
 
 class MasterPegawaiSeeder extends Seeder
 {
     public function run()
     {
-        MasterPegawai::create([
+        $user = User::create([
+            'nama' => 'Admin Sistem',
+            'email' => 'admin@gmail.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $user->profile()->create([
             'nomor_identitas' => 'ADMIN',
             'tipe_identitas' => 'ID',
-            'nama' => 'Admin Sistem',
             'jabatan_id' => 1, // pastikan id jabatan 1 ada
             'bidang_id' => 1, // pastikan id bidang 1 ada
             'jenis_kelamin' => 'L',
-            'email' => 'admin@gmail.com',
-            'password' => bcrypt('password'),
             'status_kepegawaian' => 'Kontrak',
+            'status_aktif' => 'Aktif',
         ]);
     }
 }

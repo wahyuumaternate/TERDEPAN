@@ -70,16 +70,16 @@
                                                 <option value="">Pilih Pegawai</option>
                                                 @foreach ($bawahanLangsung as $pegawai)
                                                     <option value="{{ $pegawai->id }}">
-                                                        {{ $pegawai->nama }} - {{ $pegawai->jabatan->nama ?? '' }}
-                                                        @if ($pegawai->bidang)
-                                                            ({{ $pegawai->bidang->nama }})
+                                                        {{ $pegawai->nama }} - {{ $pegawai->profile->jabatan->nama ?? '' }}
+                                                        @if ($pegawai->profile->bidang)
+                                                            ({{ $pegawai->profile->bidang->nama }})
                                                         @endif
                                                     </option>
                                                 @endforeach
                                             </select>
                                             <small class="text-muted">
                                                 @php
-                                                    $kodeJabatan = auth()->user()->jabatan?->kode;
+                                                    $kodeJabatan = auth()->user()->profile?->jabatan?->kode;
                                                 @endphp
                                                 @if (in_array($kodeJabatan, ['KABAN', 'SEKBAN']))
                                                     Anda dapat memberikan tugas harian ke semua pegawai
@@ -183,16 +183,16 @@
                                             <option value="">Pilih Pegawai</option>
                                             @foreach ($pegawaiTugasTambahan as $pegawai)
                                                 <option value="{{ $pegawai->id }}">
-                                                    {{ $pegawai->nama }} - {{ $pegawai->jabatan->nama ?? '' }}
-                                                    @if ($pegawai->bidang)
-                                                        ({{ $pegawai->bidang->nama }})
+                                                    {{ $pegawai->nama }} - {{ $pegawai->profile->jabatan->nama ?? '' }}
+                                                    @if ($pegawai->profile->bidang)
+                                                        ({{ $pegawai->profile->bidang->nama }})
                                                     @endif
                                                 </option>
                                             @endforeach
                                         </select>
                                         <small class="text-muted">
                                             @php
-                                                $kodeJabatan = auth()->user()->jabatan?->kode;
+                                                $kodeJabatan = auth()->user()->profile?->jabatan?->kode;
                                             @endphp
                                             @if (in_array($kodeJabatan, ['KABAN', 'SEKBAN']))
                                                 Anda dapat memberikan tugas tambahan ke semua pegawai

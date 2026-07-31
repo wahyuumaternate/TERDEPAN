@@ -161,7 +161,7 @@
                             <div class="d-flex flex-column flex-sm-row gap-2">
                                 @php
                                     $user = auth()->user();
-                                    $kodeJabatan = $user->jabatan?->kode;
+                                    $kodeJabatan = $user->profile?->jabatan?->kode;
                                     $canCreateInFolder = false;
 
                                     // ADMIN, KABAN, SEKBAN bisa buat folder di mana saja
@@ -172,7 +172,7 @@
                                     elseif (
                                         in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
                                     ) {
-                                        $canCreateInFolder = $folder->bidang_id === $user->bidang_id;
+                                        $canCreateInFolder = $folder->bidang_id === $user->profile?->bidang_id;
                                     }
                                 @endphp
 

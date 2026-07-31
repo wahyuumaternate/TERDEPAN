@@ -4,17 +4,15 @@ namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterBidang;
-use App\Models\MasterJabatan;
-use App\Models\MasterPegawai;
-use Illuminate\Http\Request;
-use Modules\Penugasan\Models\TugasPokok;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Modules\Penugasan\Models\TugasPokok;
 
 /**
  * TugasPokokController
- * 
+ *
  * Mengelola tugas pokok yang bersumber dari Perjanjian Kinerja (PK)
  * Tugas pokok merupakan breakdown dari indikator PK (60-70% dari total pekerjaan)
  */
@@ -24,26 +22,26 @@ class TugasPokokController extends Controller
 
     /**
      * Menampilkan daftar tugas pokok (untuk atasan/admin)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\View\View
      */
     public function index(Request $request)
     {
         $user = $request->user();
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Cek akses: Admin, Kaban, Sekban, Kabid
-        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID'])) {
+        if (! in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID'])) {
             abort(403, 'Tidak memiliki akses ke halaman ini');
         }
 
         $query = TugasPokok::with([
-            'pegawai:id,nama,jabatan_id,bidang_id',
-            'pegawai.jabatan:id,nama',
-            'pegawai.bidang:id,nama',
+            'pegawai:id,nama',
+            'pegawai.profile:id,user_id,jabatan_id,bidang_id',
+            'pegawai.profile.jabatan:id,nama',
+            'pegawai.profile.bidang:id,nama',
             'perjanjianKinerja:id,periode_mulai,periode_selesai',
-            'indikatorPK:id,indikator_sasaran'
+            'indikatorPK:id,indikator_sasaran',
         ]);
 
         // Filter berdasarkan role
@@ -52,7 +50,7 @@ class TugasPokokController extends Controller
         } elseif ($kodeJabatan === 'KABID') {
             // Lihat hanya bidangnya
             $query->whereHas('pegawai', function ($q) use ($user) {
-                $q->where('bidang_id', $user->bidang_id);
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
             });
         }
 
@@ -68,7 +66,7 @@ class TugasPokokController extends Controller
         // Filter berdasarkan bidang
         if ($request->filled('bidang_id')) {
             $query->whereHas('pegawai', function ($q) use ($request) {
-                $q->where('bidang_id', $request->bidang_id);
+                $q->whereRelation('profile', 'bidang_id', $request->bidang_id);
             });
         }
 
@@ -102,10 +100,10 @@ class TugasPokokController extends Controller
             ->get();
 
         // Get pegawai list for filter
-        $pegawaiQuery = MasterPegawai::where('status_aktif', 'Aktif');
+        $pegawaiQuery = User::whereRelation('profile', 'status_aktif', 'Aktif');
 
         if ($kodeJabatan === 'KABID') {
-            $pegawaiQuery->where('bidang_id', $user->bidang_id);
+            $pegawaiQuery->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
         }
 
         $pegawaiList = $pegawaiQuery->select('id', 'nama')->orderBy('nama')->get();
@@ -115,7 +113,7 @@ class TugasPokokController extends Controller
 
         if ($kodeJabatan === 'KABID') {
             $statsQuery->whereHas('pegawai', function ($q) use ($user) {
-                $q->where('bidang_id', $user->bidang_id);
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
             });
         }
 
@@ -138,8 +136,7 @@ class TugasPokokController extends Controller
 
     /**
      * Menampilkan daftar tugas pokok milik user yang sedang login
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\View\View
      */
     public function tugasSaya(Request $request)
@@ -159,13 +156,13 @@ class TugasPokokController extends Controller
                           WHEN status = 'validasi' THEN 4
                           WHEN status = 'selesai' THEN 5
                           ELSE 99 END");
-                }
+                },
             ])
             ->withCount([
                 'tugasHarian as total_tugas_harian',
                 'tugasHarian as selesai_count' => function ($q) {
                     $q->where('status', 'selesai');
-                }
+                },
             ]);
 
         // Filter berdasarkan status
@@ -207,17 +204,17 @@ class TugasPokokController extends Controller
 
     /**
      * Menampilkan detail tugas pokok
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\View\View
      */
     public function show(Request $request, $id)
     {
         $tugasPokok = TugasPokok::with([
-            'pegawai:id,nama,nip,jabatan_id,bidang_id',
-            'pegawai.jabatan:id,nama',
-            'pegawai.bidang:id,nama',
+            'pegawai:id,nama',
+            'pegawai.profile:id,user_id,jabatan_id,bidang_id',
+            'pegawai.profile.jabatan:id,nama',
+            'pegawai.profile.bidang:id,nama',
             'perjanjianKinerja:id,periode_mulai,periode_selesai,tahun',
             'indikatorPK:id,indikator_sasaran,target_value,satuan',
             'tugasHarian' => function ($q) {
@@ -235,7 +232,7 @@ class TugasPokokController extends Controller
             'progress' => function ($q) {
                 $q->orderBy('tanggal', 'desc')->limit(10);
             },
-            'attachedFiles'
+            'attachedFiles',
         ])->findOrFail($id);
 
         // Authorization check
@@ -259,10 +256,55 @@ class TugasPokokController extends Controller
     }
 
     /**
+     * Membuat tugas pokok secara mandiri (tanpa sumber Perjanjian Kinerja).
+     *
+     * Selama modul PerjanjianKinerja dinonaktifkan, ini menjadi satu-satunya
+     * jalur pembuatan Tugas Pokok — atasan mengisi langsung nama tugas,
+     * deskripsi, bobot, dan target tanpa perlu indikator PK.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'pegawai_id' => 'required|exists:users,id',
+            'nama_tugas' => 'required|string|max:255',
+            'deskripsi' => 'required|string',
+            'bobot_persen' => 'required|numeric|min:0|max:100',
+            'target_value' => 'required|numeric|min:0',
+            'satuan' => 'required|string|max:30',
+            'tanggal_mulai' => 'required|date',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+        ]);
+
+        $tugasPokok = TugasPokok::create([
+            'pegawai_id' => $validated['pegawai_id'],
+            'perjanjian_kinerja_id' => null,
+            'indikator_id' => null,
+            'nama_tugas' => $validated['nama_tugas'],
+            'deskripsi' => $validated['deskripsi'],
+            'bobot_persen' => $validated['bobot_persen'],
+            'target_value' => $validated['target_value'],
+            'satuan' => $validated['satuan'],
+            'tanggal_mulai' => $validated['tanggal_mulai'],
+            'tanggal_selesai' => $validated['tanggal_selesai'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tugas pokok berhasil dibuat',
+            'data' => $tugasPokok,
+        ], 201);
+    }
+
+    /**
      * Sinkronisasi data tugas pokok dari Perjanjian Kinerja
      * Hanya mensinkronkan untuk pegawai yang sedang login
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
+     * Catatan: dinonaktifkan dari UI selama modul PerjanjianKinerja non-aktif
+     * (lihat Modules/Penugasan/routes/web.php), tapi method ini tetap
+     * dipertahankan agar bisa diaktifkan kembali bila PK diaktifkan lagi.
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function sinkronData(Request $request)
@@ -278,9 +320,9 @@ class TugasPokokController extends Controller
             $rows = DB::table('pk_indikator as i')
                 ->join('pk_sasaran as s', 'i.sasaran_id', '=', 's.id')
                 ->join('pk_perjanjian_kinerja as p', 's.perjanjian_kinerja_id', '=', 'p.id')
-                ->join('master_pegawai as peg', 'p.pegawai_id', '=', 'peg.id')
+                ->join('user_profiles as peg_profile', 'p.pegawai_id', '=', 'peg_profile.user_id')
                 ->where('p.pegawai_id', $userId) // Hanya untuk user yang login
-                ->where('peg.status_aktif', 'Aktif')
+                ->where('peg_profile.status_aktif', 'Aktif')
                 ->where('p.status_dokumen', '!=', 'Draft') // Hanya sinkron yang sudah bukan draft
                 ->whereNull('p.deleted_at') // Tidak yang sudah dihapus
                 ->select(
@@ -291,7 +333,7 @@ class TugasPokokController extends Controller
                     DB::raw("COALESCE(i.keterangan, '') as indikator_deskripsi"),
                     'p.periode_mulai as perjanjian_periode_mulai',
                     'p.periode_selesai as perjanjian_periode_selesai',
-                    DB::raw("COALESCE(i.target_value, 0) as indikator_target"),
+                    DB::raw('COALESCE(i.target_value, 0) as indikator_target'),
                     DB::raw("COALESCE(i.satuan, '-') as indikator_satuan")
                 )
                 ->get();
@@ -303,6 +345,7 @@ class TugasPokokController extends Controller
 
                 if ($exists) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -313,7 +356,7 @@ class TugasPokokController extends Controller
                     'perjanjian_kinerja_id' => $r->perjanjian_kinerja_id,
                     'pegawai_id' => $r->pegawai_id,
                     'indikator_id' => $r->indikator_id,
-                    'nama_tugas' => $r->indikator_nama ?? 'Tugas indikator ' . $r->indikator_id,
+                    'nama_tugas' => $r->indikator_nama ?? 'Tugas indikator '.$r->indikator_id,
                     'deskripsi' => $r->indikator_deskripsi ?? '',
                     'bobot_persen' => 60, // Default bobot, bisa disesuaikan
                     'tanggal_mulai' => $periode_mulai,
@@ -338,22 +381,21 @@ class TugasPokokController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Sinkronisasi gagal: ' . $e->getMessage(),
+                'message' => 'Sinkronisasi gagal: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Update status tugas pokok
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:pending,dikerjakan,selesai'
+            'status' => 'required|in:pending,dikerjakan,selesai',
         ]);
 
         $tugasPokok = TugasPokok::findOrFail($id);
@@ -365,7 +407,7 @@ class TugasPokokController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Status tugas berhasil diperbarui'
+            'message' => 'Status tugas berhasil diperbarui',
         ]);
     }
 }

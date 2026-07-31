@@ -84,11 +84,11 @@
 
                  <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#"
                      data-bs-toggle="dropdown">
-                     @if (Auth::user() && Auth::user()->foto_profile_path)
-                         <img src="{{ asset('storage/' . Auth::user()->foto_profile_path) }}"
+                     @if (Auth::user() && Auth::user()->profile?->foto_profile_path)
+                         <img src="{{ asset('storage/' . Auth::user()->profile->foto_profile_path) }}"
                              alt="{{ Auth::user()->nama }}" class="rounded-circle">
                      @else
-                         @if (Auth::user()->jenis_kelamin == 'L')
+                         @if (Auth::user()->profile?->jenis_kelamin == 'L')
                              <img src="{{ asset('assets/img/avatar-laki-laki.webp') }}" alt="{{ Auth::user()->nama }}"
                                  class="rounded-circle">
                          @else
@@ -103,7 +103,7 @@
                  <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
                      <li class="dropdown-header">
                          <h6>{{ Auth::user()->nama }}</h6>
-                         <span>{{ Auth::user()->jabatan->nama }}</span>
+                         <span>{{ Auth::user()->profile?->jabatan?->nama }}</span>
                      </li>
                      <li>
                          <hr class="dropdown-divider">

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\TerminalData;
 
-use Tests\TestCase;
-use App\Models\MasterPegawai;
-use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
-use Modules\TerminalData\Models\TdFolder;
-use Modules\TerminalData\Models\TdFile;
+use App\Models\MasterJabatan;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Models\TdFolder;
+use Tests\TestCase;
 
 class FilePermissionTest extends TestCase
 {
@@ -37,14 +37,17 @@ class FilePermissionTest extends TestCase
         ]);
 
         // Create pegawai for created_by constraint
-        $pegawai = MasterPegawai::create([
-            'nomor_identitas' => '199001012020011001',
-            'tipe_identitas' => 'NIP',
+        $pegawai = User::create([
             'nama' => 'Test User',
-            'jenis_kelamin' => 'L',
-            'status_kepegawaian' => 'PNS',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
+        ]);
+        $pegawai->profile()->create([
+            'nomor_identitas' => '199001012020011001',
+            'tipe_identitas' => 'NIP',
+            'jenis_kelamin' => 'L',
+            'status_kepegawaian' => 'PNS',
+            'status_aktif' => 'Aktif',
             'jabatan_id' => 1,
             'bidang_id' => 1,
         ]);
@@ -100,8 +103,9 @@ class FilePermissionTest extends TestCase
     /**
      * Test upload file permission by jabatan
      * Upload dibatasi berdasarkan bidang/sub_bidang scope
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanUploadAccessProvider
      */
     public function test_1_upload_file_permission_by_jabatan($jabatanKode, $folderBidangId, $userBidangId, $canUpload)
@@ -127,19 +131,20 @@ class FilePermissionTest extends TestCase
             $response->assertStatus(200)
                 ->assertJson([
                     'success' => true,
-                    'message' => 'File berhasil diupload'
+                    'message' => 'File berhasil diupload',
                 ]);
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'success' => false
+                    'success' => false,
                 ]);
         }
     }
+
     /**
      * Test upload to Eviden Kinerja folder
      * Hanya owner folder yang bisa upload
-     * 
+     *
      * @test
      */
     public function test_1_upload_to_eviden_kinerja_only_owner()
@@ -166,7 +171,7 @@ class FilePermissionTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'File berhasil diupload'
+                'message' => 'File berhasil diupload',
             ]);
 
         // Create another fake file for other user
@@ -181,15 +186,16 @@ class FilePermissionTest extends TestCase
 
         $response2->assertStatus(403)
             ->assertJson([
-                'success' => false
+                'success' => false,
             ]);
     }
 
     /**
      * Test view files in database
      * Verify that uploaded files exist in database
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanViewAccessProvider
      */
     public function test_2_view_files_in_database($jabatanKode, $bidangId)
@@ -203,7 +209,7 @@ class FilePermissionTest extends TestCase
         $this->assertGreaterThanOrEqual(
             5,
             $fileCount,
-            "Harus ada minimal 5 file di database dari setUp"
+            'Harus ada minimal 5 file di database dari setUp'
         );
 
         // Semua user bisa query file dari database
@@ -214,8 +220,9 @@ class FilePermissionTest extends TestCase
     /**
      * Test download file permission
      * Semua user yang terautentikasi bisa download file yang ada
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanViewAccessProvider
      */
     public function test_3_download_file_access_by_jabatan($jabatanKode, $bidangId)
@@ -225,7 +232,7 @@ class FilePermissionTest extends TestCase
         // Ambil file yang sudah ada dari setUp
         $file = TdFile::first();
 
-        // Karena file di setUp tidak punya physical file, 
+        // Karena file di setUp tidak punya physical file,
         // kita hanya test bahwa policy membolehkan (bukan 403)
         // Error 500/404 karena file tidak ada di storage adalah OK
         $response = $this->actingAs($user, 'sanctum')
@@ -239,10 +246,12 @@ class FilePermissionTest extends TestCase
             "{$jabatanKode} tidak boleh dapat 403 saat download"
         );
     }
+
     /**
      * Test update file permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanUpdateDeleteProvider
      */
     public function test_4_update_file_permission_by_jabatan($jabatanKode, $fileBidangId, $userBidangId, $canUpdate)
@@ -264,12 +273,12 @@ class FilePermissionTest extends TestCase
             'bidang_id' => $fileBidangId,
             'created_by' => $canUpdate && in_array($jabatanKode, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
                 ? $user->id
-                : $owner->id
+                : $owner->id,
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->putJson(route('terminaldata.filesData.update', $file->id), [
-                'name' => 'Updated File Name'
+                'name' => 'Updated File Name',
             ]);
 
         if ($canUpdate) {
@@ -281,8 +290,9 @@ class FilePermissionTest extends TestCase
 
     /**
      * Test delete file permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanUpdateDeleteProvider
      */
     public function test_5_delete_file_permission_by_jabatan($jabatanKode, $fileBidangId, $userBidangId, $canDelete)
@@ -304,7 +314,7 @@ class FilePermissionTest extends TestCase
             'bidang_id' => $fileBidangId,
             'created_by' => $canDelete && in_array($jabatanKode, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
                 ? $user->id
-                : $owner->id
+                : $owner->id,
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
@@ -319,7 +329,7 @@ class FilePermissionTest extends TestCase
 
     /**
      * Test cannot delete file in Eviden Kinerja folder
-     * 
+     *
      * @test
      */
     public function test_5_cannot_delete_file_in_eviden_kinerja()
@@ -400,21 +410,27 @@ class FilePermissionTest extends TestCase
 
     // ==================== HELPER METHODS ====================
 
-    protected function createUserWithJabatan(string $kodeJabatan, ?int $bidangId = null): MasterPegawai
+    protected function createUserWithJabatan(string $kodeJabatan, ?int $bidangId = null): User
     {
         $jabatan = MasterJabatan::where('kode', $kodeJabatan)->firstOrFail();
-        $nip = '1990' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT) . '001';
+        $nip = '1990'.str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT).'001';
 
-        return MasterPegawai::create([
+        $user = User::create([
+            'nama' => 'User '.$kodeJabatan,
+            'email' => strtolower($kodeJabatan).rand(1, 9999).'@test.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $user->profile()->create([
             'nomor_identitas' => $nip,
             'tipe_identitas' => 'NIP',
-            'nama' => 'User ' . $kodeJabatan,
             'jenis_kelamin' => 'L',
             'status_kepegawaian' => 'PNS',
-            'email' => strtolower($kodeJabatan) . rand(1, 9999) . '@test.com',
-            'password' => bcrypt('password'),
+            'status_aktif' => 'Aktif',
             'jabatan_id' => $jabatan->id,
             'bidang_id' => $bidangId ?? MasterBidang::first()->id,
         ]);
+
+        return $user->fresh('profile');
     }
 }

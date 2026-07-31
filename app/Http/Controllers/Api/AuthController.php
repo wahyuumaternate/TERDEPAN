@@ -3,39 +3,53 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\MasterPegawai;
 
 /**
- * 
  * @OA\Tag(
  *     name="Auth",
  *     description="API Authentication"
  *     )
- * 
+ *
  *     @OA\Post(
  *     path="/login",
  *     tags={"Auth"},
- *     summary="Login user (MasterPegawai) menggunakan NIP atau NIK",
+ *     summary="Login user menggunakan email",
+ *
  *     @OA\RequestBody(
  *         required=true,
+ *
  *         @OA\JsonContent(
- *             required={"nomor_identitas","password"},
- *             @OA\Property(property="nomor_identitas", type="string", example="197001011990011001"),
+ *             required={"email","password"},
+ *
+ *             @OA\Property(property="email", type="string", example="pegawai@email.com"),
  *             @OA\Property(property="password", type="string", example="password123")
  *         )
  *     ),
+ *
  *     @OA\Response(response=200, description="Login sukses, return token"),
  *     @OA\Response(response=401, description="Unauthorized")
  *     )
- * 
+ *
  *    @OA\Delete(
  *     path="/logout",
  *     tags={"Auth"},
- *     summary="Logout user (MasterPegawai)",
- *     @OA\Response(response=200, description="Login sukses, return token"),
+ *     security={{"bearerAuth":{}}},
+ *     summary="Logout user (revoke token yang sedang dipakai)",
+ *
+ *     @OA\Response(response=200, description="Logout sukses"),
+ *     @OA\Response(response=401, description="Unauthorized")
+ *     )
+ *
+ *    @OA\Get(
+ *     path="/me",
+ *     tags={"Auth"},
+ *     security={{"bearerAuth":{}}},
+ *     summary="Data user yang sedang login",
+ *
+ *     @OA\Response(response=200, description="OK"),
  *     @OA\Response(response=401, description="Unauthorized")
  *     )
  */
@@ -44,73 +58,56 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'nomor_identitas' => 'required',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        // Cari berdasarkan NIP atau NIK
-        $pegawai = MasterPegawai::where('nomor_identitas', $credentials['nomor_identitas'])
-            ->first();
+        $user = User::where('email', $credentials['email'])->first();
 
-        if (!$pegawai || !Hash::check($credentials['password'], $pegawai->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Unauthorized',
-                'data' => null
+                'data' => null,
             ], 401);
         }
-        // Update last login info
-        $pegawai->last_login_at = now();
-        $pegawai->last_login_ip = $request->ip();
-        $pegawai->save();
 
-        $token = $pegawai->createToken('api-token')->plainTextToken;
+        // Update last login info (disimpan di user_profiles)
+        $user->profile()->update([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ]);
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
         return response()->json([
             'status' => true,
             'message' => 'Login sukses',
             'data' => [
                 'access_token' => $token,
                 'token_type' => 'Bearer',
-                'user' => $pegawai,
-            ]
+                'user' => $user->load('profile'),
+            ],
         ]);
-
-        // // 1️⃣ Cek kredensial
-        // if (!Auth::attempt($credentials)) {
-        //     return response()->json(['message' => 'Invalid credentials'], 401);
-        // }
-
-        // // 2️⃣ Ambil user
-        // $user = Auth::user();
-
-        // // 3️⃣ Hapus token lama (opsional)
-        // $user->tokens()->delete();
-
-        // // 4️⃣ Buat token baru
-        // $token = $user->createToken('api-token')->plainTextToken;
-
-        // // 5️⃣ Kembalikan respons JSON
-        // return response()->json([
-        //     'status' => true,
-        //     'message' => 'Login sukses',
-        //     'data' => [
-        //         'access_token' => $token,
-        //         'token_type' => 'Bearer',
-        //         'user' => $user,
-        //     ]
-        // ]);
     }
 
-    // public function logout(Request $request)
-    // {
-    //     // Hapus token saat ini
-    //     $request->user()->currentAccessToken()->delete();
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
 
-    //     return response()->json(['message' => 'Logged out successfully']);
-    // }
+        return response()->json([
+            'status' => true,
+            'message' => 'Logout sukses',
+            'data' => null,
+        ]);
+    }
 
-    // public function me(Request $request)
-    // {
-    //     return response()->json($request->user());
-    // }
+    public function me(Request $request)
+    {
+        return response()->json([
+            'status' => true,
+            'message' => 'Data user yang sedang login',
+            'data' => $request->user()->load('profile.jabatan', 'profile.bidang'),
+        ]);
+    }
 }

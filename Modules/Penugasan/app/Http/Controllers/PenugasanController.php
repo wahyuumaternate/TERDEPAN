@@ -5,22 +5,23 @@ namespace Modules\Penugasan\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\MasterBidang;
 use App\Models\MasterJabatan;
-use App\Models\MasterPegawai;
+use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
-use Modules\Penugasan\Models\TugasHarian;
-use Modules\Penugasan\Models\TugasTambahan;
 use Modules\Penugasan\Helpers\PenilaianHelper;
+use Modules\Penugasan\Models\TugasHarian;
 use Modules\Penugasan\Models\TugasPokok;
+use Modules\Penugasan\Models\TugasTambahan;
 
 class PenugasanController extends Controller
 {
     use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
@@ -30,8 +31,8 @@ class PenugasanController extends Controller
         $tahun = $request->get('tahun', date('Y'));
 
         // Query untuk mendapatkan daftar pegawai dengan statistik tugas pokok
-        $pegawaiQuery = MasterPegawai::where('status_aktif', 'Aktif')
-            ->with(['jabatan', 'bidang'])
+        $pegawaiQuery = User::whereRelation('profile', 'status_aktif', 'Aktif')
+            ->with(['profile.jabatan', 'profile.bidang'])
             // Kecualikan admin utama (ID 1) dan user yang sedang login
             ->where('id', '!=', 1) // Asumsikan ID 1 adalah admin utama
             ->where('id', '!=', Auth::id()) // Kecualikan user yang sedang login
@@ -60,7 +61,7 @@ class PenugasanController extends Controller
                 'tugasPokok as selesai_tugas' => function ($q) use ($tahun) {
                     $q->whereYear('tanggal_mulai', $tahun)
                         ->where('status', 'selesai');
-                }
+                },
             ]);
 
         // Filter by jabatan
@@ -70,7 +71,7 @@ class PenugasanController extends Controller
 
         // Filter by bidang
         if ($request->filled('bidang_id')) {
-            $pegawaiQuery->where('bidang_id', $request->bidang_id);
+            $pegawaiQuery->whereRelation('profile', 'bidang_id', $request->bidang_id);
         }
 
         // Search
@@ -104,6 +105,7 @@ class PenugasanController extends Controller
             $pegawai->total_tugas = ($pegawai->tugas_pokok_count ?? 0) +
                 ($pegawai->tugas_harian_count ?? 0) +
                 ($pegawai->tugas_tambahan_count ?? 0);
+
             return $pegawai;
         });
 
@@ -124,8 +126,8 @@ class PenugasanController extends Controller
 
         // Statistics
         $stats = [
-            'total_pegawai' => MasterPegawai::where('status_aktif', 'Aktif')->count(),
-            'pegawai_dengan_tugas' => MasterPegawai::where('status_aktif', 'Aktif')
+            'total_pegawai' => User::whereRelation('profile', 'status_aktif', 'Aktif')->count(),
+            'pegawai_dengan_tugas' => User::whereRelation('profile', 'status_aktif', 'Aktif')
                 ->whereHas('tugasPokok', function ($q) use ($tahun) {
                     $q->whereYear('tanggal_mulai', $tahun);
                 })->count(),
@@ -153,7 +155,7 @@ class PenugasanController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $pegawai = MasterPegawai::with(['jabatan', 'bidang'])->findOrFail($id);
+        $pegawai = User::with(['profile.jabatan', 'profile.bidang'])->findOrFail($id);
 
         $tahun = $request->get('tahun', date('Y'));
 
@@ -163,7 +165,7 @@ class PenugasanController extends Controller
                 'perjanjianKinerja',
                 'indikatorPK',
                 'attachedFiles',
-                'progress'
+                'progress',
             ])
             ->whereYear('tanggal_mulai', $tahun);
 
@@ -201,7 +203,7 @@ class PenugasanController extends Controller
                 'tugasPokok',
                 'pemberiTugas',
                 'attachedFiles',
-                'progress'
+                'progress',
             ])
             ->whereYear('tanggal_mulai', $tahun);
 
@@ -214,7 +216,7 @@ class PenugasanController extends Controller
         $tugasTambahanList = \Modules\Penugasan\Models\TugasTambahan::with([
             'pemberiTugas',
             'validator',
-            'attachedFiles'
+            'attachedFiles',
         ])->where('pegawai_id', $pegawai->id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -279,7 +281,7 @@ class PenugasanController extends Controller
             // Validasi berdasarkan jenis tugas
             $rules = [
                 'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-                'pegawai_id' => 'required|exists:master_pegawai,id',
+                'pegawai_id' => 'required|exists:users,id',
                 'nama_tugas' => 'required|string|max:255',
                 'deskripsi' => 'nullable|string',
                 'tanggal_mulai' => 'required|date',
@@ -306,11 +308,11 @@ class PenugasanController extends Controller
 
             DB::beginTransaction();
             try {
-                // Get pemberi tugas id from authenticated user (MasterPegawai)
-                $pemberiTugasId = Auth::id(); // ID dari MasterPegawai yang login
+                // Get pemberi tugas id from authenticated user (User)
+                $pemberiTugasId = Auth::id(); // ID dari User yang login
 
                 // Validasi pemberi tugas
-                if (!$pemberiTugasId) {
+                if (! $pemberiTugasId) {
                     throw new \Exception('Anda harus login untuk memberikan tugas.');
                 }
 
@@ -320,7 +322,7 @@ class PenugasanController extends Controller
                         ->where('pegawai_id', $validated['pegawai_id'])
                         ->first();
 
-                    if (!$tugasPokok) {
+                    if (! $tugasPokok) {
                         throw new \Exception('Tugas pokok tidak sesuai dengan pegawai yang dipilih');
                     }
 
@@ -368,7 +370,7 @@ class PenugasanController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal memberikan tugas: ' . $e->getMessage(),
+                    'message' => 'Gagal memberikan tugas: '.$e->getMessage(),
                 ], 500);
             }
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -426,7 +428,7 @@ class PenugasanController extends Controller
                 throw new \Exception('Anda tidak memiliki izin untuk upload bukti tugas ini');
             }
 
-            if (!in_array($tugas->status, ['dikerjakan', 'revisi'])) {
+            if (! in_array($tugas->status, ['dikerjakan', 'revisi'])) {
                 throw new \Exception('Status tugas harus dikerjakan atau revisi untuk dapat upload bukti');
             }
 
@@ -435,7 +437,7 @@ class PenugasanController extends Controller
             $replacedFiles = [];
 
             // Process file replacements first
-            if (!empty($validated['replacements'])) {
+            if (! empty($validated['replacements'])) {
                 foreach ($validated['replacements'] as $replacement) {
                     $oldFile = \Modules\TerminalData\Models\TdFile::findOrFail($replacement['old_file_id']);
 
@@ -448,7 +450,7 @@ class PenugasanController extends Controller
                     $folderId = $replacement['folder_id'];
 
                     // Upload new version file
-                    $fileName = time() . '_v' . ($oldFile->version + 1) . '_' . $file->getClientOriginalName();
+                    $fileName = time().'_v'.($oldFile->version + 1).'_'.$file->getClientOriginalName();
                     $filePath = $file->store('terminal-data', 'public');
 
                     // Mark old file as not latest
@@ -459,7 +461,7 @@ class PenugasanController extends Controller
                         'folder_id' => $folderId,
                         'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
                         'original_name' => $file->getClientOriginalName(),
-                        'description' => 'Revisi: ' . ($validated['keterangan'] ?? 'File diperbarui'),
+                        'description' => 'Revisi: '.($validated['keterangan'] ?? 'File diperbarui'),
                         'storage_path' => $filePath,
                         'extension' => $file->getClientOriginalExtension(),
                         'mime_type' => $file->getMimeType(),
@@ -468,7 +470,7 @@ class PenugasanController extends Controller
                         'version' => $oldFile->version + 1,
                         'original_file_id' => $oldFile->original_file_id ?? $oldFile->id,
                         'is_latest_version' => true,
-                        'version_notes' => 'Revisi dari versi ' . $oldFile->version . ': ' . ($validated['keterangan'] ?? ''),
+                        'version_notes' => 'Revisi dari versi '.$oldFile->version.': '.($validated['keterangan'] ?? ''),
                         'created_by' => Auth::id(),
                         // Polymorphic relation - same as parent
                         'attachable_type' => $oldFile->attachable_type,
@@ -485,12 +487,12 @@ class PenugasanController extends Controller
             }
 
             // Process new files
-            if (!empty($request->file('files'))) {
+            if (! empty($request->file('files'))) {
                 foreach ($request->file('files') as $index => $file) {
                     $folderId = $validated['folder_ids'][$index] ?? $validated['folder_ids'][0];
 
                     // Upload file ke storage
-                    $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                    $fileName = time().'_'.$index.'_'.$file->getClientOriginalName();
                     $filePath = $file->store('terminal-data', 'public');
 
                     // Create TdFile record (polymorphic ke tugas)
@@ -506,7 +508,7 @@ class PenugasanController extends Controller
                         'hash' => hash_file('sha256', $file->getRealPath()),
                         'version' => 1,
                         'is_latest_version' => true,
-                        'version_notes' => $isRevision ? 'File tambahan saat revisi: ' . $validated['keterangan'] : null,
+                        'version_notes' => $isRevision ? 'File tambahan saat revisi: '.$validated['keterangan'] : null,
                         'created_by' => Auth::id(),
                         // Polymorphic relation
                         'attachable_type' => $modelClass,
@@ -523,14 +525,14 @@ class PenugasanController extends Controller
             // Build description message
             $progressDesc = [];
             if (count($replacedFiles) > 0) {
-                $progressDesc[] = count($replacedFiles) . " file diperbarui";
+                $progressDesc[] = count($replacedFiles).' file diperbarui';
             }
             if (count($uploadedFiles) - count($replacedFiles) > 0) {
-                $progressDesc[] = (count($uploadedFiles) - count($replacedFiles)) . " file baru";
+                $progressDesc[] = (count($uploadedFiles) - count($replacedFiles)).' file baru';
             }
-            $descMessage = "Upload bukti: " . implode(", ", $progressDesc);
+            $descMessage = 'Upload bukti: '.implode(', ', $progressDesc);
             if ($validated['keterangan']) {
-                $descMessage .= " - " . $validated['keterangan'];
+                $descMessage .= ' - '.$validated['keterangan'];
             }
 
             // Update or create progress record untuk hari ini (hindari duplicate)
@@ -556,7 +558,7 @@ class PenugasanController extends Controller
 
             $message = 'Bukti berhasil diupload. Status tugas diubah menjadi menunggu validasi.';
             if (count($replacedFiles) > 0) {
-                $message .= ' ' . count($replacedFiles) . ' file telah diperbarui dengan versi baru.';
+                $message .= ' '.count($replacedFiles).' file telah diperbarui dengan versi baru.';
             }
 
             return response()->json([
@@ -570,7 +572,7 @@ class PenugasanController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal upload bukti: ' . $e->getMessage(),
+                'message' => 'Gagal upload bukti: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -669,6 +671,7 @@ class PenugasanController extends Controller
                 }
 
                 DB::commit();
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
@@ -679,7 +682,7 @@ class PenugasanController extends Controller
                         'nilai_akhir' => $hasilPenilaian['nilai_akhir'],
                         'grade' => $hasilPenilaian['grade'],
                         'keterlambatan' => $hasilPenilaian['waktu']['status'],
-                    ] : null
+                    ] : null,
                 ]);
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -767,7 +770,7 @@ class PenugasanController extends Controller
      */
     private function getNextRevisionNumber($tugas, $modelClass)
     {
-        if (!class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
+        if (! class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
             return 1;
         }
 
@@ -812,7 +815,7 @@ class PenugasanController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal preview penilaian: ' . $e->getMessage()
+                'message' => 'Gagal preview penilaian: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -827,7 +830,7 @@ class PenugasanController extends Controller
 
         // Statistik umum
         $stats = [
-            'total_pegawai' => \App\Models\MasterPegawai::where('status_aktif', 'Aktif')->count(),
+            'total_pegawai' => \App\Models\User::whereRelation('profile', 'status_aktif', 'Aktif')->count(),
             'tugas_harian_total' => TugasHarian::whereYear('tanggal_mulai', $tahun)->count(),
             'tugas_tambahan_total' => TugasTambahan::whereYear('tanggal_mulai', $tahun)->count(),
             'menunggu_validasi' => TugasHarian::where('status', 'validasi')->count() +
@@ -835,8 +838,8 @@ class PenugasanController extends Controller
         ];
 
         // Penilaian bulanan pegawai
-        $penilaianBulanan = \App\Models\MasterPegawai::with(['tugasHarian', 'tugasTambahan'])
-            ->where('status_aktif', 'Aktif')
+        $penilaianBulanan = \App\Models\User::with(['tugasHarian', 'tugasTambahan'])
+            ->whereRelation('profile', 'status_aktif', 'Aktif')
             ->get()
             ->map(function ($pegawai) use ($tahun, $bulan) {
                 $tugasHarian = TugasHarian::where('pegawai_id', $pegawai->id)
@@ -904,20 +907,22 @@ class PenugasanController extends Controller
                 'success' => true,
                 'message' => 'Tugas harian mandiri berhasil dibuat',
                 'data' => $tugasHarian,
-                'tahun' => date('Y', strtotime($validated['tanggal_mulai'])) // Tahun dari tanggal mulai
+                'tahun' => date('Y', strtotime($validated['tanggal_mulai'])), // Tahun dari tanggal mulai
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal membuat tugas: ' . $e->getMessage()
+                'message' => 'Gagal membuat tugas: '.$e->getMessage(),
             ], 500);
         }
     }

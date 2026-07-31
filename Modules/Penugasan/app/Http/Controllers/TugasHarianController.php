@@ -3,17 +3,16 @@
 namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterPegawai;
+use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Modules\Penugasan\Models\TugasHarian;
 use Modules\Penugasan\Models\TugasPokok;
 
 /**
  * TugasHarianController
- * 
+ *
  * Mengelola tugas harian yang merupakan breakdown dari Tugas Pokok
  * Tugas harian bisa dibuat mandiri (is_mandiri=true) atau diberikan atasan
  */
@@ -23,26 +22,26 @@ class TugasHarianController extends Controller
 
     /**
      * Menampilkan daftar tugas harian (untuk atasan/admin)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\View\View
      */
     public function index(Request $request)
     {
         $user = $request->user();
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Cek akses: Admin, Kaban, Sekban, Kabid
-        if (!in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID'])) {
+        if (! in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID'])) {
             abort(403, 'Tidak memiliki akses ke halaman ini');
         }
 
         $query = TugasHarian::with([
             'tugasPokok:id,nama_tugas',
-            'pegawai:id,nama,jabatan_id,bidang_id',
-            'pegawai.jabatan:id,nama',
-            'pegawai.bidang:id,nama',
-            'pemberiTugas:id,nama'
+            'pegawai:id,nama',
+            'pegawai.profile:id,user_id,jabatan_id,bidang_id',
+            'pegawai.profile.jabatan:id,nama',
+            'pegawai.profile.bidang:id,nama',
+            'pemberiTugas:id,nama',
         ]);
 
         // Filter berdasarkan role
@@ -51,7 +50,7 @@ class TugasHarianController extends Controller
         } elseif ($kodeJabatan === 'KABID') {
             // Lihat hanya bidangnya
             $query->whereHas('pegawai', function ($q) use ($user) {
-                $q->where('bidang_id', $user->bidang_id);
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
             });
         }
 
@@ -68,7 +67,7 @@ class TugasHarianController extends Controller
         // Filter berdasarkan bidang
         if ($request->filled('bidang_id')) {
             $query->whereHas('pegawai', function ($q) use ($request) {
-                $q->where('bidang_id', $request->bidang_id);
+                $q->whereRelation('profile', 'bidang_id', $request->bidang_id);
             });
         }
 
@@ -91,7 +90,7 @@ class TugasHarianController extends Controller
         $tugasHarian = $query->paginate($request->get('per_page', 20));
 
         // Get filter options
-        $pegawaiList = \App\Models\MasterPegawai::where('status_aktif', 'Aktif')
+        $pegawaiList = \App\Models\User::whereRelation('profile', 'status_aktif', 'Aktif')
             ->orderBy('nama')
             ->get();
 
@@ -107,7 +106,7 @@ class TugasHarianController extends Controller
             // All tugas
         } elseif ($kodeJabatan === 'KABID') {
             $statsQuery->whereHas('pegawai', function ($q) use ($user) {
-                $q->where('bidang_id', $user->bidang_id);
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
             });
         }
 
@@ -125,8 +124,7 @@ class TugasHarianController extends Controller
 
     /**
      * Menampilkan daftar tugas harian milik user yang sedang login
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\View\View
      */
     public function tugasSaya(Request $request)
@@ -136,7 +134,7 @@ class TugasHarianController extends Controller
         $query = TugasHarian::where('pegawai_id', $user->id)
             ->with([
                 'tugasPokok:id,nama_tugas,progress_persen',
-                'pemberiTugas:id,nama'
+                'pemberiTugas:id,nama',
             ]);
 
         // Filter berdasarkan status
@@ -181,8 +179,7 @@ class TugasHarianController extends Controller
 
     /**
      * Menampilkan form untuk membuat tugas harian baru (tugas mandiri)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\View\View
      */
     public function create(Request $request)
@@ -200,14 +197,13 @@ class TugasHarianController extends Controller
 
     /**
      * Menyimpan tugas harian baru (tugas mandiri)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'pegawai_id' => 'required|exists:master_pegawai,id',
+            'pegawai_id' => 'required|exists:users,id',
             'tugas_pokok_id' => 'required|exists:knj_tugas_pokok,id',
             'nama_tugas' => 'required|string|max:500',
             'deskripsi' => 'nullable|string',
@@ -221,7 +217,7 @@ class TugasHarianController extends Controller
         DB::beginTransaction();
         try {
             $user = $request->user();
-            $kodeJabatan = $user->jabatan?->kode;
+            $kodeJabatan = $user->profile?->jabatan?->kode;
             $pegawaiId = $validated['pegawai_id'];
 
             // Jika pegawai_id sama dengan user, ini self-assignment
@@ -233,22 +229,22 @@ class TugasHarianController extends Controller
                 ->firstOrFail();
 
             // Validasi hak akses untuk memberikan tugas
-            if (!$isSelfAssignment) {
-                $pegawai = MasterPegawai::findOrFail($pegawaiId);
+            if (! $isSelfAssignment) {
+                $pegawai = User::findOrFail($pegawaiId);
                 $hasAccess = false;
 
                 if (in_array($kodeJabatan, ['KABAN', 'SEKBAN'])) {
                     // KABAN/SEKBAN bisa memberi tugas ke semua pegawai (except GATEK)
-                    $hasAccess = ($pegawai->jabatan?->kode !== 'GATEK');
+                    $hasAccess = ($pegawai->profile?->jabatan?->kode !== 'GATEK');
                 } elseif ($kodeJabatan === 'KABID') {
                     // KABID bisa memberi tugas ke pegawai di bidang yang sama
-                    $hasAccess = ($pegawai->bidang_id === $user->bidang_id);
+                    $hasAccess = ($pegawai->profile?->bidang_id === $user->bidang_id);
                 } else {
                     // Role lain hanya bisa memberi tugas ke bawahan langsung
-                    $hasAccess = ($pegawai->atasan_langsung_id === $user->id);
+                    $hasAccess = ($pegawai->profile?->atasan_langsung_id === $user->id);
                 }
 
-                if (!$hasAccess) {
+                if (! $hasAccess) {
                     throw new \Exception('Anda tidak memiliki hak akses untuk memberikan tugas kepada pegawai ini');
                 }
             }
@@ -273,14 +269,14 @@ class TugasHarianController extends Controller
 
             $message = $isSelfAssignment
                 ? 'Tugas harian berhasil dibuat dan menunggu persetujuan atasan'
-                : 'Tugas harian berhasil diberikan kepada ' . $tugasPokok->pegawai->nama;
+                : 'Tugas harian berhasil diberikan kepada '.$tugasPokok->pegawai->nama;
 
             // Handle both AJAX and regular form submission
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => $message,
-                    'data' => $tugasHarian
+                    'data' => $tugasHarian,
                 ]);
             }
 
@@ -292,12 +288,12 @@ class TugasHarianController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal membuat tugas harian: ' . $e->getMessage()
+                    'message' => 'Gagal membuat tugas harian: '.$e->getMessage(),
                 ], 500);
             }
 
             return redirect()->back()
-                ->with('error', 'Gagal membuat tugas harian: ' . $e->getMessage())
+                ->with('error', 'Gagal membuat tugas harian: '.$e->getMessage())
                 ->withInput()
                 ->withErrors(['error' => $e->getMessage()]);
         }
@@ -305,8 +301,7 @@ class TugasHarianController extends Controller
 
     /**
      * Menampilkan detail tugas harian
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\View\View
      */
@@ -314,9 +309,10 @@ class TugasHarianController extends Controller
     {
         $tugasHarian = TugasHarian::with([
             'tugasPokok:id,nama_tugas,progress_persen',
-            'pegawai:id,nama,nomor_identitas,jabatan_id,bidang_id',
-            'pegawai.jabatan:id,nama',
-            'pegawai.bidang:id,nama',
+            'pegawai:id,nama',
+            'pegawai.profile:id,user_id,nomor_identitas,jabatan_id,bidang_id',
+            'pegawai.profile.jabatan:id,nama',
+            'pegawai.profile.bidang:id,nama',
             'pemberiTugas:id,nama',
             'validator:id,nama',
             'attachedFiles',
@@ -325,7 +321,7 @@ class TugasHarianController extends Controller
             },
             'historyRevisi' => function ($q) {
                 $q->with('direvisiOleh:id,nama')->orderBy('revisi_ke', 'desc');
-            }
+            },
         ])->findOrFail($id);
 
         // Authorization check
@@ -336,7 +332,7 @@ class TugasHarianController extends Controller
 
     /**
      * Menampilkan form edit tugas harian
-     * 
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse|\Illuminate\View\View
      */
@@ -358,17 +354,17 @@ class TugasHarianController extends Controller
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tugas harian tidak ditemukan'
+                    'message' => 'Tugas harian tidak ditemukan',
                 ], 404);
             }
+
             return redirect()->back()->with('error', 'Tugas harian tidak ditemukan');
         }
     }
 
     /**
      * Update tugas harian
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -391,30 +387,30 @@ class TugasHarianController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tugas harian berhasil diperbarui'
+                'message' => 'Tugas harian berhasil diperbarui',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini',
             ], 403);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Hapus tugas harian
-     * 
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -428,25 +424,24 @@ class TugasHarianController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tugas harian berhasil dihapus'
+                'message' => 'Tugas harian berhasil dihapus',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Terima tugas harian (dari pending ke dikerjakan)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -458,39 +453,38 @@ class TugasHarianController extends Controller
         if ($tugasHarian->pegawai_id !== $request->user()->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini',
             ], 403);
         }
 
         if ($tugasHarian->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Tugas hanya bisa diterima jika berstatus pending'
+                'message' => 'Tugas hanya bisa diterima jika berstatus pending',
             ], 422);
         }
 
         $tugasHarian->update([
             'status' => 'dikerjakan',
-            'tanggal_mulai_aktual' => now()
+            'tanggal_mulai_aktual' => now(),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Tugas harian berhasil diterima dan mulai dikerjakan'
+            'message' => 'Tugas harian berhasil diterima dan mulai dikerjakan',
         ]);
     }
 
     /**
      * Tolak tugas harian
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function tolak(Request $request, $id)
     {
         $validated = $request->validate([
-            'alasan_penolakan' => 'required|string|max:1000'
+            'alasan_penolakan' => 'required|string|max:1000',
         ]);
 
         $tugasHarian = TugasHarian::findOrFail($id);
@@ -499,34 +493,33 @@ class TugasHarianController extends Controller
         if ($tugasHarian->pegawai_id !== $request->user()->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini',
             ], 403);
         }
 
         if ($tugasHarian->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Hanya tugas berstatus pending yang bisa ditolak'
+                'message' => 'Hanya tugas berstatus pending yang bisa ditolak',
             ], 422);
         }
 
         // Soft delete dengan alasan
         $tugasHarian->update([
             'catatan_penolakan' => $validated['alasan_penolakan'],
-            'ditolak_pada' => now()
+            'ditolak_pada' => now(),
         ]);
         $tugasHarian->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Tugas harian berhasil ditolak'
+            'message' => 'Tugas harian berhasil ditolak',
         ]);
     }
 
     /**
      * Mulai mengerjakan tugas (deprecated - gunakan terima)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -537,8 +530,7 @@ class TugasHarianController extends Controller
 
     /**
      * Submit tugas untuk validasi
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -550,15 +542,15 @@ class TugasHarianController extends Controller
         if ($tugasHarian->pegawai_id !== $request->user()->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak memiliki izin untuk melakukan aksi ini'
+                'message' => 'Tidak memiliki izin untuk melakukan aksi ini',
             ], 403);
         }
 
         // Cek status
-        if (!in_array($tugasHarian->status, ['dikerjakan', 'revisi'])) {
+        if (! in_array($tugasHarian->status, ['dikerjakan', 'revisi'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tugas hanya bisa disubmit jika sedang dikerjakan atau revisi'
+                'message' => 'Tugas hanya bisa disubmit jika sedang dikerjakan atau revisi',
             ], 422);
         }
 
@@ -566,24 +558,24 @@ class TugasHarianController extends Controller
         if ($tugasHarian->attachedFiles()->count() === 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Harap upload bukti pengerjaan terlebih dahulu'
+                'message' => 'Harap upload bukti pengerjaan terlebih dahulu',
             ], 422);
         }
 
         $tugasHarian->update([
             'status' => 'validasi',
-            'tanggal_submit' => now()
+            'tanggal_submit' => now(),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Tugas berhasil disubmit untuk validasi'
+            'message' => 'Tugas berhasil disubmit untuk validasi',
         ]);
     }
 
     /**
      * Menampilkan form upload bukti pengerjaan tugas
-     * 
+     *
      * @param  string  $id
      * @return \Illuminate\View\View
      */
@@ -591,7 +583,7 @@ class TugasHarianController extends Controller
     {
         $tugas = TugasHarian::with([
             'tugasPokok:id,nama_tugas',
-            'pegawai:id,nama'
+            'pegawai:id,nama',
         ])->findOrFail($id);
 
         // Authorization check - hanya pemilik tugas
@@ -606,22 +598,21 @@ class TugasHarianController extends Controller
 
     /**
      * Upload bukti pengerjaan tugas
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function uploadBukti(Request $request, $id)
     {
         // Delegate to PenugasanController for now
-        $controller = new \Modules\Penugasan\Http\Controllers\PenugasanController();
+        $controller = new \Modules\Penugasan\Http\Controllers\PenugasanController;
+
         return $controller->uploadBukti($request);
     }
 
     /**
      * Update progress tugas harian
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -648,13 +639,13 @@ class TugasHarianController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Progress tugas berhasil diperbarui'
+            'message' => 'Progress tugas berhasil diperbarui',
         ]);
     }
 
     /**
      * Mendapatkan history revisi tugas harian
-     * 
+     *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -681,7 +672,7 @@ class TugasHarianController extends Controller
                             'status' => $item->status,
                             'direvisi_oleh' => $item->direvisiOleh ? [
                                 'id' => $item->direvisiOleh->id,
-                                'nama' => $item->direvisiOleh->nama
+                                'nama' => $item->direvisiOleh->nama,
                             ] : null,
                             'files' => $item->attachedFiles->map(function ($file) {
                                 return [
@@ -689,7 +680,7 @@ class TugasHarianController extends Controller
                                     'name' => $file->name,
                                     'original_name' => $file->original_name,
                                 ];
-                            })
+                            }),
                         ];
                     });
             }
@@ -700,22 +691,21 @@ class TugasHarianController extends Controller
                 'tugas' => [
                     'id' => $tugasHarian->id,
                     'nama_tugas' => $tugasHarian->nama_tugas,
-                    'status' => $tugasHarian->status
-                ]
+                    'status' => $tugasHarian->status,
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memuat history revisi: ' . $e->getMessage(),
-                'history' => []
+                'message' => 'Gagal memuat history revisi: '.$e->getMessage(),
+                'history' => [],
             ], 500);
         }
     }
 
     /**
      * Menampilkan tugas harian berdasarkan tugas pokok (nested route)
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @param  string  $tugasPokokId
      * @return \Illuminate\View\View
      */
@@ -729,7 +719,7 @@ class TugasHarianController extends Controller
         $tugasHarian = TugasHarian::where('tugas_pokok_id', $tugasPokokId)
             ->with([
                 'pemberiTugas:id,nama',
-                'validator:id,nama'
+                'validator:id,nama',
             ])
             ->orderBy('tanggal_mulai', 'desc')
             ->paginate(20);

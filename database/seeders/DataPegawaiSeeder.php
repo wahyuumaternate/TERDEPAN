@@ -2,12 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use App\Models\MasterPegawai;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Hash;
 
 class DataPegawaiSeeder extends Seeder
 {
@@ -25,16 +23,17 @@ class DataPegawaiSeeder extends Seeder
 
             // Read all CSV files
             $csvFiles = [
-                $basePath . '/TERDEPAN Data Pegawai 1.csv',
-                $basePath . '/TERDEPAN Data Pegawai 2.csv',
-                $basePath . '/TERDEPAN Data Pegawai 3.csv',
+                $basePath.'/TERDEPAN Data Pegawai 1.csv',
+                $basePath.'/TERDEPAN Data Pegawai 2.csv',
+                $basePath.'/TERDEPAN Data Pegawai 3.csv',
             ];
 
             // Parse all CSV data
             $allData = [];
             foreach ($csvFiles as $file) {
-                if (!file_exists($file)) {
+                if (! file_exists($file)) {
                     $this->command->warn("⚠️  File not found: {$file}");
+
                     continue;
                 }
 
@@ -44,6 +43,7 @@ class DataPegawaiSeeder extends Seeder
 
             if (empty($allData)) {
                 $this->command->error('❌ No data found in CSV files!');
+
                 return;
             }
 
@@ -56,8 +56,8 @@ class DataPegawaiSeeder extends Seeder
             $this->displayPegawaiTable($createdPegawai);
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->command->error('❌ Error: ' . $e->getMessage());
-            $this->command->error('Line: ' . $e->getLine());
+            $this->command->error('❌ Error: '.$e->getMessage());
+            $this->command->error('Line: '.$e->getLine());
             throw $e;
         }
     }
@@ -82,6 +82,7 @@ class DataPegawaiSeeder extends Seeder
         }
 
         fclose($file);
+
         return $data;
     }
 
@@ -107,8 +108,9 @@ class DataPegawaiSeeder extends Seeder
             $jabatanId = $this->getJabatanIdFromName($jabatanName);
             $bidangId = $this->getBidangIdFromName($row['Bidang']);
 
-            if (!$jabatanId || !$bidangId) {
+            if (! $jabatanId || ! $bidangId) {
                 $this->command->warn("⚠️  Skipping {$nama}: Jabatan or Bidang not found (Jabatan: {$jabatanName}, Bidang: {$row['Bidang']})");
+
                 continue;
             }
 
@@ -120,13 +122,17 @@ class DataPegawaiSeeder extends Seeder
                 $tipeIdentitas = 'ID';
             }
 
-            $pegawai = MasterPegawai::create([
+            $pegawai = User::create([
+                'nama' => $nama,
+                'email' => $email,
+                'password' => Hash::make('password'),
+            ]);
+
+            $pegawai->profile()->create([
                 'nomor_identitas' => $nip,
                 'tipe_identitas' => $tipeIdentitas,
                 'gelar_depan' => trim($row['Gelar Depan'] ?? ''),
-                'nama' => $nama,
                 'gelar_belakang' => trim($row['Gelar Belakang'] ?? ''),
-                'email' => $email,
                 'no_telepon' => trim($row['No Telpon'] ?? ''),
                 'jenis_kelamin' => $this->parseJenisKelamin($row['Jenis Kelamin']),
                 'tanggal_lahir' => $this->parseTanggalLahir($row['Tanggal Lahir'] ?? ''),
@@ -138,7 +144,6 @@ class DataPegawaiSeeder extends Seeder
                 'pangkat' => trim($row['Pangkat'] ?? ''),
                 'golongan' => trim($row['Golongan'] ?? ''),
                 'tanggal_masuk' => $this->parseTanggalMasuk($row['Tanggal Masuk'] ?? ''),
-                'password' => Hash::make('password'),
             ]);
 
             $createdPegawai[] = $pegawai;
@@ -151,12 +156,12 @@ class DataPegawaiSeeder extends Seeder
         foreach ($data as $index => $row) {
             $atasanName = trim($row['Atasan Langsung'] ?? '');
 
-            if (!empty($atasanName) && isset($createdPegawai[$index])) {
+            if (! empty($atasanName) && isset($createdPegawai[$index])) {
                 // Try exact match first
                 $atasan = $pegawaiMap[$atasanName] ?? null;
 
                 // If not found, try to find by partial match (case-insensitive)
-                if (!$atasan) {
+                if (! $atasan) {
                     foreach ($pegawaiMap as $mapNama => $mapPegawai) {
                         // Check if atasan name matches (ignoring case and extra spaces)
                         if (strtoupper(trim($mapNama)) === strtoupper(trim($atasanName))) {
@@ -167,8 +172,8 @@ class DataPegawaiSeeder extends Seeder
                 }
 
                 if ($atasan) {
-                    $createdPegawai[$index]->update([
-                        'atasan_langsung_id' => $atasan->id
+                    $createdPegawai[$index]->profile()->update([
+                        'atasan_langsung_id' => $atasan->id,
                     ]);
                     $this->command->info("✓ {$createdPegawai[$index]->nama} → Atasan: {$atasan->nama}");
                 } else {
@@ -191,7 +196,7 @@ class DataPegawaiSeeder extends Seeder
             // Generate email from nama
             $nama = strtolower(trim($row['Nama']));
             $nama = str_replace(' ', '.', $nama);
-            $email = $nama . '@bappeda.local';
+            $email = $nama.'@bappeda.local';
         }
 
         return $email;
@@ -277,11 +282,11 @@ class DataPegawaiSeeder extends Seeder
         }
 
         // If not found, check for JF (Jabatan Fungsional)
-        if (!$kode && (stripos($jabatanName, 'jf ') !== false || stripos($jabatanName, 'jabatan fungsional') !== false)) {
+        if (! $kode && (stripos($jabatanName, 'jf ') !== false || stripos($jabatanName, 'jabatan fungsional') !== false)) {
             $kode = 'JAFUNG';
         }
 
-        if (!$kode) {
+        if (! $kode) {
             return null;
         }
 
@@ -338,8 +343,8 @@ class DataPegawaiSeeder extends Seeder
         $this->command->info('');
 
         // Load relations for all pegawai
-        $pegawaiIds = array_map(fn($p) => $p->id, $pegawaiList);
-        $pegawaiWithRelations = MasterPegawai::with(['jabatan', 'bidang', 'atasanLangsung'])
+        $pegawaiIds = array_map(fn ($p) => $p->id, $pegawaiList);
+        $pegawaiWithRelations = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])
             ->whereIn('id', $pegawaiIds)
             ->orderBy('id')
             ->get()
@@ -352,16 +357,16 @@ class DataPegawaiSeeder extends Seeder
         foreach ($pegawaiList as $index => $pegawai) {
             $pegawaiLoaded = $pegawaiWithRelations->get($pegawai->id);
 
-            $jabatan = $pegawaiLoaded->jabatan->nama ?? '-';
-            $bidang = $pegawaiLoaded->bidang->nama ?? '-';
-            $atasan = $pegawaiLoaded->atasanLangsung->nama ?? '-';
+            $jabatan = $pegawaiLoaded->profile?->jabatan->nama ?? '-';
+            $bidang = $pegawaiLoaded->profile?->bidang->nama ?? '-';
+            $atasan = $pegawaiLoaded->profile?->atasanLangsung->nama ?? '-';
 
             $rows[] = [
                 $index + 1,
                 $pegawaiLoaded->nama,
                 $jabatan,
                 $bidang,
-                $pegawaiLoaded->nomor_identitas,
+                $pegawaiLoaded->profile?->nomor_identitas,
                 $pegawaiLoaded->email,
                 $atasan,
             ];

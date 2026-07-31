@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignUuid('tipe_progress_id');
 
             // Who and When
-            $table->foreignId('pegawai_id')->constrained('master_pegawai');
+            $table->foreignId('pegawai_id')->constrained('users');
             $table->date('tanggal')->comment('Tanggal progress');
 
             // Progress Details
@@ -28,7 +28,6 @@ return new class extends Migration
                 ->comment('Apa yang dikerjakan');
             $table->text('kendala')->nullable()
                 ->comment('Kendala yang dihadapi');
-
 
             // File attachments via polymorphic relation to td_files (handled in td_files.attachable_*)
             // No direct foreign key needed - files will reference this table via polymorphic

@@ -43,7 +43,7 @@
                                 <i class="bi bi-check-circle text-success"></i>
                             </div>
                             <div class="ps-3">
-                                <h6 class="mb-0 fw-bold">{{ $data->where('status_aktif', 'Aktif')->count() }}</h6>
+                                <h6 class="mb-0 fw-bold">{{ $data->where('profile.status_aktif', 'Aktif')->count() }}</h6>
                                 <span class="text-muted small pt-1">aktif</span>
                             </div>
                         </div>
@@ -61,7 +61,7 @@
                                 <i class="bi bi-award text-info"></i>
                             </div>
                             <div class="ps-3">
-                                <h6 class="mb-0 fw-bold">{{ $data->where('status_kepegawaian', 'PNS')->count() }}</h6>
+                                <h6 class="mb-0 fw-bold">{{ $data->where('profile.status_kepegawaian', 'PNS')->count() }}</h6>
                                 <span class="text-muted small pt-1">pegawai</span>
                             </div>
                         </div>
@@ -80,7 +80,7 @@
                             </div>
                             <div class="ps-3">
                                 <h6 class="mb-0 fw-bold">
-                                    {{ $data->whereIn('status_kepegawaian', ['PPPK', 'Kontrak'])->count() }}</h6>
+                                    {{ $data->whereIn('profile.status_kepegawaian', ['PPPK', 'Kontrak'])->count() }}</h6>
                                 <span class="text-muted small pt-1">pegawai</span>
                             </div>
                         </div>
@@ -128,7 +128,7 @@
                             <div class="col-lg-2 mb-3">
                                 <select class="form-select" id="filterBidang">
                                     <option value="">Semua Bidang</option>
-                                    @foreach ($data->pluck('bidang')->unique() as $bidang)
+                                    @foreach ($data->pluck('profile.bidang')->unique() as $bidang)
                                         @if ($bidang)
                                             <option value="{{ $bidang->nama }}">{{ $bidang->nama }}</option>
                                         @endif
@@ -138,7 +138,7 @@
                             <div class="col-lg-2 mb-3">
                                 <select class="form-select" id="filterJabatan">
                                     <option value="">Semua Jabatan</option>
-                                    @foreach ($data->pluck('jabatan')->unique() as $jabatan)
+                                    @foreach ($data->pluck('profile.jabatan')->unique() as $jabatan)
                                         @if ($jabatan)
                                             <option value="{{ $jabatan->nama }}">{{ $jabatan->nama }}</option>
                                         @endif
@@ -176,8 +176,8 @@
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td class="text-center">
-                                                @if ($pegawai->foto_profile_path)
-                                                    <img src="{{ asset("storage/" . $pegawai->foto_profile_path) }}"
+                                                @if ($pegawai->profile->foto_profile_path)
+                                                    <img src="{{ asset("storage/" . $pegawai->profile->foto_profile_path) }}"
                                                         alt="{{ $pegawai->nama }}" class="rounded-circle d-flex align-items-center justify-content-center"
                                                         style="width: 40px; height: 40px; object-fit: cover;">
                                                 @else
@@ -188,52 +188,52 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <div class="fw-bold">{{ $pegawai->nomor_identitas }}</div>
-                                                <small class="text-muted">{{ $pegawai->tipe_identitas }}</small>
+                                                <div class="fw-bold">{{ $pegawai->profile->nomor_identitas }}</div>
+                                                <small class="text-muted">{{ $pegawai->profile->tipe_identitas }}</small>
                                             </td>
                                             <td>
                                                 <div class="fw-bold">
-                                                    {{ $pegawai->gelar_depan }} {{ $pegawai->nama }}
-                                                    {{ $pegawai->gelar_belakang }}
+                                                    {{ $pegawai->profile->gelar_depan }} {{ $pegawai->nama }}
+                                                    {{ $pegawai->profile->gelar_belakang }}
                                                 </div>
                                                 <small class="text-muted">{{ $pegawai->email }}</small>
                                             </td>
                                             <td>
                                                 <span class="badge bg-info bg-opacity-10 text-info">
-                                                    {{ $pegawai->jabatan->nama ?? '-' }}
+                                                    {{ $pegawai->profile->jabatan->nama ?? '-' }}
                                                 </span>
-                                                @if ($pegawai->pangkat)
-                                                    <br><small class="text-muted">{{ $pegawai->pangkat }}
-                                                        {{ $pegawai->golongan }}</small>
+                                                @if ($pegawai->profile->pangkat)
+                                                    <br><small class="text-muted">{{ $pegawai->profile->pangkat }}
+                                                        {{ $pegawai->profile->golongan }}</small>
                                                 @endif
                                             </td>
                                             <td>
                                                 <span class="badge bg-secondary bg-opacity-10 text-secondary">
-                                                    {{ $pegawai->bidang->nama ?? '-' }}
+                                                    {{ $pegawai->profile->bidang->nama ?? '-' }}
                                                 </span>
                                             </td>
                                             <td>
-                                                @switch($pegawai->status_aktif)
+                                                @switch($pegawai->profile->status_aktif)
                                                     @case('Aktif')
-                                                        <span class="badge bg-success">{{ $pegawai->status_aktif }}</span>
+                                                        <span class="badge bg-success">{{ $pegawai->profile->status_aktif }}</span>
                                                     @break
 
                                                     @case('Nonaktif')
-                                                        <span class="badge bg-danger">{{ $pegawai->status_aktif }}</span>
+                                                        <span class="badge bg-danger">{{ $pegawai->profile->status_aktif }}</span>
                                                     @break
 
                                                     @case('Cuti')
-                                                        <span class="badge bg-warning">{{ $pegawai->status_aktif }}</span>
+                                                        <span class="badge bg-warning">{{ $pegawai->profile->status_aktif }}</span>
                                                     @break
 
                                                     @case('Pensiun')
-                                                        <span class="badge bg-secondary">{{ $pegawai->status_aktif }}</span>
+                                                        <span class="badge bg-secondary">{{ $pegawai->profile->status_aktif }}</span>
                                                     @break
 
                                                     @default
-                                                        <span class="badge bg-light text-dark">{{ $pegawai->status_aktif }}</span>
+                                                        <span class="badge bg-light text-dark">{{ $pegawai->profile->status_aktif }}</span>
                                                 @endswitch
-                                                <br><small class="text-muted">{{ $pegawai->status_kepegawaian }}</small>
+                                                <br><small class="text-muted">{{ $pegawai->profile->status_kepegawaian }}</small>
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">

@@ -15,7 +15,7 @@
     <section class="section">
         @php
             $user = auth()->user();
-            $anggotaTim = \App\Models\MasterPegawai::where('atasan_langsung_id', $user->id)
+            $anggotaTim = \App\Models\User::whereRelation('profile', 'atasan_langsung_id', $user->id)
                 ->where('status_aktif', 'Aktif')
                 ->with(['jabatan', 'bidang'])
                 ->withCount([
@@ -278,12 +278,12 @@
                                                 <small class="text-muted">NIP: {{ $anggota->nip ?? '-' }}</small>
                                             </td>
                                             <td>
-                                                @if ($anggota->bidang)
+                                                @if ($anggota->profile->bidang)
                                                     <span
-                                                        class="badge bg-secondary">{{ $anggota->bidang->nama_bidang }}</span>
+                                                        class="badge bg-secondary">{{ $anggota->profile->bidang->nama_bidang }}</span>
                                                 @endif
                                                 <br><small
-                                                    class="text-muted">{{ $anggota->jabatan->nama_jabatan ?? '-' }}</small>
+                                                    class="text-muted">{{ $anggota->profile->jabatan->nama_jabatan ?? '-' }}</small>
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge bg-warning">{{ $anggota->tugas_pending }}</span>

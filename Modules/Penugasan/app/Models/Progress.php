@@ -2,11 +2,11 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 
 // use Modules\Penugasan\Database\Factories\ProgressFactory;
@@ -16,7 +16,9 @@ class Progress extends Model
     use HasFactory;
 
     protected $table = 'knj_progress';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /**
@@ -40,7 +42,7 @@ class Progress extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -49,7 +51,7 @@ class Progress extends Model
     }
 
     // Relationships
-    
+
     /**
      * Get the parent progressable model (TugasPokok, TugasHarian, TugasTambahan)
      */
@@ -60,7 +62,7 @@ class Progress extends Model
 
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
     }
 
     /**
@@ -85,7 +87,7 @@ class Progress extends Model
     public function scopeByProgressable($query, $type, $id)
     {
         return $query->where('tipe_progress', $type)
-                    ->where('tipe_progress_id', $id);
+            ->where('tipe_progress_id', $id);
     }
 
     // protected static function newFactory(): ProgressFactory

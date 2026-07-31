@@ -2,17 +2,16 @@
 
 namespace Modules\TerminalData\Http\Controllers\Api;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Http\Requests\StoreTdFolderRequest;
 use Modules\TerminalData\Http\Requests\UpdateTdFolderRequest;
 use Modules\TerminalData\Http\Resources\TdFolderResource;
+use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Services\TdFolderService;
 
 class TdFolderController extends Controller
@@ -24,12 +23,13 @@ class TdFolderController extends Controller
     ) {
         $this->middleware('auth:sanctum');
     }
+
     /**
      * Display a listing of folders
      */
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\MasterPegawai $user */
+        /** @var \App\Models\User $user */
         $user = $request->user();
         $parentId = $request->get('parent_id');
 
@@ -56,14 +56,15 @@ class TdFolderController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
-            Log::error('Error loading folders: ' . $e->getMessage());
+            Log::error('Error loading folders: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memuat folder',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -74,7 +75,7 @@ class TdFolderController extends Controller
     public function store(StoreTdFolderRequest $request): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             $folder = $this->folderService->createFolder($request->validated(), $user);
@@ -82,17 +83,17 @@ class TdFolderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dibuat',
-                'data' => new TdFolderResource($folder)
+                'data' => new TdFolderResource($folder),
             ], 201);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal membuat folder: ' . $e->getMessage()
+                'message' => 'Gagal membuat folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -103,32 +104,32 @@ class TdFolderController extends Controller
     public function show($folderId): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get folder by ID using service
             $folder = $this->folderService->getFolderById($folderId, $user);
 
-            if (!$folder) {
+            if (! $folder) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Folder tidak ditemukan'
+                    'message' => 'Folder tidak ditemukan',
                 ], 404);
             }
 
             return response()->json([
                 'success' => true,
-                'data' => new TdFolderResource($folder)
+                'data' => new TdFolderResource($folder),
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -139,16 +140,16 @@ class TdFolderController extends Controller
     public function children($folderId): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get folder by ID using service
             $folder = $this->folderService->getFolderById($folderId, $user);
 
-            if (!$folder) {
+            if (! $folder) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Folder tidak ditemukan'
+                    'message' => 'Folder tidak ditemukan',
                 ], 404);
             }
 
@@ -165,12 +166,12 @@ class TdFolderController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -181,7 +182,7 @@ class TdFolderController extends Controller
     public function update(UpdateTdFolderRequest $request, TdFolder $folder): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             $folder = $this->folderService->updateFolder($folder, $request->validated(), $user);
@@ -189,17 +190,17 @@ class TdFolderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil diupdate',
-                'data' => new TdFolderResource($folder)
+                'data' => new TdFolderResource($folder),
             ]);
         } catch (AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal update folder: ' . $e->getMessage()
+                'message' => 'Gagal update folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -210,14 +211,14 @@ class TdFolderController extends Controller
     public function destroy(TdFolder $folder, Request $request): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             // Check if folder has subfolders
             if ($folder->subfolders()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder'
+                    'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder',
                 ], 400);
             }
 
@@ -225,7 +226,7 @@ class TdFolderController extends Controller
             if ($folder->files()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak dapat menghapus folder yang masih memiliki file'
+                    'message' => 'Tidak dapat menghapus folder yang masih memiliki file',
                 ], 400);
             }
 
@@ -234,12 +235,12 @@ class TdFolderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dipindahkan ke sampah'
+                'message' => 'Folder berhasil dipindahkan ke sampah',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus folder: ' . $e->getMessage()
+                'message' => 'Gagal menghapus folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -256,7 +257,7 @@ class TdFolderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => TdFolderResource::collection($breadcrumb)
+            'data' => TdFolderResource::collection($breadcrumb),
         ]);
     }
 
@@ -266,7 +267,7 @@ class TdFolderController extends Controller
     public function move(Request $request, TdFolder $folder): JsonResponse
     {
         $request->validate([
-            'parent_id' => 'nullable|uuid|exists:td_folders,id'
+            'parent_id' => 'nullable|uuid|exists:td_folders,id',
         ]);
 
         try {
@@ -275,12 +276,12 @@ class TdFolderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dipindahkan',
-                'data' => new TdFolderResource($folder->fresh())
+                'data' => new TdFolderResource($folder->fresh()),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -293,12 +294,12 @@ class TdFolderController extends Controller
         // Authorize view (user must be able to see the folder to star it)
         $this->authorize('view', $folder);
 
-        $folder->update(['is_starred' => !$folder->is_starred]);
+        $folder->update(['is_starred' => ! $folder->is_starred]);
 
         return response()->json([
             'success' => true,
             'message' => $folder->is_starred ? 'Folder ditandai' : 'Tanda dihapus',
-            'data' => new TdFolderResource($folder)
+            'data' => new TdFolderResource($folder),
         ]);
     }
 
@@ -318,7 +319,7 @@ class TdFolderController extends Controller
                 'total_size' => $folder->total_size,
                 'human_size' => $folder->getHumanSize(),
                 'level' => $folder->level,
-            ]
+            ],
         ]);
     }
 
@@ -338,17 +339,17 @@ class TdFolderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dipulihkan'
+                'message' => 'Folder berhasil dipulihkan',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk memulihkan folder ini'
+                'message' => 'Anda tidak memiliki izin untuk memulihkan folder ini',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memulihkan folder: ' . $e->getMessage()
+                'message' => 'Gagal memulihkan folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -369,17 +370,17 @@ class TdFolderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dihapus permanen'
+                'message' => 'Folder berhasil dihapus permanen',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk menghapus folder ini secara permanen'
+                'message' => 'Anda tidak memiliki izin untuk menghapus folder ini secara permanen',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus folder permanen: ' . $e->getMessage()
+                'message' => 'Gagal menghapus folder permanen: '.$e->getMessage(),
             ], 500);
         }
     }

@@ -1,13 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Penugasan\Http\Controllers\ApiController;
 use Modules\Penugasan\Http\Controllers\DashboardController;
 use Modules\Penugasan\Http\Controllers\PenugasanController;
-use Modules\Penugasan\Http\Controllers\TugasPokokController;
-use Modules\Penugasan\Http\Controllers\TugasHarianController;
-use Modules\Penugasan\Http\Controllers\TugasTambahanController;
 use Modules\Penugasan\Http\Controllers\TeamController;
-use Modules\Penugasan\Http\Controllers\ApiController;
+use Modules\Penugasan\Http\Controllers\TugasHarianController;
+use Modules\Penugasan\Http\Controllers\TugasPokokController;
+use Modules\Penugasan\Http\Controllers\TugasTambahanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,7 +40,9 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/{tugasPokok}', [TugasPokokController::class, 'show'])->name('show');
 
         // Actions
-        Route::post('/sinkron', [TugasPokokController::class, 'sinkronData'])->name('sinkron');
+        Route::post('/', [TugasPokokController::class, 'store'])->name('store');
+        // Sinkron dari Perjanjian Kinerja dinonaktifkan selama modul PerjanjianKinerja non-aktif.
+        // Route::post('/sinkron', [TugasPokokController::class, 'sinkronData'])->name('sinkron');
         // Route::post('/{tugasPokok}/terima', [TugasPokokController::class, 'terima'])->name('terima');
         Route::post('/{tugasPokok}/update-status', [TugasPokokController::class, 'updateStatus'])->name('update-status');
 
