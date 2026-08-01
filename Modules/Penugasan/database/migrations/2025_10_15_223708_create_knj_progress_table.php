@@ -14,8 +14,7 @@ return new class extends Migration
         Schema::create('knj_progress', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
-            $table->string('tipe_progress')->comment('TugasPokok, TugasHarian, TugasTambahan');
-            $table->foreignUuid('tipe_progress_id');
+            $table->foreignUuid('penugasan_id')->constrained('knj_penugasan');
 
             // Who and When
             $table->foreignId('pegawai_id')->constrained('users');
@@ -35,8 +34,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['pegawai_id', 'tanggal']);
-            $table->index(['tipe_progress', 'tipe_progress_id']);
-            $table->unique(['tipe_progress', 'tipe_progress_id', 'tanggal'], 'unique_daily_progress');
+            $table->unique(['penugasan_id', 'tanggal'], 'unique_daily_progress');
         });
     }
 

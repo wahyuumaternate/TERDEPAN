@@ -2,6 +2,7 @@
 
 namespace Modules\Penugasan\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,39 +16,40 @@ class NilaiTahunan extends Model
 
     protected $table = 'knj_nilai_tahunan';
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'pegawai_id',
         'tahun',
-        'nilai_kinerja',
+        'rata_rata_bulanan',
+        'nilai_tahunan',
         'kategori_nilai',
-        'catatan_penilaian',
-        'penilai_id',
-        'tanggal_penilaian',
-        'status_penilaian',
+        'ringkasan_kinerja',
+        'rekomendasi',
+        'is_finalized',
+        'approved_by',
+        'approved_at',
+        'finalized_at',
+        'breakdown_bulanan',
     ];
 
     protected $casts = [
         'tahun' => 'integer',
-        'nilai_kinerja' => 'decimal:2',
-        'tanggal_penilaian' => 'date',
-    ];
-
-    protected $attributes = [
-        'status_penilaian' => 'Draft',
+        'rata_rata_bulanan' => 'decimal:2',
+        'nilai_tahunan' => 'decimal:2',
+        'is_finalized' => 'boolean',
+        'approved_at' => 'datetime',
+        'finalized_at' => 'datetime',
+        'breakdown_bulanan' => 'array',
     ];
 
     // Relationships
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
+        return $this->belongsTo(User::class, 'pegawai_id');
     }
 
-    public function penilai(): BelongsTo
+    public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'penilai_id');
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function nilaiBulanan(): HasMany
@@ -67,13 +69,8 @@ class NilaiTahunan extends Model
         return $query->where('tahun', $tahun);
     }
 
-    public function scopeApproved($query)
+    public function scopeFinalized($query)
     {
-        return $query->where('status_penilaian', 'Approved');
+        return $query->where('is_finalized', true);
     }
-
-    // protected static function newFactory(): NilaiTahunanFactory
-    // {
-    //     // return NilaiTahunanFactory::new();
-    // }
 }

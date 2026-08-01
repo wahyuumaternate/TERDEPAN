@@ -2,20 +2,20 @@
 
 namespace Modules\Penugasan\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-// use Modules\Penugasan\Database\Factories\TugasHarianFactory;
-
-class TugasHarian extends Model
+class Penugasan extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'knj_tugas_harian';
+    protected $table = 'knj_penugasan';
 
     public $incrementing = false;
 
@@ -25,56 +25,69 @@ class TugasHarian extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'tugas_pokok_id',
         'pegawai_id',
         'pemberi_tugas_id',
-        'is_mandiri',
-        'status_approval',
-        'alasan_reject',
+        'jenis',
         'nama_tugas',
         'deskripsi',
+        'alasan_penugasan',
         'tanggal_mulai',
         'tanggal_selesai',
         'target_value',
         'satuan',
+        'bobot_persen',
+        'progress_persen',
+        'realisasi_persen',
+        'nilai_akhir',
         'status',
+        'status_approval',
+        'alasan_reject',
         'validator_id',
         'hasil_validasi',
         'catatan_validasi',
-        'penilaian_kualitas',
         'validated_at',
-        'target_penilaian',
-        'nilai_akhir',
+        'diterima_at',
     ];
 
     protected $casts = [
-        'is_mandiri' => 'boolean',
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
         'validated_at' => 'datetime',
-        'target_penilaian' => 'decimal:2',
-        'nilai_akhir' => 'decimal:2',
+        'diterima_at' => 'datetime',
         'target_value' => 'decimal:2',
-        'penilaian_kualitas' => 'integer',
+        'bobot_persen' => 'decimal:2',
+        'progress_persen' => 'decimal:2',
+        'realisasi_persen' => 'decimal:2',
+        'nilai_akhir' => 'decimal:2',
     ];
 
     protected $attributes = [
-        'is_mandiri' => false,
         'status' => 'pending',
+        'progress_persen' => 0,
     ];
 
     protected static function boot()
     {
         parent::boot();
 
-        static::creating(function ($model) {
+        static::creating(function (self $model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
             }
         });
     }
 
-    // Status constants (sesuai migration - Bahasa Indonesia)
+    // Jenis constants
+    public const JENIS_POKOK = 'pokok';
+
+    public const JENIS_TAMBAHAN = 'tambahan';
+
+    public const JENISES = [
+        self::JENIS_POKOK,
+        self::JENIS_TAMBAHAN,
+    ];
+
+    // Status constants (alur seragam untuk semua jenis)
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_DIKERJAKAN = 'dikerjakan';
@@ -108,24 +121,19 @@ class TugasHarian extends Model
     public const VALIDASI_DITOLAK = 'ditolak';
 
     // Relationships
-    public function tugasPokok(): BelongsTo
-    {
-        return $this->belongsTo(TugasPokok::class, 'tugas_pokok_id');
-    }
-
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
+        return $this->belongsTo(User::class, 'pegawai_id');
     }
 
     public function pemberiTugas(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'pemberi_tugas_id');
+        return $this->belongsTo(User::class, 'pemberi_tugas_id');
     }
 
     public function validator(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'validator_id');
+        return $this->belongsTo(User::class, 'validator_id');
     }
 
     /**
@@ -137,19 +145,39 @@ class TugasHarian extends Model
     }
 
     /**
-     * Get all progress entries (polymorphic)
+     * Rincian aktivitas harian (dulu tabel Tugas Harian terpisah, kini log progress)
      */
-    public function progress(): MorphMany
+    public function progress(): HasMany
     {
-        return $this->morphMany(Progress::class, 'progressable', 'tipe_progress', 'tipe_progress_id');
+        return $this->hasMany(Progress::class, 'penugasan_id');
     }
 
     /**
-     * Get revision history (polymorphic)
+     * Riwayat revisi
      */
-    public function historyRevisi(): MorphMany
+    public function historyRevisi(): HasMany
     {
-        return $this->morphMany(HistoriRevisi::class, 'revisable', 'tipe_revisi', 'tipe_revisi_id');
+        return $this->hasMany(HistoriRevisi::class, 'penugasan_id');
+    }
+
+    /**
+     * Apakah ini tugas mandiri (self-initiated, tanpa pemberi tugas)
+     */
+    public function getIsMandiriAttribute(): bool
+    {
+        return $this->pemberi_tugas_id === null;
+    }
+
+    /**
+     * Hitung nilai akhir: bobot_persen x realisasi_persen / 100
+     */
+    public function hitungNilaiAkhir(): ?float
+    {
+        if ($this->bobot_persen === null || $this->realisasi_persen === null) {
+            return null;
+        }
+
+        return round(((float) $this->bobot_persen * (float) $this->realisasi_persen) / 100, 2);
     }
 
     // Scopes
@@ -158,14 +186,24 @@ class TugasHarian extends Model
         return $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_DIKERJAKAN]);
     }
 
-    public function scopeMandiri($query)
+    public function scopePokok($query)
     {
-        return $query->where('is_mandiri', true);
+        return $query->where('jenis', self::JENIS_POKOK);
     }
 
-    public function scopeNonMandiri($query)
+    public function scopeTambahan($query)
     {
-        return $query->where('is_mandiri', false);
+        return $query->where('jenis', self::JENIS_TAMBAHAN);
+    }
+
+    public function scopeMandiri($query)
+    {
+        return $query->whereNull('pemberi_tugas_id');
+    }
+
+    public function scopeDitugaskan($query)
+    {
+        return $query->whereNotNull('pemberi_tugas_id');
     }
 
     public function scopeByPegawai($query, $pegawaiId)
@@ -177,9 +215,4 @@ class TugasHarian extends Model
     {
         return $query->where('status', $status);
     }
-
-    // protected static function newFactory(): TugasHarianFactory
-    // {
-    //     // return TugasHarianFactory::new();
-    // }
 }

@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 
 class HistoriRevisi extends Model
@@ -21,8 +20,7 @@ class HistoriRevisi extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'tipe_revisi',
-        'tipe_revisi_id',
+        'penugasan_id',
         'revisi_ke',
         'tanggal_revisi',
         'catatan_revisi',
@@ -68,12 +66,9 @@ class HistoriRevisi extends Model
         self::STATUS_DITERIMA,
     ];
 
-    /**
-     * Get the parent revisable model (TugasHarian, TugasTambahan)
-     */
-    public function revisable(): MorphTo
+    public function penugasan(): BelongsTo
     {
-        return $this->morphTo('revisable', 'tipe_revisi', 'tipe_revisi_id');
+        return $this->belongsTo(Penugasan::class, 'penugasan_id');
     }
 
     /**

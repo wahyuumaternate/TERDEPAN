@@ -35,26 +35,10 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the tugas pokok for the user.
+     * Get the penugasan (assignments) for the user.
      */
-    public function tugasPokok()
+    public function penugasan()
     {
-        return $this->hasMany(\Modules\Penugasan\Models\TugasPokok::class, 'pegawai_id');
-    }
-
-    /**
-     * Get the tugas harian for the user.
-     */
-    public function tugasHarian()
-    {
-        return $this->hasMany(\Modules\Penugasan\Models\TugasHarian::class, 'pegawai_id');
-    }
-
-    /**
-     * Get the tugas tambahan for the user.
-     */
-    public function tugasTambahan()
-    {
-        return $this->hasMany(\Modules\Penugasan\Models\TugasTambahan::class, 'pegawai_id');
+        return $this->hasMany(\Modules\Penugasan\Models\Penugasan::class, 'pegawai_id');
     }
 }

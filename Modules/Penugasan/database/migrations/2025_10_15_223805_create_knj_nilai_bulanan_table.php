@@ -19,13 +19,11 @@ return new class extends Migration
             $table->year('tahun');
             $table->tinyInteger('bulan')->comment('1-12');
 
-            // Scores (calculated from tasks)
-            $table->decimal('nilai_tugas_pokok', 5, 2)->default(0)
-                ->comment('60-70% weight');
-            $table->decimal('nilai_tugas_harian', 5, 2)->default(0)
-                ->comment('20-30% weight');
-            $table->decimal('nilai_tugas_tambahan', 5, 2)->default(0)
-                ->comment('Bonus max 20%');
+            // Scores (aggregated from knj_penugasan: nilai_akhir = bobot_persen x realisasi_persen / 100)
+            $table->decimal('total_bobot', 6, 2)->default(0)
+                ->comment('Jumlah bobot_persen seluruh Penugasan selesai pada periode ini');
+            $table->decimal('total_nilai', 6, 2)->default(0)
+                ->comment('Jumlah nilai_akhir (kontribusi bobot x realisasi) seluruh Penugasan periode ini');
 
             // Adjustments
             $table->decimal('total_penalty', 5, 2)->default(0);
@@ -33,7 +31,7 @@ return new class extends Migration
 
             // Final Score
             $table->decimal('nilai_total', 5, 2)->default(0)
-                ->comment('Final score 0-120 (with bonus)');
+                ->comment('(total_nilai / total_bobot) x 100, disesuaikan total_penalty/total_bonus');
             $table->enum('kategori_nilai', [
                 'Sangat_Baik',    // > 90
                 'Baik',           // 80-90

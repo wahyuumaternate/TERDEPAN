@@ -7,9 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Modules\Penugasan\Models\TugasHarian;
-use Modules\Penugasan\Models\TugasPokok;
-use Modules\Penugasan\Models\TugasTambahan;
+use Modules\Penugasan\Models\Penugasan;
 
 /**
  * ApiController
@@ -31,13 +29,13 @@ class ApiController extends Controller
         $stats = Cache::remember("api_stats_{$user->id}", 300, function () use ($user) {
             return [
                 'tugas_pokok' => [
-                    'total' => TugasPokok::where('pegawai_id', $user->id)->count(),
-                    'aktif' => TugasPokok::where('pegawai_id', $user->id)
+                    'total' => Penugasan::pokok()->where('pegawai_id', $user->id)->count(),
+                    'aktif' => Penugasan::pokok()->where('pegawai_id', $user->id)
                         ->where('status', 'dikerjakan')->count(),
-                    'selesai' => TugasPokok::where('pegawai_id', $user->id)
+                    'selesai' => Penugasan::pokok()->where('pegawai_id', $user->id)
                         ->where('status', 'selesai')->count(),
                 ],
-                'tugas_harian' => DB::table('knj_tugas_harian')
+                'tugas_harian' => DB::table('knj_penugasan')
                     ->select([
                         DB::raw('COUNT(*) as total'),
                         DB::raw('SUM(CASE WHEN status = \'pending\' THEN 1 ELSE 0 END) as pending'),
@@ -49,11 +47,11 @@ class ApiController extends Controller
                     ->whereNull('deleted_at')
                     ->first(),
                 'tugas_tambahan' => [
-                    'total' => TugasTambahan::where('pegawai_id', $user->id)->count(),
-                    'aktif' => TugasTambahan::where('pegawai_id', $user->id)
+                    'total' => Penugasan::tambahan()->where('pegawai_id', $user->id)->count(),
+                    'aktif' => Penugasan::tambahan()->where('pegawai_id', $user->id)
                         ->whereIn('status', ['dikerjakan', 'validasi'])->count(),
                 ],
-                'nilai_rata_rata' => round(TugasHarian::where('pegawai_id', $user->id)
+                'nilai_rata_rata' => round(Penugasan::where('pegawai_id', $user->id)
                     ->whereNotNull('nilai_akhir')
                     ->avg('nilai_akhir'), 2),
             ];
@@ -76,10 +74,9 @@ class ApiController extends Controller
         $start = $request->input('start', now()->startOfMonth());
         $end = $request->input('end', now()->endOfMonth());
 
-        // Tugas harian
-        $tugasHarian = TugasHarian::where('pegawai_id', $user->id)
+        $events = Penugasan::where('pegawai_id', $user->id)
             ->whereBetween('tanggal_selesai', [$start, $end])
-            ->select('id', 'nama_tugas', 'tanggal_mulai', 'tanggal_selesai', 'status')
+            ->select('id', 'nama_tugas', 'tanggal_mulai', 'tanggal_selesai', 'status', 'jenis')
             ->get()
             ->map(function ($tugas) {
                 return [
@@ -88,29 +85,10 @@ class ApiController extends Controller
                     'start' => $tugas->tanggal_mulai,
                     'end' => $tugas->tanggal_selesai,
                     'status' => $tugas->status,
-                    'type' => 'harian',
+                    'type' => $tugas->jenis,
                     'color' => $this->getStatusColor($tugas->status),
                 ];
             });
-
-        // Tugas tambahan
-        $tugasTambahan = TugasTambahan::where('pegawai_id', $user->id)
-            ->whereBetween('tanggal_selesai', [$start, $end])
-            ->select('id', 'nama_tugas', 'tanggal_mulai', 'tanggal_selesai', 'status')
-            ->get()
-            ->map(function ($tugas) {
-                return [
-                    'id' => $tugas->id,
-                    'title' => $tugas->nama_tugas,
-                    'start' => $tugas->tanggal_mulai,
-                    'end' => $tugas->tanggal_selesai,
-                    'status' => $tugas->status,
-                    'type' => 'tambahan',
-                    'color' => $this->getStatusColor($tugas->status),
-                ];
-            });
-
-        $events = $tugasHarian->merge($tugasTambahan);
 
         return response()->json([
             'success' => true,
@@ -129,8 +107,7 @@ class ApiController extends Controller
 
         $notifikasi = [];
 
-        // Tugas baru (pending)
-        $tugasBaru = TugasHarian::where('pegawai_id', $user->id)
+        $tugasBaru = Penugasan::where('pegawai_id', $user->id)
             ->where('status', 'pending')
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
@@ -139,12 +116,12 @@ class ApiController extends Controller
             $notifikasi[] = [
                 'type' => 'info',
                 'message' => "Anda memiliki {$tugasBaru} tugas baru yang perlu ditindaklanjuti",
-                'link' => route('penugasan.tugas-harian.tugas-saya', ['status' => 'pending']),
+                'link' => route('penugasan.tugas-saya', ['status' => 'pending']),
             ];
         }
 
         // Tugas mendesak (deadline < 3 hari)
-        $tugasMendesak = TugasHarian::where('pegawai_id', $user->id)
+        $tugasMendesak = Penugasan::where('pegawai_id', $user->id)
             ->whereIn('status', ['pending', 'dikerjakan'])
             ->where('tanggal_selesai', '<=', now()->addDays(3))
             ->where('tanggal_selesai', '>', now())
@@ -159,7 +136,7 @@ class ApiController extends Controller
         }
 
         // Tugas terlambat
-        $tugasTerlambat = TugasHarian::where('pegawai_id', $user->id)
+        $tugasTerlambat = Penugasan::where('pegawai_id', $user->id)
             ->whereIn('status', ['dikerjakan', 'validasi'])
             ->where('tanggal_selesai', '<', now())
             ->count();
@@ -168,12 +145,12 @@ class ApiController extends Controller
             $notifikasi[] = [
                 'type' => 'danger',
                 'message' => "Ada {$tugasTerlambat} tugas yang melewati deadline",
-                'link' => route('penugasan.tugas-harian.tugas-saya'),
+                'link' => route('penugasan.tugas-saya'),
             ];
         }
 
         // Tugas perlu revisi
-        $tugasRevisi = TugasHarian::where('pegawai_id', $user->id)
+        $tugasRevisi = Penugasan::where('pegawai_id', $user->id)
             ->where('status', 'revisi')
             ->count();
 
@@ -181,7 +158,7 @@ class ApiController extends Controller
             $notifikasi[] = [
                 'type' => 'warning',
                 'message' => "{$tugasRevisi} tugas perlu diperbaiki",
-                'link' => route('penugasan.tugas-harian.tugas-saya', ['status' => 'revisi']),
+                'link' => route('penugasan.tugas-saya', ['status' => 'revisi']),
             ];
         }
 
@@ -201,16 +178,15 @@ class ApiController extends Controller
     {
         $user = $request->user();
 
-        // Get anggota tim
         $anggotaTim = User::whereRelation('profile', 'atasan_langsung_id', $user->id)
             ->whereRelation('profile', 'status_aktif', 'Aktif')
-            ->select('id', 'nama', 'jabatan_id')
-            ->with('jabatan:id,nama')
+            ->select('id', 'nama')
+            ->with('profile.jabatan:id,nama')
             ->withCount([
-                'tugasHarian as tugas_aktif' => function ($q) {
+                'penugasan as tugas_aktif' => function ($q) {
                     $q->whereIn('status', ['dikerjakan', 'validasi']);
                 },
-                'tugasHarian as tugas_pending' => function ($q) {
+                'penugasan as tugas_pending' => function ($q) {
                     $q->where('status', 'pending');
                 },
             ])
@@ -275,8 +251,8 @@ class ApiController extends Controller
     }
 
     /**
-     * Mendapatkan daftar tugas pokok berdasarkan pegawai
-     * Digunakan untuk dropdown saat memberikan tugas harian
+     * Mendapatkan daftar penugasan (jenis pokok) berdasarkan pegawai
+     * Digunakan untuk dropdown saat memberikan tugas
      *
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
@@ -286,10 +262,8 @@ class ApiController extends Controller
         try {
             $user = $request->user();
 
-            // Cek apakah pegawai adalah bawahan atau user sendiri yang memiliki akses
             $pegawai = User::where('id', $id)->firstOrFail();
 
-            // Authorization: hanya atasan langsung atau pegawai itu sendiri yang bisa akses
             if ($pegawai->profile?->atasan_langsung_id !== $user->id && $pegawai->id !== $user->id) {
                 return response()->json([
                     'success' => false,
@@ -297,8 +271,7 @@ class ApiController extends Controller
                 ], 403);
             }
 
-            // Get tugas pokok yang masih aktif
-            $tugasPokok = TugasPokok::where('pegawai_id', $id)
+            $tugasPokok = Penugasan::pokok()->where('pegawai_id', $id)
                 ->whereIn('status', ['dikerjakan', 'pending'])
                 ->select('id', 'nama_tugas', 'progress_persen', 'status', 'satuan')
                 ->orderBy('nama_tugas')

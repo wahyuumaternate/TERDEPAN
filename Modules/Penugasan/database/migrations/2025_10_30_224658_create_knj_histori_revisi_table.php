@@ -14,11 +14,7 @@ return new class extends Migration
         Schema::create('knj_histori_revisi', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
-            // Polymorphic relation (to tugas_harian, tugas_tambahan)
-            // Note: tugas_pokok tidak bisa revisi (read-only from PK)
-            $table->string('tipe_revisi')
-                ->comment('TugasHarian, TugasTambahan');
-            $table->foreignUuid('tipe_revisi_id');
+            $table->foreignUuid('penugasan_id')->constrained('knj_penugasan');
 
             // Informasi Revisi
             $table->integer('revisi_ke')->default(1)->comment('Nomor revisi ke berapa');
@@ -44,7 +40,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['pegawai_id', 'status']);
-            $table->index(['tipe_revisi', 'tipe_revisi_id'], 'revisable_index');
+            $table->index('penugasan_id');
         });
     }
 

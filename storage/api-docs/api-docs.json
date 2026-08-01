@@ -15,6 +15,537 @@
         }
     ],
     "paths": {
+        "/penugasan": {
+            "get": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "List penugasan (filter: jenis, status, pegawai_id)",
+                "operationId": "12996d6dc361a085fcc2c1e36c377e2f",
+                "parameters": [
+                    {
+                        "name": "jenis",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pokok",
+                                "tambahan"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "dikerjakan",
+                                "validasi",
+                                "revisi",
+                                "selesai"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pegawai_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Buat penugasan baru. pegawai_id == user login berarti tugas mandiri (menunggu approval atasan); selain itu pemberi_tugas_id otomatis diisi user login",
+                "operationId": "f0d7769394723dad9e6837f8c671675f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "pegawai_id",
+                                    "jenis",
+                                    "nama_tugas",
+                                    "deskripsi",
+                                    "tanggal_mulai",
+                                    "tanggal_selesai",
+                                    "bobot_persen"
+                                ],
+                                "properties": {
+                                    "pegawai_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "jenis": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pokok",
+                                            "tambahan"
+                                        ],
+                                        "example": "tambahan"
+                                    },
+                                    "nama_tugas": {
+                                        "type": "string",
+                                        "example": "Menyusun laporan triwulan"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Menyusun dan mengumpulkan laporan triwulan bidang"
+                                    },
+                                    "alasan_penugasan": {
+                                        "type": "string",
+                                        "example": "Menggantikan staf yang cuti"
+                                    },
+                                    "tanggal_mulai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-01"
+                                    },
+                                    "tanggal_selesai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-15"
+                                    },
+                                    "target_value": {
+                                        "type": "number",
+                                        "example": 1
+                                    },
+                                    "satuan": {
+                                        "type": "string",
+                                        "example": "dokumen"
+                                    },
+                                    "bobot_persen": {
+                                        "type": "number",
+                                        "example": 15
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses untuk memberikan tugas ke pegawai ini"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}": {
+            "get": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Detail penugasan",
+                "operationId": "40759ca81553678a7b17901c6a1fae65",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki akses"
+                    },
+                    "404": {
+                        "description": "Penugasan tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Update penugasan (hanya pemberi tugas, status masih pending)",
+                "operationId": "a56a7d71cfe7b26b5a9438ebe617de3e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama_tugas": {
+                                        "type": "string"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string"
+                                    },
+                                    "tanggal_mulai": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "tanggal_selesai": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "target_value": {
+                                        "type": "number"
+                                    },
+                                    "satuan": {
+                                        "type": "string"
+                                    },
+                                    "bobot_persen": {
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Hapus penugasan (hanya pemberi tugas, status masih pending)",
+                "operationId": "c9598467cf1db97ea38567ed3b6f7ad4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/terima": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai menerima penugasan (pending -> dikerjakan)",
+                "operationId": "cda963e00dc5598ad89beefa1ba64ddc",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/tolak": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai menolak penugasan (status pending)",
+                "operationId": "71a16999934af6fff9d5fdc19e0e8302",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "alasan_penolakan"
+                                ],
+                                "properties": {
+                                    "alasan_penolakan": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/submit": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai submit tugas untuk divalidasi (dikerjakan/revisi -> validasi)",
+                "operationId": "4c85b4ca2ee8458c1623846f5c6db5b7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai atau belum ada bukti pengerjaan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/validasi": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan memvalidasi tugas: menetapkan realisasi_persen, menghitung nilai_akhir = bobot_persen x realisasi_persen / 100",
+                "operationId": "8d2acc39abcba6bd2092f00da1ca8ac1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "hasil_validasi"
+                                ],
+                                "properties": {
+                                    "hasil_validasi": {
+                                        "type": "string",
+                                        "enum": [
+                                            "diterima",
+                                            "revisi",
+                                            "ditolak"
+                                        ]
+                                    },
+                                    "realisasi_persen": {
+                                        "description": "Wajib jika hasil_validasi=diterima",
+                                        "type": "number",
+                                        "example": 90
+                                    },
+                                    "catatan_validasi": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal atau status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/progress": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Catat progress harian (pengganti Tugas Harian lama) dan update progress_persen berjalan",
+                "operationId": "c6e93a4062bb3cf822e10a82c7138c08",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "progress_persen",
+                                    "deskripsi_kegiatan"
+                                ],
+                                "properties": {
+                                    "progress_persen": {
+                                        "type": "number",
+                                        "example": 50
+                                    },
+                                    "deskripsi_kegiatan": {
+                                        "type": "string",
+                                        "example": "Mengumpulkan data dari bidang terkait"
+                                    },
+                                    "kendala": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/login": {
             "post": {
                 "tags": [
@@ -1514,6 +2045,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Penugasan",
+            "description": "API Penugasan (gabungan Tugas Pokok + Tugas Tambahan + Tugas Harian). Nilai akhir dihitung dengan rumus bobot_persen x realisasi_persen / 100."
+        },
         {
             "name": "Auth",
             "description": "API Authentication"

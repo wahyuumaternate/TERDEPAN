@@ -10,6 +10,9 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Modules\Penugasan\Models\HistoriRevisi;
+use Modules\Penugasan\Models\Penugasan;
+use Modules\Penugasan\Models\Progress;
 use Modules\TerminalData\Models\TdFile;
 use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Policies\TdFilePolicy;
@@ -36,10 +39,14 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrap();
 
-        // Morph map stabil untuk Spatie Permission (model_has_roles/model_has_permissions),
-        // supaya tidak terikat ke nama class App\Models\User yang bisa berubah lagi ke depannya.
+        // Morph map stabil untuk Spatie Permission (model_has_roles/model_has_permissions)
+        // dan untuk relasi polymorphic attachable (td_files), supaya tidak terikat ke nama
+        // class penuh yang bisa berubah lagi ke depannya.
         Relation::enforceMorphMap([
             'user' => User::class,
+            'penugasan' => Penugasan::class,
+            'penugasan_progress' => Progress::class,
+            'penugasan_histori_revisi' => HistoriRevisi::class,
         ]);
 
         // Register policies

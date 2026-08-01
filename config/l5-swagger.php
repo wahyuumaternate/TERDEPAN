@@ -45,6 +45,7 @@ return [
                  */
                 'annotations' => [
                     base_path('app'),
+                    base_path('Modules/Penugasan/app/Http/Controllers/Api'),
                 ],
             ],
         ],
