@@ -2,15 +2,56 @@
 
 @section('main')
     <div class="pagetitle">
-        <h1>Beranda E-Kinerja</h1>
+        <h1>Dashboard</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item active">Beranda</li>
+                <li class="breadcrumb-item active">Dashboard</li>
             </ol>
         </nav>
     </div><!-- End Page Title -->
 
     <section class="section dashboard">
+        @isset($tdStats)
+            <!-- Ringkasan Terminal Data -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-folder2-open text-primary me-2"></i>
+                                Ringkasan Terminal Data
+                            </h5>
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <div class="small text-muted">Total Folder</div>
+                                            <div class="fs-4 fw-bold">{{ $tdStats['total_folders'] ?? 0 }}</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="small text-muted">Total File</div>
+                                            <div class="fs-4 fw-bold">{{ $tdStats['total_files'] ?? 0 }}</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="small text-muted">Ukuran Total</div>
+                                            <div class="fs-4 fw-bold">
+                                                {{ \App\Helpers\StorageHelper::formatBytes($tdStats['total_size'] ?? 0) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                    <a href="{{ route('terminaldata.index') }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-arrow-right-circle me-1"></i>Buka Terminal Data
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endisset
+
         <!-- Stats Cards -->
         <div class="row mb-4">
             <!-- Tugas Pokok Card -->
@@ -147,9 +188,9 @@
                                                     <small>{{ $tugas['pemberi_tugas'] }}</small>
                                                 </td>
                                                 <td class="text-center">
-                                                    @if ($tugas['jenis'] === 'harian')
-                                                        <span class="badge bg-info">
-                                                            <i class="bi bi-calendar-check me-1"></i>Harian
+                                                    @if ($tugas['jenis'] === 'pokok')
+                                                        <span class="badge bg-primary">
+                                                            <i class="bi bi-file-earmark-text me-1"></i>Pokok
                                                         </span>
                                                     @else
                                                         <span class="badge bg-success">
@@ -174,17 +215,10 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-center">
-                                                    @if ($tugas['jenis'] === 'harian')
-                                                        <a href="{{ route('penugasan.tugas-harian.show', $tugas['id']) }}"
-                                                            class="btn btn-sm btn-primary">
-                                                            <i class="bi bi-eye me-1"></i>Lihat
-                                                        </a>
-                                                    @else
-                                                        <a href="{{ route('penugasan.tugas-tambahan.show', $tugas['id']) }}"
-                                                            class="btn btn-sm btn-primary">
-                                                            <i class="bi bi-eye me-1"></i>Lihat
-                                                        </a>
-                                                    @endif
+                                                    <a href="{{ route('penugasan.show', $tugas['id']) }}"
+                                                        class="btn btn-sm btn-primary">
+                                                        <i class="bi bi-eye me-1"></i>Lihat
+                                                    </a>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -203,14 +237,12 @@
                     <div class="card-body">
                         <h5 class="card-title">Aksi Cepat</h5>
                         <div class="d-grid gap-2">
-                            <a href="{{ route('penugasan.tugas-harian.tugas-saya') }}" class="btn btn-primary">
-                                <i class="bi bi-calendar-check me-2"></i>Lihat Tugas Harian
-                            </a>
-                            <a href="{{ route('penugasan.tugas-tambahan.tugas-saya') }}" class="btn btn-outline-primary">
-                                <i class="bi bi-plus-circle me-2"></i>Lihat Tugas Tambahan
-                            </a>
-                            <a href="{{ route('penugasan.tugas-pokok.tugas-saya') }}" class="btn btn-outline-info">
+                            <a href="{{ route('penugasan.tugas-saya', ['jenis' => 'pokok']) }}" class="btn btn-outline-info">
                                 <i class="bi bi-file-earmark-text me-2"></i>Tugas Pokok Saya
+                            </a>
+                            <a href="{{ route('penugasan.tugas-saya', ['jenis' => 'tambahan']) }}"
+                                class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Tugas Tambahan Saya
                             </a>
 
                             @php

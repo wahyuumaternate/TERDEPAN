@@ -7,9 +7,12 @@ use App\Models\MasterBidang;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Modules\Penugasan\Models\HistoriRevisi;
 use Modules\Penugasan\Models\Penugasan;
 use Modules\Penugasan\Models\Progress;
+use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Models\TdFolder;
 
 /**
  * PenugasanController (web)
@@ -146,18 +149,15 @@ class PenugasanController extends Controller
         return view('penugasan::penugasan.tugas-saya', compact('penugasan', 'grouped', 'status', 'jenis'));
     }
 
+    /**
+     * Form pembuatan tugas mandiri (self-initiated). Tidak memerlukan izin
+     * "create" atasan karena pegawai membuat tugas untuk dirinya sendiri —
+     * lihat store() yang melewati authorize('create'/'assignTo') saat
+     * pegawai_id sama dengan user yang login.
+     */
     public function create(Request $request)
     {
-        $user = $request->user();
-        $this->authorize('create', Penugasan::class);
-
-        $pegawaiList = User::whereRelation('profile', 'status_aktif', 'Aktif')
-            ->where('id', '!=', $user->id)
-            ->with(['profile.jabatan', 'profile.bidang'])
-            ->orderBy('nama')
-            ->get();
-
-        return view('penugasan::penugasan.create', compact('pegawaiList'));
+        return view('penugasan::penugasan.create');
     }
 
     public function store(Request $request)
@@ -442,6 +442,73 @@ class PenugasanController extends Controller
         }
 
         return view('penugasan::penugasan.upload-eviden', ['tugas' => $tugas, 'jenisTugas' => $tugas->jenis]);
+    }
+
+    /**
+     * Upload bukti pengerjaan (eviden) dan lampirkan ke penugasan (polymorphic attachedFiles).
+     */
+    public function uploadBukti(Request $request, string $id)
+    {
+        $penugasan = Penugasan::findOrFail($id);
+
+        if ($request->user()->id !== $penugasan->pegawai_id) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+
+        $validated = $request->validate([
+            'folder_id' => 'required|uuid|exists:td_folders,id',
+            'file' => [
+                'required',
+                'file',
+                'max:102400',
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,bmp,svg,webp',
+            ],
+        ], [
+            'file.mimes' => 'File harus berupa dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll)',
+            'file.max' => 'Ukuran file maksimal 100MB',
+        ]);
+
+        try {
+            $folder = TdFolder::findOrFail($validated['folder_id']);
+            $this->authorize('upload', [TdFile::class, $folder]);
+
+            $uploadedFile = $request->file('file');
+            $originalName = $uploadedFile->getClientOriginalName();
+            $extension = $uploadedFile->getClientOriginalExtension();
+            $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)).'_'.time().'.'.$extension;
+            $storagePath = "terminal-data/{$folder->bidang_id}/{$folder->id}";
+            $path = $uploadedFile->storeAs($storagePath, $filename);
+            $hash = hash_file('sha256', $uploadedFile->getRealPath());
+
+            $file = $penugasan->attachedFiles()->create([
+                'folder_id' => $folder->id,
+                'bidang_id' => $folder->bidang_id,
+                'sub_bidang_id' => $folder->sub_bidang_id,
+                'name' => pathinfo($originalName, PATHINFO_FILENAME),
+                'original_name' => $originalName,
+                'storage_path' => $path,
+                'extension' => $extension,
+                'mime_type' => $uploadedFile->getMimeType(),
+                'size' => $uploadedFile->getSize(),
+                'hash' => $hash,
+                'version' => 1,
+                'is_latest_version' => true,
+                'created_by' => $request->user()->id,
+            ]);
+
+            $folder->updateStats();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Bukti pengerjaan berhasil diupload',
+                'data' => ['id' => $file->id, 'name' => $file->original_name],
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk upload file ke folder ini.',
+            ], 403);
+        }
     }
 
     public function updateProgress(Request $request, string $id)

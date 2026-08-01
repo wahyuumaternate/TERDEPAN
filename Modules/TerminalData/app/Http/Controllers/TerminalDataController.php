@@ -37,7 +37,7 @@ class TerminalDataController extends Controller
     /**
      * Get dashboard statistics based on user role
      */
-    private function getDashboardStats($user): array
+    public function getDashboardStats($user): array
     {
         $kodeJabatan = $user->profile?->jabatan?->kode;
 

@@ -2,23 +2,35 @@
  <aside id="sidebar" class="sidebar">
      <ul class="sidebar-nav" id="sidebar-nav">
 
+         <!-- Dashboard Nav -->
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/terminal-data') ? 'active' : 'collapsed' }} bg-primary text-white"
-                 href="{{ url('/terminal-data') }}">
-                 <i class="bi bi-arrow-left text-white"></i>
-                 <span>Terminal Data</span>
+             <a class="nav-link {{ Request::is('/') ? 'active' : 'collapsed' }}" href="{{ url('/') }}">
+                 <i class="bi bi-house"></i>
+                 <span>Dashboard</span>
              </a>
          </li><!-- End Dashboard Nav -->
 
-         <hr>
+         <!-- Terminal Data -->
+         <li class="nav-heading">Terminal Data</li>
 
-         <!-- Beranda Nav -->
+         @php
+             $dokumenActive = request()->is('terminal-data/folders*') || request()->is('terminal-data/folder*');
+         @endphp
+
          <li class="nav-item">
-             <a class="nav-link {{ Request::is('/e-kinerja') ? 'active' : 'collapsed' }}" href="{{ url('/e-kinerja') }}">
-                 <i class="bi bi-house"></i>
-                 <span>Beranda</span>
+             <a class="nav-link {{ $dokumenActive ? '' : 'collapsed' }}"
+                 href="{{ route('terminaldata.folders.index') }}">
+                 <i class="bi bi-folder2-open"></i><span>Penyimpanan</span>
              </a>
-         </li><!-- End Beranda Nav -->
+         </li>
+
+         <li class="nav-item">
+             <a class="nav-link {{ Request::is('terminal-data/sampah*') ? '' : 'collapsed' }}"
+                 href="{{ route('terminaldata.sampah.index') }}">
+                 <i class="bi bi-trash"></i>
+                 <span>Sampah</span>
+             </a>
+         </li>
 
          <!-- E-Kinerja -->
          <li class="nav-heading">E-Kinerja Perencana</li>
@@ -148,22 +160,15 @@
              <ul id="tugas-saya-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
                  <!-- Tugas Pokok Saya -->
                  <li>
-                     <a href="{{ route('penugasan.tugas-pokok.tugas-saya') }}">
-                         <i class="bi bi-circle"></i><span>Tugas Pokok</span>
-                     </a>
-                 </li>
-
-                 <!-- Tugas Harian Saya -->
-                 <li>
-                     <a href="{{ route('penugasan.tugas-harian.tugas-saya') }}">
-                         <i class="bi bi-circle"></i><span>Tugas Harian</span>
+                     <a href="{{ route('penugasan.tugas-saya', ['jenis' => 'pokok']) }}">
+                         <i class="bi bi-circle"></i><span>Tugas Pokok Saya</span>
                      </a>
                  </li>
 
                  <!-- Tugas Tambahan Saya -->
                  <li>
-                     <a href="{{ route('penugasan.tugas-tambahan.tugas-saya') }}">
-                         <i class="bi bi-circle"></i><span>Tugas Tambahan</span>
+                     <a href="{{ route('penugasan.tugas-saya', ['jenis' => 'tambahan']) }}">
+                         <i class="bi bi-circle"></i><span>Tugas Tambahan Saya</span>
                      </a>
                  </li>
              </ul>
@@ -219,102 +224,6 @@
              </li><!-- End Manajemen Tim Nav -->
          @endif
 
-         {{-- <!-- Penugasan Nav -->
-         <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#tugas-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-list-task"></i><span>Penugasan</span><i class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="tugas-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ route('penugasan.tugas-pokok.index') }}">
-                         <i class="bi bi-circle"></i><span>Daftar Penugasan</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ route('penugasan.tugas-pokok.show', AUTH::user()->id) }}">
-                         <i class="bi bi-circle"></i><span>Tugas Saya</span>
-                     </a>
-                 </li>
-                 <li class="nav-item">
-                     <a href="#">
-                         <i class="bi bi-circle"></i><span>Penilaian Kinerja</span>
-                     </a>
-                 </li><!-- End Penilaian Nav -->
-             </ul>
-         </li><!-- End Penugasan Nav --> --}}
-
-         <!-- Progress & Validasi Nav -->
-         {{-- <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#progress-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-graph-up"></i><span>Progress & Validasi</span><i
-                     class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="progress-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ url('progress') }}">
-                         <i class="bi bi-circle"></i><span>Input Progress</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('progress/foto-bukti') }}">
-                         <i class="bi bi-circle"></i><span>Foto Bukti</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('progress/dokumen-bukti') }}">
-                         <i class="bi bi-circle"></i><span>Dokumen Bukti</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('validasi') }}">
-                         <i class="bi bi-circle"></i><span>Validasi Tugas</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('revisi') }}">
-                         <i class="bi bi-circle"></i><span>Revisi</span>
-                     </a>
-                 </li>
-             </ul>
-         </li><!-- End Progress & Validasi Nav --> --}}
-
-         {{-- <!-- Penilaian Nav -->
-         <li class="nav-item">
-             <a class="nav-link collapsed" href="{{ url('penilaian/laporan') }}">
-                 <i class="bi bi-award"></i><span>Penilaian Kinerja</span>
-             </a>
-         </li><!-- End Penilaian Nav -->
-
-         <!-- Delegasi & Workload Nav -->
-         <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#delegasi-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-arrow-left-right"></i><span>Delegasi & Workload</span><i
-                     class="bi bi-chevron-down ms-auto"></i>
-             </a>
-             <ul id="delegasi-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <li>
-                     <a href="{{ url('delegasi') }}">
-                         <i class="bi bi-circle"></i><span>Delegasi Tugas</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('delegasi/history') }}">
-                         <i class="bi bi-circle"></i><span>History Delegasi</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('workload') }}">
-                         <i class="bi bi-circle"></i><span>Monitor Workload</span>
-                     </a>
-                 </li>
-                 <li>
-                     <a href="{{ url('workload/report') }}">
-                         <i class="bi bi-circle"></i><span>Laporan Beban Kerja</span>
-                     </a>
-                 </li>
-             </ul>
-         </li><!-- End Delegasi & Workload Nav --> --}}
-
          <!-- Master Data -->
          @if ($canAccessMasterData)
              <li class="nav-heading">Master Data</li>
@@ -333,6 +242,11 @@
                      <li>
                          <a href="{{ route('master.bidang.index') }}">
                              <i class="bi bi-circle"></i><span>Bidang</span>
+                         </a>
+                     </li>
+                     <li>
+                         <a href="{{ route('master.sub-bidang.index') }}">
+                             <i class="bi bi-circle"></i><span>Sub Bidang</span>
                          </a>
                      </li>
                      <li>

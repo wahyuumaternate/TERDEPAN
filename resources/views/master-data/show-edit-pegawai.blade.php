@@ -407,11 +407,12 @@
                                     <div class="edit-mode d-none">
                                         <select class="form-select" name="atasan_langsung_id">
                                             <option value="">Pilih Atasan Langsung</option>
-                                            @foreach (\App\Models\User::where('id', '!=', $pegawai->id)->get() as $atasan)
-<option value="{{ $atasan->id }}" {{ $pegawai->atasan_langsung_id == $atasan->id ? 'selected' : '' }}>
-                                                    {{ $atasan->nama }} - {{ $atasan->jabatan->nama ?? '' }}
+                                            @foreach (\App\Models\User::where('id', '!=', $pegawai->id)->with('profile.jabatan')->get() as $atasan)
+                                                <option value="{{ $atasan->id }}"
+                                                    {{ $pegawai->profile?->atasan_langsung_id == $atasan->id ? 'selected' : '' }}>
+                                                    {{ $atasan->nama }} - {{ $atasan->profile?->jabatan?->nama ?? '' }}
                                                 </option>
-@endforeach
+                                            @endforeach
                                         </select>
                                     </div>
                                 </div>

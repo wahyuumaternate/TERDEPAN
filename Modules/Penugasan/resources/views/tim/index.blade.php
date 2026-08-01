@@ -61,7 +61,7 @@
                             </div>
                             <div class="ps-3">
                                 @php
-                                    $validasiCount = \Modules\Penugasan\Models\TugasHarian::whereIn(
+                                    $validasiCount = \Modules\Penugasan\Models\Penugasan::whereIn(
                                         'pegawai_id',
                                         $anggotaTim->pluck('id'),
                                     )
@@ -145,8 +145,8 @@
                             <label class="form-label small">Bidang</label>
                             <select class="form-select" id="filterBidang">
                                 <option value="">Semua Bidang</option>
-                                @foreach ($anggotaTim->pluck('bidang')->unique()->filter() as $bidang)
-                                    <option value="{{ $bidang->id }}">{{ $bidang->nama_bidang }}</option>
+                                @foreach ($anggotaTim->pluck('profile.bidang')->unique('id')->filter() as $bidang)
+                                    <option value="{{ $bidang->id }}">{{ $bidang->nama }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -154,8 +154,8 @@
                             <label class="form-label small">Jabatan</label>
                             <select class="form-select" id="filterJabatan">
                                 <option value="">Semua Jabatan</option>
-                                @foreach ($anggotaTim->pluck('jabatan')->unique()->filter() as $jabatan)
-                                    <option value="{{ $jabatan->id }}">{{ $jabatan->nama_jabatan }}</option>
+                                @foreach ($anggotaTim->pluck('profile.jabatan')->unique('id')->filter() as $jabatan)
+                                    <option value="{{ $jabatan->id }}">{{ $jabatan->nama }}</option>
                                 @endforeach
                             </select>
                         </div>

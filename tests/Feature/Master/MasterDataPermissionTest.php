@@ -383,6 +383,109 @@ class MasterDataPermissionTest extends TestCase
         }
     }
 
+    // ==================== SUB BIDANG TESTS ====================
+
+    /**
+     * Test create sub bidang permission by jabatan
+     *
+     * @test
+     *
+     * @dataProvider jabatanMasterDataProvider
+     */
+    public function test_11_create_sub_bidang_permission_by_jabatan($jabatanKode, $canManage)
+    {
+        $user = $this->createUserWithJabatan($jabatanKode);
+
+        $response = $this->actingAs($user)
+            ->post(route('master.sub-bidang.store'), [
+                'bidang_id' => MasterBidang::first()->id,
+                'nama' => 'Sub Bidang Test',
+            ]);
+
+        if ($canManage) {
+            $this->assertContains(
+                $response->status(),
+                [200, 201, 302],
+                "{$jabatanKode} should be able to create sub bidang"
+            );
+        } else {
+            $this->assertEquals(
+                403,
+                $response->status(),
+                "{$jabatanKode} should NOT be able to create sub bidang"
+            );
+        }
+    }
+
+    /**
+     * Test update sub bidang permission by jabatan
+     *
+     * @test
+     *
+     * @dataProvider jabatanMasterDataProvider
+     */
+    public function test_12_update_sub_bidang_permission_by_jabatan($jabatanKode, $canManage)
+    {
+        $user = $this->createUserWithJabatan($jabatanKode);
+        $subBidang = \App\Models\MasterSubBidang::create([
+            'bidang_id' => MasterBidang::first()->id,
+            'nama' => 'Sub Bidang Awal',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->put(route('master.sub-bidang.update', $subBidang->id), [
+                'bidang_id' => $subBidang->bidang_id,
+                'nama' => 'Sub Bidang Updated',
+            ]);
+
+        if ($canManage) {
+            $this->assertContains(
+                $response->status(),
+                [200, 302],
+                "{$jabatanKode} should be able to update sub bidang"
+            );
+        } else {
+            $this->assertEquals(
+                403,
+                $response->status(),
+                "{$jabatanKode} should NOT be able to update sub bidang"
+            );
+        }
+    }
+
+    /**
+     * Test delete sub bidang permission by jabatan
+     *
+     * @test
+     *
+     * @dataProvider jabatanMasterDataProvider
+     */
+    public function test_13_delete_sub_bidang_permission_by_jabatan($jabatanKode, $canManage)
+    {
+        $user = $this->createUserWithJabatan($jabatanKode);
+        $subBidang = \App\Models\MasterSubBidang::create([
+            'bidang_id' => MasterBidang::first()->id,
+            'nama' => 'Sub Bidang To Delete',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->delete(route('master.sub-bidang.destroy', $subBidang->id));
+
+        if ($canManage) {
+            $this->assertContains(
+                $response->status(),
+                [200, 302],
+                "{$jabatanKode} should be able to delete sub bidang"
+            );
+        } else {
+            $this->assertEquals(
+                403,
+                $response->status(),
+                "{$jabatanKode} should NOT be able to delete sub bidang"
+            );
+        }
+    }
+
     // ==================== VIEW TESTS ====================
 
     /**
@@ -414,6 +517,14 @@ class MasterDataPermissionTest extends TestCase
 
         // Test view pegawai index
         $response = $this->actingAs($user)->get(route('master.pegawai.index'));
+        if ($canManage) {
+            $response->assertStatus(200);
+        } else {
+            $this->assertContains($response->status(), [403, 302, 500]);
+        }
+
+        // Test view sub bidang index
+        $response = $this->actingAs($user)->get(route('master.sub-bidang.index'));
         if ($canManage) {
             $response->assertStatus(200);
         } else {

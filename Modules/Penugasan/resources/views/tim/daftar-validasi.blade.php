@@ -5,7 +5,7 @@
         <h1>Validasi Tugas Tim</h1>
         <nav>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('penugasan.tim.index') }}">Tim</a></li>
                 <li class="breadcrumb-item active">Validasi</li>
             </ol>
@@ -13,20 +13,15 @@
     </div>
 
     <section class="section">
-        <div class="card">
+        <div class="card shadow-sm border-0">
             <div class="card-header bg-white">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <h5 class="mb-0">
-                            <i class="bi bi-check-circle me-2"></i>
-                            Daftar Tugas Menunggu Validasi
-                        </h5>
-                        <small class="text-muted">Tugas harian yang perlu divalidasi dari anggota tim</small>
+                        <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Daftar Tugas Menunggu Validasi</h5>
                     </div>
                     <div class="col-md-4 text-end">
                         <span class="badge bg-warning text-dark fs-6">
-                            <i class="bi bi-hourglass-split me-1"></i>
-                            {{ $tugasValidasi->total() }} tugas menunggu
+                            <i class="bi bi-hourglass-split me-1"></i>{{ $tugasValidasi->total() }} tugas menunggu
                         </span>
                     </div>
                 </div>
@@ -45,24 +40,21 @@
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 5%;">No</th>
-                                    <th style="width: 25%;">Nama Tugas</th>
-                                    <th style="width: 15%;">Tugas Pokok</th>
-                                    <th style="width: 15%;">Pegawai</th>
-                                    <th style="width: 10%;">Deadline</th>
-                                    <th style="width: 8%;">Target</th>
-                                    <th style="width: 8%;">Bukti</th>
-                                    <th style="width: 14%;" class="text-center">Aksi</th>
+                                    <th>Nama Tugas</th>
+                                    <th>Jenis</th>
+                                    <th>Pegawai</th>
+                                    <th class="text-center">Bobot</th>
+                                    <th class="text-center">Deadline</th>
+                                    <th class="text-center">Bukti</th>
+                                    <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($tugasValidasi as $index => $tugas)
+                                @foreach ($tugasValidasi as $tugas)
                                     @php
-                                        $daysLeft = now()->diffInDays($tugas->tanggal_selesai, false);
-                                        $isOverdue = $daysLeft < 0;
+                                        $isOverdue = now()->gt($tugas->tanggal_selesai);
                                     @endphp
                                     <tr>
-                                        <td>{{ $tugasValidasi->firstItem() + $index }}</td>
                                         <td>
                                             <div class="fw-semibold">{{ $tugas->nama_tugas }}</div>
                                             @if ($tugas->deskripsi)
@@ -70,63 +62,43 @@
                                             @endif
                                         </td>
                                         <td>
-                                            @if ($tugas->tugasPokok)
-                                                <small class="text-muted">
-                                                    <i class="bi bi-folder me-1"></i>
-                                                    {{ Str::limit($tugas->tugasPokok->nama_tugas, 30) }}
-                                                </small>
-                                            @else
-                                                <small class="text-muted">-</small>
-                                            @endif
+                                            <span
+                                                class="badge bg-info bg-opacity-10 text-info">{{ ucfirst($tugas->jenis) }}</span>
                                         </td>
                                         <td>
-                                            <div class="d-flex align-items-center">
-                                                <i class="bi bi-person-circle text-primary me-2 fs-5"></i>
-                                                <div>
-                                                    <div class="small fw-semibold">{{ $tugas->pegawai->nama }}</div>
-                                                    <small
-                                                        class="text-muted">{{ $tugas->pegawai->profile->jabatan?->nama ?? '-' }}</small>
-                                                </div>
-                                            </div>
+                                            <div class="small fw-semibold">{{ $tugas->pegawai->nama }}</div>
+                                            <small
+                                                class="text-muted">{{ $tugas->pegawai->profile->jabatan?->nama ?? '-' }}</small>
                                         </td>
-                                        <td>
+                                        <td class="text-center">{{ $tugas->bobot_persen }}%</td>
+                                        <td class="text-center">
                                             <small>{{ $tugas->tanggal_selesai->format('d M Y') }}</small>
                                             @if ($isOverdue)
-                                                <br><span class="badge bg-danger badge-sm">
-                                                    <i class="bi bi-exclamation-triangle"></i> Terlambat
-                                                </span>
+                                                <br><span class="badge bg-danger badge-sm">Terlambat</span>
                                             @endif
                                         </td>
-                                        <td>
-                                            <small class="fw-semibold">{{ $tugas->target_value }}</small>
-                                            <small class="text-muted d-block">{{ $tugas->satuan }}</small>
-                                        </td>
-                                        <td>
+                                        <td class="text-center">
                                             @if ($tugas->attachedFiles->isNotEmpty())
-                                                <span class="badge bg-success">
-                                                    <i class="bi bi-paperclip me-1"></i>
-                                                    {{ $tugas->attachedFiles->count() }} file
-                                                </span>
+                                                <span class="badge bg-success"><i class="bi bi-paperclip me-1"></i>
+                                                    {{ $tugas->attachedFiles->count() }} file</span>
                                             @else
-                                                <span class="badge bg-secondary">
-                                                    <i class="bi bi-dash-circle"></i>
-                                                </span>
+                                                <span class="badge bg-secondary"><i class="bi bi-dash-circle"></i></span>
                                             @endif
                                         </td>
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('penugasan.tugas-harian.show', $tugas->id) }}"
+                                                <a href="{{ route('penugasan.show', $tugas->id) }}"
                                                     class="btn btn-outline-info" title="Detail" target="_blank">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                                 <button class="btn btn-outline-success"
-                                                    onclick="validasiTugas('{{ $tugas->id }}', 'setuju')"
+                                                    onclick="bukaValidasi('{{ $tugas->id }}', '{{ $tugas->bobot_persen }}', 'diterima')"
                                                     title="Setujui">
                                                     <i class="bi bi-check2"></i>
                                                 </button>
                                                 <button class="btn btn-outline-danger"
-                                                    onclick="validasiTugas('{{ $tugas->id }}', 'revisi')"
-                                                    title="Revisi">
+                                                    onclick="bukaValidasi('{{ $tugas->id }}', '{{ $tugas->bobot_persen }}', 'revisi')"
+                                                    title="Minta Revisi">
                                                     <i class="bi bi-arrow-clockwise"></i>
                                                 </button>
                                             </div>
@@ -137,15 +109,12 @@
                         </table>
                     </div>
 
-                    <!-- Pagination -->
                     <div class="d-flex justify-content-between align-items-center mt-3">
                         <div class="text-muted">
-                            Menampilkan {{ $tugasValidasi->firstItem() }} - {{ $tugasValidasi->lastItem() }}
-                            dari {{ $tugasValidasi->total() }} data
+                            Menampilkan {{ $tugasValidasi->firstItem() }} - {{ $tugasValidasi->lastItem() }} dari
+                            {{ $tugasValidasi->total() }} data
                         </div>
-                        <div>
-                            {{ $tugasValidasi->links() }}
-                        </div>
+                        {{ $tugasValidasi->links() }}
                     </div>
                 @endif
             </div>
@@ -160,54 +129,33 @@
                     <h5 class="modal-title" id="validasiModalTitle">Validasi Tugas</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="validasiForm">
-                    @csrf
-                    <input type="hidden" name="tugas_id" id="tugasId">
-                    <input type="hidden" name="jenis_tugas" value="tugas_harian">
-                    <input type="hidden" name="status_validasi" id="statusValidasi">
+                <div class="modal-body">
+                    <input type="hidden" id="tugasId">
+                    <input type="hidden" id="bobotPersen">
+                    <input type="hidden" id="statusValidasi">
 
-                    <div class="modal-body">
-                        <div class="mb-3" id="nilaiGroup">
-                            <label class="form-label">Nilai Kualitas <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="penilaian_kualitas" id="nilaiInput"
-                                min="0" max="100" step="0.01" required>
-                            <small class="text-muted">Nilai kualitas pekerjaan antara 0 - 100</small>
-                        </div>
-
-                        <div class="mb-3" id="progressGroup">
-                            <label class="form-label">Update Progress Tugas Pokok</label>
-                            <select class="form-select" name="progress_update_type" id="progressType" required>
-                                <option value="otomatis">Otomatis (berdasarkan target)</option>
-                                <option value="manual">Manual</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3" id="progressValueGroup" style="display: none;">
-                            <label class="form-label">Nilai Progress Manual <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="progress_value" id="progressValue"
-                                min="0" step="0.01">
-                            <small class="text-muted">Masukkan nilai progress manual</small>
-                        </div>
-
-                        <div class="mb-3" id="catatanValidasiGroup">
-                            <label class="form-label">Catatan Validasi</label>
-                            <textarea class="form-control" name="catatan_validasi" id="catatanValidasiInput" rows="3"
-                                placeholder="Berikan feedback positif (opsional)"></textarea>
-                        </div>
-
-                        <div class="mb-3" id="catatanRevisiGroup" style="display: none;">
-                            <label class="form-label">Catatan Revisi <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="catatan_revisi" id="catatanRevisiInput" rows="4" required
-                                placeholder="Jelaskan apa yang perlu diperbaiki..."></textarea>
-                        </div>
+                    <div class="mb-3" id="realisasiGroup">
+                        <label class="form-label">Realisasi (%) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="realisasiInput" min="0" max="100"
+                            step="0.01">
+                        <small class="text-muted">Bobot tugas: <strong id="bobotDisplay"></strong>%</small>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <i class="bi bi-save me-2"></i>Simpan
-                        </button>
+
+                    <div class="alert alert-info d-none" id="previewAlert">
+                        Nilai Akhir: <strong id="previewNilai">-</strong> (bobot × realisasi / 100)
                     </div>
-                </form>
+
+                    <div class="mb-3">
+                        <label class="form-label" id="catatanLabel">Catatan Validasi</label>
+                        <textarea class="form-control" id="catatanInput" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="submitValidasiBtn" onclick="submitValidasi()">
+                        <i class="bi bi-save me-2"></i>Simpan
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -219,205 +167,127 @@
             font-size: 0.7rem;
             padding: 0.2rem 0.4rem;
         }
-
-        .table tbody tr {
-            transition: background-color 0.2s ease;
-        }
-
-        .table tbody tr:hover {
-            background-color: rgba(0, 123, 255, 0.05);
-        }
-
-        .btn-group-sm>.btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-        }
     </style>
 @endpush
 
 @push('scripts')
     <script>
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         let validasiModal = null;
-        let currentTugasId = null;
-        let currentAction = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             validasiModal = new bootstrap.Modal(document.getElementById('validasiModal'));
         });
 
-        function validasiTugas(tugasId, action) {
-            currentTugasId = tugasId;
-            currentAction = action;
-
-            const modalTitle = document.getElementById('validasiModalTitle');
-            const nilaiGroup = document.getElementById('nilaiGroup');
-            const progressGroup = document.getElementById('progressGroup');
-            const progressValueGroup = document.getElementById('progressValueGroup');
-            const catatanValidasiGroup = document.getElementById('catatanValidasiGroup');
-            const catatanRevisiGroup = document.getElementById('catatanRevisiGroup');
-            const submitBtn = document.getElementById('submitBtn');
-            const statusValidasi = document.getElementById('statusValidasi');
-            const nilaiInput = document.getElementById('nilaiInput');
-            const progressType = document.getElementById('progressType');
-            const progressValue = document.getElementById('progressValue');
-            const catatanRevisiInput = document.getElementById('catatanRevisiInput');
-
-            // Reset form
-            document.getElementById('validasiForm').reset();
+        function bukaValidasi(tugasId, bobotPersen, status) {
             document.getElementById('tugasId').value = tugasId;
+            document.getElementById('bobotPersen').value = bobotPersen;
+            document.getElementById('statusValidasi').value = status;
+            document.getElementById('bobotDisplay').textContent = bobotPersen;
+            document.getElementById('realisasiInput').value = '';
+            document.getElementById('catatanInput').value = '';
+            document.getElementById('previewAlert').classList.add('d-none');
 
-            if (action === 'setuju') {
-                modalTitle.textContent = 'Setujui Tugas';
-                nilaiGroup.style.display = 'block';
-                progressGroup.style.display = 'block';
-                catatanValidasiGroup.style.display = 'block';
-                catatanRevisiGroup.style.display = 'none';
+            const title = document.getElementById('validasiModalTitle');
+            const realisasiGroup = document.getElementById('realisasiGroup');
+            const catatanLabel = document.getElementById('catatanLabel');
+            const submitBtn = document.getElementById('submitValidasiBtn');
 
-                nilaiInput.required = true;
-                nilaiInput.disabled = false;
-                progressType.required = true;
-                progressType.disabled = false;
-                catatanRevisiInput.required = false;
-                catatanRevisiInput.disabled = true;
-
-                statusValidasi.value = 'diterima';
-                submitBtn.innerHTML = '<i class="bi bi-check2 me-2"></i>Setujui';
+            if (status === 'diterima') {
+                title.textContent = 'Setujui Tugas';
+                realisasiGroup.classList.remove('d-none');
+                document.getElementById('realisasiInput').required = true;
+                catatanLabel.innerHTML = 'Catatan Validasi';
+                document.getElementById('catatanInput').required = false;
                 submitBtn.className = 'btn btn-success';
-            } else if (action === 'revisi') {
-                modalTitle.textContent = 'Minta Revisi';
-                nilaiGroup.style.display = 'none';
-                progressGroup.style.display = 'none';
-                progressValueGroup.style.display = 'none';
-                catatanValidasiGroup.style.display = 'none';
-                catatanRevisiGroup.style.display = 'block';
-
-                nilaiInput.required = false;
-                nilaiInput.disabled = true;
-                progressType.required = false;
-                progressType.disabled = true;
-                progressValue.required = false;
-                progressValue.disabled = true;
-                catatanRevisiInput.required = true;
-                catatanRevisiInput.disabled = false;
-
-                statusValidasi.value = 'revisi';
-                submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Minta Revisi';
+                submitBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Setujui';
+            } else {
+                title.textContent = 'Minta Revisi';
+                realisasiGroup.classList.add('d-none');
+                document.getElementById('realisasiInput').required = false;
+                catatanLabel.innerHTML = 'Catatan Revisi <span class="text-danger">*</span>';
+                document.getElementById('catatanInput').required = true;
                 submitBtn.className = 'btn btn-danger';
+                submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Minta Revisi';
             }
 
             validasiModal.show();
         }
 
-        // Toggle progress value input based on type
-        document.getElementById('progressType').addEventListener('change', function() {
-            const progressValueGroup = document.getElementById('progressValueGroup');
-            const progressValue = document.getElementById('progressValue');
+        let previewTimeout;
+        document.getElementById('realisasiInput').addEventListener('input', function() {
+            const bobot = document.getElementById('bobotPersen').value;
+            const realisasi = this.value;
 
-            if (this.value === 'manual') {
-                progressValueGroup.style.display = 'block';
-                progressValue.required = true;
-                progressValue.disabled = false;
-            } else {
-                progressValueGroup.style.display = 'none';
-                progressValue.required = false;
-                progressValue.disabled = true;
-                progressValue.value = ''; // Clear value
+            clearTimeout(previewTimeout);
+            if (realisasi === '') {
+                document.getElementById('previewAlert').classList.add('d-none');
+                return;
             }
+
+            previewTimeout = setTimeout(() => {
+                fetch("{{ route('penugasan.tim.preview-penilaian') }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            bobot_persen: bobot,
+                            realisasi_persen: realisasi
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('previewNilai').textContent = data.data.nilai_akhir;
+                            document.getElementById('previewAlert').classList.remove('d-none');
+                        }
+                    });
+            }, 300);
         });
 
-        document.getElementById('validasiForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const form = this;
-            const formData = new FormData(form);
+        function submitValidasi() {
             const tugasId = document.getElementById('tugasId').value;
-            const statusValidasi = document.getElementById('statusValidasi').value;
+            const status = document.getElementById('statusValidasi').value;
+            const payload = {
+                status_validasi: status,
+                catatan_validasi: document.getElementById('catatanInput').value,
+            };
 
-            // Debug: Check if jenis_tugas is in the form
-            console.log('jenis_tugas value:', formData.get('jenis_tugas'));
-            console.log('All form data:');
-            for (let [key, value] of formData.entries()) {
-                console.log(key + ': ' + value);
+            if (status === 'diterima') {
+                payload.realisasi_persen = document.getElementById('realisasiInput').value;
             }
 
-            // Remove disabled fields from FormData (they won't be sent)
-            // But also ensure we only send required fields based on status
-            if (statusValidasi === 'revisi') {
-                // For revisi, remove fields that are not needed
-                formData.delete('penilaian_kualitas');
-                formData.delete('progress_update_type');
-                formData.delete('progress_value');
-                formData.delete('catatan_validasi');
-            } else if (statusValidasi === 'diterima') {
-                // For diterima, remove catatan_revisi
-                formData.delete('catatan_revisi');
-
-                // If progress type is otomatis, remove progress_value
-                if (formData.get('progress_update_type') === 'otomatis') {
-                    formData.delete('progress_value');
-                }
-            }
-
-            console.log('Final form data being sent:');
-            for (let [key, value] of formData.entries()) {
-                console.log(key + ': ' + value);
-            }
-
-            // Show loading
-            const submitBtn = document.getElementById('submitBtn');
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
-
-            fetch(`/penugasan/tim/validasi/${tugasId}`, {
+            fetch(`{{ url('/penugasan/tim/validasi') }}/${tugasId}`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    body: formData
+                    body: JSON.stringify(payload)
                 })
-                .then(response => response.json())
+                .then(r => r.json())
                 .then(data => {
                     if (data.success) {
                         validasiModal.hide();
-
-                        // Show success message with SweetAlert if available, else alert
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Berhasil!',
-                                text: data.message || 'Validasi berhasil disimpan!',
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
-                        } else {
-                            alert(data.message || 'Validasi berhasil disimpan!');
-                            location.reload();
-                        }
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: data.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => window.location.reload());
                     } else {
-                        // Show error details if available
-                        let errorMessage = data.message || 'Terjadi kesalahan';
+                        let msg = data.message || 'Terjadi kesalahan';
                         if (data.errors) {
-                            errorMessage += ':\n';
-                            Object.values(data.errors).forEach(errors => {
-                                errorMessage += '- ' + errors.join(', ') + '\n';
-                            });
+                            msg += ': ' + Object.values(data.errors).flat().join(', ');
                         }
-
-                        console.error('Server response:', data);
-                        alert(errorMessage);
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
+                        Swal.fire('Gagal', msg, 'error');
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan saat memproses validasi');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
                 });
-        });
+        }
     </script>
 @endpush

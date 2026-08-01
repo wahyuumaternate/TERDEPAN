@@ -1,4 +1,4 @@
-@extends('terminaldata::components.layouts.master')
+@extends('layouts.main')
 
 @php
     // Helper function to format file size

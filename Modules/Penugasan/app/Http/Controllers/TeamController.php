@@ -124,28 +124,6 @@ class TeamController extends Controller
 
         $tahun = $request->get('tahun', date('Y'));
 
-        // Query penugasan jenis pokok untuk pegawai ini
-        $query = Penugasan::pokok()->where('pegawai_id', $id)
-            ->with(['attachedFiles', 'progress'])
-            ->whereYear('tanggal_mulai', $tahun);
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('nama_tugas', 'like', "%{$request->search}%")
-                    ->orWhere('deskripsi', 'like', "%{$request->search}%");
-            });
-        }
-
-        $sortBy = $request->get('sort_by', 'tanggal_mulai');
-        $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        $tugasPokok = $query->paginate($request->get('per_page', 10));
-
         $tahuns = Penugasan::where('pegawai_id', $id)
             ->selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
             ->distinct()
@@ -153,52 +131,35 @@ class TeamController extends Controller
             ->pluck('tahun')
             ->filter();
 
-        // Rincian aktivitas harian (dulu Tugas Harian) — sekarang log progress per penugasan
-        $tugasHarian = \Modules\Penugasan\Models\Progress::whereHas('penugasan', function ($q) use ($id, $tahun) {
-            $q->where('pegawai_id', $id)->whereYear('tanggal_mulai', $tahun);
-        })
-            ->with(['penugasan:id,nama_tugas,jenis'])
-            ->orderBy('tanggal', 'desc')
-            ->paginate($request->get('per_page_harian', 10), ['*'], 'page_harian');
+        $query = Penugasan::where('pegawai_id', $id)
+            ->with(['attachedFiles', 'pemberiTugas:id,nama', 'validator:id,nama'])
+            ->whereYear('tanggal_mulai', $tahun);
 
-        // Penugasan jenis tambahan untuk pegawai ini
-        $tugasTambahanList = Penugasan::tambahan()
-            ->with(['pemberiTugas', 'validator', 'attachedFiles'])
-            ->where('pegawai_id', $pegawai->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($request->filled('jenis')) {
+            $query->where('jenis', $request->jenis);
+        }
 
-        $totalTugasPokok = Penugasan::pokok()->where('pegawai_id', $id)->whereYear('tanggal_mulai', $tahun)->count();
-        $totalTugasHarian = $tugasHarian->total();
-        $tugasSelesai = Penugasan::pokok()->where('pegawai_id', $id)->whereYear('tanggal_mulai', $tahun)->where('status', 'selesai')->count();
-        $tugasBerjalan = Penugasan::pokok()->where('pegawai_id', $id)->whereYear('tanggal_mulai', $tahun)->whereIn('status', ['dikerjakan', 'revisi'])->count();
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
-        $totalTugasTambahan = $tugasTambahanList->count();
-        $tugasTambahanSelesai = $tugasTambahanList->where('status', 'selesai')->count();
-        $tugasTambahanProgress = $tugasTambahanList->whereIn('status', ['dikerjakan', 'revisi', 'validasi'])->count();
+        $sortBy = $request->get('sort_by', 'tanggal_mulai');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
 
-        $tugasPokokList = Penugasan::pokok()->where('pegawai_id', $id)->orderBy('nama_tugas')->get();
+        $penugasanList = $query->paginate($request->get('per_page', 10));
 
-        // Flag untuk menunjukkan bahwa ini diakses dari "Tim Saya"
-        $fromTimSaya = true;
+        $statsQuery = Penugasan::where('pegawai_id', $id)->whereYear('tanggal_mulai', $tahun);
+        $stats = [
+            'total' => (clone $statsQuery)->count(),
+            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
+            'dikerjakan' => (clone $statsQuery)->whereIn('status', ['dikerjakan', 'revisi'])->count(),
+            'selesai' => (clone $statsQuery)->where('status', 'selesai')->count(),
+            'pokok' => (clone $statsQuery)->where('jenis', 'pokok')->count(),
+            'tambahan' => (clone $statsQuery)->where('jenis', 'tambahan')->count(),
+        ];
 
-        return view('penugasan::penugasan.detail', compact(
-            'pegawai',
-            'tugasPokok',
-            'tugasHarian',
-            'tahuns',
-            'tahun',
-            'tugasTambahanList',
-            'totalTugasPokok',
-            'totalTugasHarian',
-            'tugasSelesai',
-            'tugasBerjalan',
-            'totalTugasTambahan',
-            'tugasTambahanSelesai',
-            'tugasTambahanProgress',
-            'tugasPokokList',
-            'fromTimSaya'
-        ));
+        return view('penugasan::tim.detail-anggota', compact('pegawai', 'penugasanList', 'tahuns', 'tahun', 'stats'));
     }
 
     /**

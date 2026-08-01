@@ -1,17 +1,18 @@
 <?php
 
-use App\Http\Controllers\Master\MasterPegawaiController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Master\MasterBidangController;
 use App\Http\Controllers\Master\MasterJabatanController;
+use App\Http\Controllers\Master\MasterPegawaiController;
+use App\Http\Controllers\Master\MasterSubBidangController;
 use App\Http\Controllers\ProfileController;
-use Modules\Penugasan\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/e-kinerja', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('e-kinerja.index');
-
-Route::get('/', function () {
-    return view('welcome');
-})->middleware(['auth', 'verified'])->name('welcome');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    // Alias lama, dipertahankan supaya link/bookmark yang ada tidak putus.
+    Route::get('/e-kinerja', [DashboardController::class, 'index'])->name('e-kinerja.index');
+});
 
 Route::middleware('auth')->prefix('master')->name('master.')->group(function () {
     // ============================
@@ -41,6 +42,19 @@ Route::middleware('auth')->prefix('master')->name('master.')->group(function () 
     ]);
 
     // ============================
+    // MASTER SUB BIDANG ROUTES - /master/sub-bidang
+    // ============================
+    Route::resource('sub-bidang', MasterSubBidangController::class)->names([
+        'index' => 'sub-bidang.index',
+        'create' => 'sub-bidang.create',
+        'store' => 'sub-bidang.store',
+        'show' => 'sub-bidang.show',
+        'edit' => 'sub-bidang.edit',
+        'update' => 'sub-bidang.update',
+        'destroy' => 'sub-bidang.destroy',
+    ]);
+
+    // ============================
     // MASTER JABATAN ROUTES - /master/jabatan
     // ============================
     Route::resource('jabatan', MasterJabatanController::class)->names([
@@ -60,4 +74,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

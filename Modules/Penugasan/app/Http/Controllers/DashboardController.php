@@ -3,6 +3,7 @@
 namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -23,8 +24,23 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user();
+        $data = $this->getDashboardData($request->user());
 
+        // Check if view exists, if not use default dashboard view
+        if (view()->exists('dashboard')) {
+            return view('dashboard', $data);
+        }
+
+        return view('penugasan::dashboard', $data);
+    }
+
+    /**
+     * Mengumpulkan statistik, tugas pending, dan progress mingguan untuk dashboard.
+     *
+     * @return array{stats: array, tugasBaruPending: \Illuminate\Support\Collection, progressMingguan: \Illuminate\Support\Collection}
+     */
+    public function getDashboardData(User $user): array
+    {
         // Cache statistik untuk 5 menit
         $stats = Cache::remember("dashboard_stats_{$user->id}", 300, function () use ($user) {
             return [
@@ -99,19 +115,6 @@ class DashboardController extends Controller
             ->orderBy('minggu')
             ->get();
 
-        // Check if view exists, if not use default dashboard view
-        if (view()->exists('dashboard')) {
-            return view('dashboard', compact(
-                'stats',
-                'tugasBaruPending',
-                'progressMingguan'
-            ));
-        }
-
-        return view('penugasan::dashboard', compact(
-            'stats',
-            'tugasBaruPending',
-            'progressMingguan'
-        ));
+        return compact('stats', 'tugasBaruPending', 'progressMingguan');
     }
 }

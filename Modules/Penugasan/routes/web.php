@@ -11,10 +11,15 @@ use Modules\Penugasan\Http\Controllers\TeamController;
 | Web Routes - Modul Penugasan
 |--------------------------------------------------------------------------
 | Tugas Pokok, Tugas Tambahan, dan Tugas Harian sudah digabung menjadi satu
-| entitas Penugasan (kolom `jenis` sebagai label klasifikasi). Beberapa nama
-| route lama (tugas-pokok.*, tugas-harian.*, tugas-tambahan.*) dipertahankan
-| sebagai alias supaya link yang sudah ada di sidebar/dashboard tidak putus,
-| sambil menunggu view Blade disesuaikan penuh ke skema baru di sesi lanjutan.
+| entitas Penugasan (kolom `jenis` sebagai label klasifikasi). Seluruh view
+| Blade sudah disesuaikan penuh ke skema baru (lihat dok. 06 §6) sehingga
+| alias route lama (tugas-pokok.*, tugas-harian.*, tugas-tambahan.*) sudah
+| tidak diperlukan lagi dan telah dihapus.
+|--------------------------------------------------------------------------
+| PENTING: rute statis (tim/*, api/*, daftar, tugas-saya, create) harus
+| didaftarkan SEBELUM rute wildcard `/{id}` di bawah, supaya tidak ter-shadow
+| oleh wildcard tersebut (mis. GET /penugasan/tim salah tertangkap sebagai
+| show($id = 'tim') jika wildcard didaftarkan lebih dulu).
 |--------------------------------------------------------------------------
 */
 
@@ -29,29 +34,6 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     Route::get('/tugas-saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-saya');
     Route::get('/create', [PenugasanController::class, 'create'])->name('create');
     Route::post('/', [PenugasanController::class, 'store'])->name('store');
-    Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [PenugasanController::class, 'edit'])->name('edit');
-    Route::put('/{id}', [PenugasanController::class, 'update'])->name('update');
-    Route::delete('/{id}', [PenugasanController::class, 'destroy'])->name('destroy');
-
-    Route::post('/{id}/terima', [PenugasanController::class, 'terima'])->name('terima');
-    Route::post('/{id}/tolak', [PenugasanController::class, 'tolak'])->name('tolak');
-    Route::post('/{id}/mulai', [PenugasanController::class, 'mulai'])->name('mulai');
-    Route::post('/{id}/submit', [PenugasanController::class, 'submit'])->name('submit');
-    Route::get('/{id}/upload-bukti', [PenugasanController::class, 'formUploadBukti'])->name('form-upload-bukti');
-    Route::post('/{id}/update-progress', [PenugasanController::class, 'updateProgress'])->name('update-progress');
-    Route::get('/{id}/history', [PenugasanController::class, 'history'])->name('history');
-
-    // ============================================
-    // ALIAS KOMPATIBEL (dipakai sidebar/dashboard core) — jenis dipatok via default
-    // ============================================
-    Route::get('/tugas-pokok', [PenugasanController::class, 'index'])->name('tugas-pokok.index')->defaults('jenis', 'pokok');
-    Route::get('/tugas-pokok/saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-pokok.tugas-saya')->defaults('jenis', 'pokok');
-    Route::get('/tugas-pokok/{id}', [PenugasanController::class, 'show'])->name('tugas-pokok.show');
-    Route::get('/tugas-harian/saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-harian.tugas-saya');
-    Route::get('/tugas-harian/{id}', [PenugasanController::class, 'show'])->name('tugas-harian.show');
-    Route::get('/tugas-tambahan/saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-tambahan.tugas-saya')->defaults('jenis', 'tambahan');
-    Route::get('/tugas-tambahan/{id}', [PenugasanController::class, 'show'])->name('tugas-tambahan.show');
 
     // ============================================
     // TEAM MANAGEMENT (Untuk Atasan)
@@ -83,4 +65,21 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/progress-anggota/{pegawai}', [ApiController::class, 'progressAnggota'])->name('progress-anggota');
         Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
     });
+
+    // ============================================
+    // PENUGASAN — rute wildcard /{id} (harus PALING BAWAH, lihat catatan di atas)
+    // ============================================
+    Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [PenugasanController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [PenugasanController::class, 'update'])->name('update');
+    Route::delete('/{id}', [PenugasanController::class, 'destroy'])->name('destroy');
+
+    Route::post('/{id}/terima', [PenugasanController::class, 'terima'])->name('terima');
+    Route::post('/{id}/tolak', [PenugasanController::class, 'tolak'])->name('tolak');
+    Route::post('/{id}/mulai', [PenugasanController::class, 'mulai'])->name('mulai');
+    Route::post('/{id}/submit', [PenugasanController::class, 'submit'])->name('submit');
+    Route::get('/{id}/upload-bukti', [PenugasanController::class, 'formUploadBukti'])->name('form-upload-bukti');
+    Route::post('/{id}/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
+    Route::post('/{id}/update-progress', [PenugasanController::class, 'updateProgress'])->name('update-progress');
+    Route::get('/{id}/history', [PenugasanController::class, 'history'])->name('history');
 });

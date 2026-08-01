@@ -14,31 +14,11 @@
 
     <section class="section">
         @php
-            $user = auth()->user();
-            $anggotaTim = \App\Models\User::whereRelation('profile', 'atasan_langsung_id', $user->id)
-                ->where('status_aktif', 'Aktif')
-                ->with(['jabatan', 'bidang'])
-                ->withCount([
-                    'tugasHarian as tugas_aktif' => function ($q) {
-                        $q->whereIn('status', ['dikerjakan', 'validasi']);
-                    },
-                    'tugasHarian as tugas_selesai' => function ($q) {
-                        $q->where('status', 'selesai');
-                    },
-                    'tugasHarian as tugas_pending' => function ($q) {
-                        $q->where('status', 'pending');
-                    },
-                    'tugasHarian as tugas_terlambat' => function ($q) {
-                        $q->whereIn('status', ['dikerjakan', 'validasi'])->where('tanggal_selesai', '<', now());
-                    },
-                ])
-                ->get();
-
             $totalTugas = $anggotaTim->sum(function ($anggota) {
                 return $anggota->tugas_aktif + $anggota->tugas_selesai + $anggota->tugas_pending;
             });
 
-            $tugasPerluValidasi = \Modules\Penugasan\Models\TugasHarian::whereIn('pegawai_id', $anggotaTim->pluck('id'))
+            $tugasPerluValidasi = \Modules\Penugasan\Models\Penugasan::whereIn('pegawai_id', $anggotaTim->pluck('id'))
                 ->where('status', 'validasi')
                 ->count();
 
@@ -275,15 +255,16 @@
                                             <td>{{ $index + 1 }}</td>
                                             <td>
                                                 <div class="fw-semibold">{{ $anggota->nama }}</div>
-                                                <small class="text-muted">NIP: {{ $anggota->nip ?? '-' }}</small>
+                                                <small class="text-muted">NIP:
+                                                    {{ $anggota->profile->nomor_identitas ?? '-' }}</small>
                                             </td>
                                             <td>
                                                 @if ($anggota->profile->bidang)
                                                     <span
-                                                        class="badge bg-secondary">{{ $anggota->profile->bidang->nama_bidang }}</span>
+                                                        class="badge bg-secondary">{{ $anggota->profile->bidang->nama }}</span>
                                                 @endif
                                                 <br><small
-                                                    class="text-muted">{{ $anggota->profile->jabatan->nama_jabatan ?? '-' }}</small>
+                                                    class="text-muted">{{ $anggota->profile->jabatan->nama ?? '-' }}</small>
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge bg-warning">{{ $anggota->tugas_pending }}</span>

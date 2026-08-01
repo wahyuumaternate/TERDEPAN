@@ -142,9 +142,9 @@ class MasterPegawaiController extends Controller
     public function edit($id)
     {
         try {
-            $pegawai = User::with('profile')->findOrFail($id);
+            $pegawai = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])->findOrFail($id);
 
-            return view('master.pegawai.edit', compact('pegawai'));
+            return view('master-data.show-edit-pegawai', compact('pegawai'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Pegawai tidak ditemukan');
         } catch (\Exception $e) {
