@@ -10,10 +10,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Modules\Penugasan\Database\Factories\PenugasanFactory;
 
 class Penugasan extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected static function newFactory(): PenugasanFactory
+    {
+        return PenugasanFactory::new();
+    }
 
     protected $table = 'knj_penugasan';
 

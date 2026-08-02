@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
-
-// use Modules\Penugasan\Database\Factories\ProgressFactory;
+use Modules\Penugasan\Database\Factories\ProgressFactory;
 
 class Progress extends Model
 {
@@ -48,6 +47,11 @@ class Progress extends Model
         });
     }
 
+    protected static function newFactory(): ProgressFactory
+    {
+        return ProgressFactory::new();
+    }
+
     // Relationships
 
     public function penugasan(): BelongsTo
@@ -83,9 +87,4 @@ class Progress extends Model
     {
         return $query->where('penugasan_id', $penugasanId);
     }
-
-    // protected static function newFactory(): ProgressFactory
-    // {
-    //     // return ProgressFactory::new();
-    // }
 }

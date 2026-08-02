@@ -8,10 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
+use Modules\Penugasan\Database\Factories\HistoriRevisiFactory;
 
 class HistoriRevisi extends Model
 {
     use HasFactory;
+
+    protected static function newFactory(): HistoriRevisiFactory
+    {
+        return HistoriRevisiFactory::new();
+    }
 
     protected $table = 'knj_histori_revisi';
 
