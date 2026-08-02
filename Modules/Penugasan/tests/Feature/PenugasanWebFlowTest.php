@@ -137,7 +137,7 @@ class PenugasanWebFlowTest extends TestCase
         $this->actingAs($this->bawahan)
             ->post(route('penugasan.submit', $penugasan->id))
             ->assertJson(['success' => true]);
-        $this->assertSame('validasi', $penugasan->fresh()->status);
+        $this->assertSame('selesai', $penugasan->fresh()->status);
 
         // 6. Atasan melihat daftar validasi & memvalidasi dengan realisasi 90%
         $this->actingAs($this->atasan)->get(route('penugasan.tim.daftar-validasi'))->assertStatus(200);

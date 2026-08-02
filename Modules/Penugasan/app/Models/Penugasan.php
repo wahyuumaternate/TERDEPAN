@@ -27,17 +27,26 @@ class Penugasan extends Model
     protected $fillable = [
         'pegawai_id',
         'pemberi_tugas_id',
+        'is_mandiri',
+        'grup_id',
+        'mode_grup',
+        'is_koordinator',
         'jenis',
+        'prioritas',
         'nama_tugas',
         'deskripsi',
         'alasan_penugasan',
         'tanggal_mulai',
         'tanggal_selesai',
+        'deadline_terbaru',
+        'tanggal_diselesaikan',
         'target_value',
         'satuan',
         'bobot_persen',
         'progress_persen',
         'realisasi_persen',
+        'nilai_awal',
+        'persentase_terlambat',
         'nilai_akhir',
         'status',
         'status_approval',
@@ -52,13 +61,19 @@ class Penugasan extends Model
     protected $casts = [
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
+        'deadline_terbaru' => 'date',
+        'tanggal_diselesaikan' => 'datetime',
         'validated_at' => 'datetime',
         'diterima_at' => 'datetime',
         'target_value' => 'decimal:2',
         'bobot_persen' => 'decimal:2',
         'progress_persen' => 'decimal:2',
         'realisasi_persen' => 'decimal:2',
+        'nilai_awal' => 'decimal:2',
+        'persentase_terlambat' => 'decimal:2',
         'nilai_akhir' => 'decimal:2',
+        'is_mandiri' => 'boolean',
+        'is_koordinator' => 'boolean',
     ];
 
     protected $attributes = [
@@ -90,20 +105,46 @@ class Penugasan extends Model
     // Status constants (alur seragam untuk semua jenis)
     public const STATUS_PENDING = 'pending';
 
-    public const STATUS_DIKERJAKAN = 'dikerjakan';
-
-    public const STATUS_VALIDASI = 'validasi';
+    public const STATUS_PROSES = 'proses';
 
     public const STATUS_REVISI = 'revisi';
 
+    public const STATUS_TERLAMBAT = 'terlambat';
+
     public const STATUS_SELESAI = 'selesai';
+
+    public const STATUS_DITOLAK = 'ditolak';
 
     public const STATUSES = [
         self::STATUS_PENDING,
-        self::STATUS_DIKERJAKAN,
-        self::STATUS_VALIDASI,
+        self::STATUS_PROSES,
         self::STATUS_REVISI,
+        self::STATUS_TERLAMBAT,
         self::STATUS_SELESAI,
+        self::STATUS_DITOLAK,
+    ];
+
+    // Prioritas constants
+    public const PRIORITAS_RENDAH = 'rendah';
+
+    public const PRIORITAS_SEDANG = 'sedang';
+
+    public const PRIORITAS_TINGGI = 'tinggi';
+
+    public const PRIORITASES = [
+        self::PRIORITAS_RENDAH,
+        self::PRIORITAS_SEDANG,
+        self::PRIORITAS_TINGGI,
+    ];
+
+    // Mode grup constants (penugasan multi-pegawai)
+    public const MODE_GRUP_KOLEKTIF = 'kolektif';
+
+    public const MODE_GRUP_PER_ORANG = 'per_orang';
+
+    public const MODE_GRUPS = [
+        self::MODE_GRUP_KOLEKTIF,
+        self::MODE_GRUP_PER_ORANG,
     ];
 
     // Approval status constants (untuk tugas mandiri)
@@ -161,17 +202,22 @@ class Penugasan extends Model
     }
 
     /**
-     * Apakah ini tugas mandiri (self-initiated, tanpa pemberi tugas)
+     * Relasi ke penugasan induk lain dalam grup (multi-pegawai)
      */
-    public function getIsMandiriAttribute(): bool
+    public function grupAnggota(): HasMany
     {
-        return $this->pemberi_tugas_id === null;
+        return $this->hasMany(self::class, 'grup_id', 'grup_id')->where('id', '!=', $this->id);
+    }
+
+    public function perpanjanganWaktu(): HasMany
+    {
+        return $this->hasMany(PerpanjanganWaktu::class, 'penugasan_id');
     }
 
     /**
-     * Hitung nilai akhir: bobot_persen x realisasi_persen / 100
+     * Nilai awal = Bobot (pecahan) x Realisasi, sebelum dipotong keterlambatan.
      */
-    public function hitungNilaiAkhir(): ?float
+    public function hitungNilaiAwal(): ?float
     {
         if ($this->bobot_persen === null || $this->realisasi_persen === null) {
             return null;
@@ -180,10 +226,18 @@ class Penugasan extends Model
         return round(((float) $this->bobot_persen * (float) $this->realisasi_persen) / 100, 2);
     }
 
+    /**
+     * Nilai akhir = Nilai awal x (1 - Persentase Terlambat).
+     */
+    public function hitungNilaiAkhir(float $nilaiAwal, float $persentaseTerlambat): float
+    {
+        return round($nilaiAwal * (1 - $persentaseTerlambat / 100), 2);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
-        return $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_DIKERJAKAN]);
+        return $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_PROSES]);
     }
 
     public function scopePokok($query)
@@ -198,12 +252,12 @@ class Penugasan extends Model
 
     public function scopeMandiri($query)
     {
-        return $query->whereNull('pemberi_tugas_id');
+        return $query->where('is_mandiri', true);
     }
 
     public function scopeDitugaskan($query)
     {
-        return $query->whereNotNull('pemberi_tugas_id');
+        return $query->where('is_mandiri', false);
     }
 
     public function scopeByPegawai($query, $pegawaiId)

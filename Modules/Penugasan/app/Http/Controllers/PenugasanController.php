@@ -295,7 +295,7 @@ class PenugasanController extends Controller
             return response()->json(['success' => false, 'message' => 'Penugasan hanya bisa diterima jika berstatus pending'], 422);
         }
 
-        $penugasan->update(['status' => Penugasan::STATUS_DIKERJAKAN]);
+        $penugasan->update(['status' => Penugasan::STATUS_PROSES]);
 
         return response()->json(['success' => true, 'message' => 'Penugasan diterima dan mulai dikerjakan']);
     }
@@ -340,7 +340,7 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('validasi', $penugasan);
+            $this->authorize('nilai', $penugasan);
 
             $validated = $request->validate([
                 'status_validasi' => 'required|in:diterima,revisi,ditolak',
@@ -373,13 +373,13 @@ class PenugasanController extends Controller
                     'pegawai_id' => $penugasan->pegawai_id,
                 ]);
             } else {
-                $update['status'] = Penugasan::STATUS_DIKERJAKAN;
+                $update['status'] = Penugasan::STATUS_PROSES;
             }
 
             $penugasan->update($update);
 
             if ($penugasan->status === Penugasan::STATUS_SELESAI) {
-                $penugasan->update(['nilai_akhir' => $penugasan->hitungNilaiAkhir()]);
+                $penugasan->update(['nilai_akhir' => $penugasan->hitungNilaiAwal()]);
             }
 
             return response()->json(['success' => true, 'message' => 'Validasi berhasil disimpan', 'data' => $penugasan->fresh()]);
@@ -420,7 +420,7 @@ class PenugasanController extends Controller
             return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
         }
 
-        if (! in_array($penugasan->status, [Penugasan::STATUS_DIKERJAKAN, Penugasan::STATUS_REVISI])) {
+        if (! in_array($penugasan->status, [Penugasan::STATUS_PROSES, Penugasan::STATUS_REVISI])) {
             return response()->json(['success' => false, 'message' => 'Penugasan hanya bisa disubmit jika sedang dikerjakan atau revisi'], 422);
         }
 
@@ -428,7 +428,7 @@ class PenugasanController extends Controller
             return response()->json(['success' => false, 'message' => 'Harap upload bukti pengerjaan terlebih dahulu'], 422);
         }
 
-        $penugasan->update(['status' => Penugasan::STATUS_VALIDASI]);
+        $penugasan->update(['status' => Penugasan::STATUS_SELESAI, 'tanggal_diselesaikan' => now()]);
 
         return response()->json(['success' => true, 'message' => 'Penugasan berhasil disubmit untuk validasi']);
     }
