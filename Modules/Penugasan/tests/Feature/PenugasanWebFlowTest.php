@@ -108,12 +108,24 @@ class PenugasanWebFlowTest extends TestCase
 
     public function test_atasan_can_view_team_pages(): void
     {
-        $this->actingAs($this->atasan)->get(route('penugasan.tim.index'))->assertStatus(200);
-        $this->actingAs($this->atasan)->get(route('penugasan.tim.monitoring'))->assertStatus(200);
-        $this->actingAs($this->atasan)->get(route('penugasan.tim.detail-anggota', $this->bawahan->id))->assertStatus(200);
         $this->actingAs($this->atasan)->get(route('penugasan.index'))->assertStatus(200);
         $this->actingAs($this->atasan)->get(route('penugasan.tugas-saya', ['tab' => 'diberikan']))->assertStatus(200);
         $this->actingAs($this->atasan)->get(route('penugasan.create'))->assertStatus(200);
+    }
+
+    /**
+     * Regresi: menu "Manajemen Penugasan" (Tim Saya, Monitoring Tim, Detail Anggota)
+     * sudah dihapus dari sidebar & routing — pastikan rute-rutenya benar-benar hilang,
+     * bukan cuma tersembunyi di navigasi.
+     */
+    public function test_rute_manajemen_tim_lama_sudah_tidak_terdaftar(): void
+    {
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('penugasan.tim.index'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('penugasan.tim.monitoring'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('penugasan.tim.detail-anggota'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('penugasan.tim.overview'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('penugasan.tim.catatan-monitoring'));
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('penugasan.tim.preview-penilaian'));
     }
 
     public function test_route_lama_berikan_tugas_dan_validasi_redirect_ke_tab_diberikan(): void

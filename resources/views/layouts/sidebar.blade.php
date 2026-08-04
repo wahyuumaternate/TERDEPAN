@@ -144,54 +144,14 @@
              </li><!-- End Perjanjian Kinerja Nav -->
          @endif
 
-         <!-- Penugasan Nav -->
-         @php
-             $canManagePenugasan = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'JAFUNG', 'KASUBAG']);
-             $canManageTeam = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG']);
-         @endphp
-
          <!-- ========================================== -->
-         <!-- BAGIAN 1: TUGAS SAYA (Semua Role)         -->
+         <!-- Penugasan (Tugas Saya + tab "Tugas yang Saya Berikan" jika berwenang) -->
          <!-- ========================================== -->
          <li class="nav-item">
              <a href="{{ route('penugasan.tugas-saya') }}" class="nav-link collapsed">
                  <i class="bi bi-list"></i><span>Penugasan</span>
              </a>
-         </li><!-- End Tugas Saya Nav -->
-
-         <!-- ========================================== -->
-         <!-- BAGIAN 3: MANAJEMEN TIM (Atasan)          -->
-         <!-- ========================================== -->
-         @if ($canManageTeam)
-             <li class="nav-item">
-                 <a class="nav-link collapsed" data-bs-target="#manajemen-tim-nav" data-bs-toggle="collapse"
-                     href="#">
-                     <i class="bi bi-people"></i><span>Manajemen Penugasan</span><i
-                         class="bi bi-chevron-down ms-auto"></i>
-                 </a>
-                 <ul id="manajemen-tim-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                     <!-- Tim Saya -->
-                     <li>
-                         <a href="{{ route('penugasan.tim.index') }}">
-                             <i class="bi bi-circle"></i><span>Tim Saya</span>
-                         </a>
-                     </li>
-
-                     <!-- Monitoring Tim -->
-                     <li>
-                         <a href="{{ route('penugasan.tim.monitoring') }}">
-                             <i class="bi bi-circle"></i><span>Monitoring Tim</span>
-                         </a>
-                     </li>
-                 </ul>
-             </li><!-- End Manajemen Tim Nav -->
-         @elseif ($canManagePenugasan)
-             <li class="nav-item">
-                 <a href="{{ route('penugasan.tugas-saya', ['tab' => 'diberikan']) }}" class="nav-link collapsed">
-                     <i class="bi bi-people"></i><span>Tugas yang Saya Berikan</span>
-                 </a>
-             </li>
-         @endif
+         </li><!-- End Penugasan Nav -->
 
          <!-- Master Data -->
          @if ($canAccessMasterData)

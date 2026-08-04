@@ -37,15 +37,9 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     Route::post('/grup', [PenugasanController::class, 'storeGrup'])->name('store-grup');
 
     // ============================================
-    // TEAM MANAGEMENT (Untuk Atasan)
+    // TEAM (sisa endpoint yang masih dipakai halaman detail tugas + redirect kompatibilitas lama)
     // ============================================
     Route::prefix('tim')->name('tim.')->group(function () {
-        Route::get('/', [TeamController::class, 'index'])->name('index');
-        Route::get('/overview', [TeamController::class, 'overview'])->name('overview');
-        Route::get('/anggota/{pegawai}', [TeamController::class, 'detailAnggota'])->name('detail-anggota');
-
-        Route::get('/monitoring', [TeamController::class, 'monitoring'])->name('monitoring');
-        Route::post('/catatan-monitoring', [TeamController::class, 'catatanMonitoring'])->name('catatan-monitoring');
         Route::post('/preview-penilaian', [TeamController::class, 'previewPenilaian'])->name('preview-penilaian');
 
         // Redirect kompatibilitas — halaman lama digabung ke tab "diberikan" (dok. 08 §4.1)
