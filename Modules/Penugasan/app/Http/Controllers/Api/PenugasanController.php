@@ -3,19 +3,14 @@
 namespace Modules\Penugasan\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Modules\Penugasan\Models\HistoriRevisi;
 use Modules\Penugasan\Models\Penugasan;
-use Modules\Penugasan\Models\PerpanjanganWaktu;
-use Modules\Penugasan\Models\Progress;
 use Modules\Penugasan\Services\AtasanMandiriEligibility;
-use Modules\Penugasan\Services\HitungKeterlambatan;
+use Modules\Penugasan\Services\PenugasanActionService;
 
 /**
  * @OA\Tag(
@@ -333,6 +328,8 @@ class PenugasanController extends Controller
 {
     use AuthorizesRequests;
 
+    public function __construct(private readonly PenugasanActionService $actionService) {}
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -369,56 +366,9 @@ class PenugasanController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'pegawai_id' => 'required|exists:users,id',
-                'atasan_id' => 'nullable|exists:users,id',
-                'jenis' => 'required|in:'.implode(',', Penugasan::JENISES),
-                'prioritas' => 'required|in:'.implode(',', Penugasan::PRIORITASES),
-                'nama_tugas' => 'required|string|max:255',
-                'deskripsi' => 'required|string',
-                'alasan_penugasan' => 'nullable|string',
-                'tanggal_mulai' => 'required|date',
-                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-                'target_value' => 'nullable|numeric|min:0',
-                'satuan' => 'nullable|string|max:30',
-                'bobot_persen' => 'nullable|numeric|min:0|max:100',
-            ]);
+            $validated = $request->validate(PenugasanActionService::aturanBuat());
 
-            $user = $request->user();
-            $isSelfInitiated = ((int) $validated['pegawai_id']) === $user->id;
-
-            $pemberiTugasId = $user->id;
-
-            if ($isSelfInitiated) {
-                if (empty($validated['atasan_id'])) {
-                    throw ValidationException::withMessages([
-                        'atasan_id' => 'Pilih salah satu atasan yang berhak menyetujui tugas mandiri ini.',
-                    ]);
-                }
-
-                $atasan = User::findOrFail($validated['atasan_id']);
-
-                if (! app(AtasanMandiriEligibility::class)->bolehDipilih($user, $atasan)) {
-                    throw ValidationException::withMessages([
-                        'atasan_id' => 'Atasan yang dipilih tidak berhak menyetujui tugas mandiri Anda.',
-                    ]);
-                }
-
-                $pemberiTugasId = $atasan->id;
-            } else {
-                $this->authorize('create', Penugasan::class);
-                $target = User::findOrFail($validated['pegawai_id']);
-                $this->authorize('assignTo', [Penugasan::class, $target]);
-            }
-
-            $penugasan = Penugasan::create([
-                ...$validated,
-                'pemberi_tugas_id' => $pemberiTugasId,
-                'is_mandiri' => $isSelfInitiated,
-                'deadline_terbaru' => $validated['tanggal_selesai'],
-                'status' => Penugasan::STATUS_PENDING,
-                'status_approval' => $isSelfInitiated ? Penugasan::APPROVAL_PENDING : null,
-            ]);
+            $penugasan = $this->actionService->buat($validated, $request->user());
 
             return response()->json([
                 'status' => true,
@@ -446,67 +396,14 @@ class PenugasanController extends Controller
     public function berikanTugasGrup(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'pegawai_ids' => 'required|array|min:2',
-                'pegawai_ids.*' => 'required|exists:users,id|distinct',
-                'mode_grup' => 'required|in:'.implode(',', Penugasan::MODE_GRUPS),
-                'koordinator_id' => 'required_if:mode_grup,'.Penugasan::MODE_GRUP_KOLEKTIF.'|nullable|integer',
-                'jenis' => 'required|in:'.implode(',', Penugasan::JENISES),
-                'prioritas' => 'required|in:'.implode(',', Penugasan::PRIORITASES),
-                'nama_tugas' => 'required|string|max:255',
-                'deskripsi' => 'required|string',
-                'alasan_penugasan' => 'nullable|string',
-                'tanggal_mulai' => 'required|date',
-                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-                'target_value' => 'nullable|numeric|min:0',
-                'satuan' => 'nullable|string|max:30',
-                'bobot_persen' => 'nullable|numeric|min:0|max:100',
-            ]);
+            $validated = $request->validate(PenugasanActionService::aturanBuatGrup());
 
-            if ($validated['mode_grup'] === Penugasan::MODE_GRUP_KOLEKTIF
-                && ! in_array((int) $validated['koordinator_id'], array_map('intval', $validated['pegawai_ids']), true)) {
-                throw ValidationException::withMessages([
-                    'koordinator_id' => 'Koordinator harus salah satu dari pegawai_ids.',
-                ]);
-            }
-
-            $user = $request->user();
-            $this->authorize('create', Penugasan::class);
-
-            foreach ($validated['pegawai_ids'] as $pegawaiId) {
-                $this->authorize('assignTo', [Penugasan::class, User::findOrFail($pegawaiId)]);
-            }
-
-            $grupId = (string) Str::uuid();
-
-            $rows = collect($validated['pegawai_ids'])->map(function ($pegawaiId) use ($validated, $user, $grupId) {
-                return Penugasan::create([
-                    'pegawai_id' => $pegawaiId,
-                    'pemberi_tugas_id' => $user->id,
-                    'is_mandiri' => false,
-                    'grup_id' => $grupId,
-                    'mode_grup' => $validated['mode_grup'],
-                    'is_koordinator' => $validated['mode_grup'] === Penugasan::MODE_GRUP_KOLEKTIF
-                        && (int) $pegawaiId === (int) $validated['koordinator_id'],
-                    'jenis' => $validated['jenis'],
-                    'prioritas' => $validated['prioritas'],
-                    'nama_tugas' => $validated['nama_tugas'],
-                    'deskripsi' => $validated['deskripsi'],
-                    'alasan_penugasan' => $validated['alasan_penugasan'] ?? null,
-                    'tanggal_mulai' => $validated['tanggal_mulai'],
-                    'tanggal_selesai' => $validated['tanggal_selesai'],
-                    'deadline_terbaru' => $validated['tanggal_selesai'],
-                    'target_value' => $validated['target_value'] ?? null,
-                    'satuan' => $validated['satuan'] ?? null,
-                    'bobot_persen' => $validated['bobot_persen'] ?? null,
-                    'status' => Penugasan::STATUS_PENDING,
-                ]);
-            });
+            $rows = $this->actionService->buatGrup($validated, $request->user());
 
             return response()->json([
                 'status' => true,
                 'message' => 'Penugasan grup berhasil dibuat',
-                'data' => $rows->values(),
+                'data' => $rows,
             ], 201);
         } catch (ValidationException $e) {
             return response()->json(['status' => false, 'message' => 'Validasi gagal', 'data' => $e->errors()], 422);
@@ -567,32 +464,9 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('update', $penugasan);
+            $validated = $request->validate(PenugasanActionService::aturanPerbarui());
 
-            $validated = $request->validate([
-                'nama_tugas' => 'sometimes|string|max:255',
-                'deskripsi' => 'sometimes|string',
-                'alasan_penugasan' => 'nullable|string',
-                'tanggal_mulai' => 'sometimes|date',
-                'tanggal_selesai' => 'sometimes|date|after_or_equal:tanggal_mulai',
-                'target_value' => 'nullable|numeric|min:0',
-                'satuan' => 'nullable|string|max:30',
-                'bobot_persen' => 'sometimes|numeric|min:0|max:100',
-                'prioritas' => 'sometimes|in:'.implode(',', Penugasan::PRIORITASES),
-            ]);
-
-            // Tugas mandiri yang Ditolak: edit berarti diajukan ulang (aturan E3)
-            if ($penugasan->is_mandiri && $penugasan->status === Penugasan::STATUS_DITOLAK) {
-                $validated['status'] = Penugasan::STATUS_PENDING;
-                $validated['status_approval'] = Penugasan::APPROVAL_PENDING;
-                $validated['alasan_reject'] = null;
-            }
-
-            if (isset($validated['tanggal_selesai'])) {
-                $validated['deadline_terbaru'] = $validated['tanggal_selesai'];
-            }
-
-            $penugasan->update($validated);
+            $penugasan = $this->actionService->perbarui($penugasan, $validated, $request->user());
 
             return response()->json([
                 'status' => true,
@@ -612,8 +486,7 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('delete', $penugasan);
-            $penugasan->delete();
+            $this->actionService->hapus($penugasan, $request->user());
 
             return response()->json(['status' => true, 'message' => 'Penugasan berhasil dihapus', 'data' => null]);
         } catch (ModelNotFoundException $e) {
@@ -625,79 +498,51 @@ class PenugasanController extends Controller
 
     public function terima(Request $request, string $id)
     {
-        $penugasan = Penugasan::findOrFail($id);
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->terima($penugasan, $request->user());
 
-        if (! $this->userCanAuthorize('terima', $penugasan)) {
-            return $this->forbidden();
+            return response()->json(['status' => true, 'message' => 'Penugasan diterima dan mulai dikerjakan', 'data' => $penugasan]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini', 'data' => null], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['status' => false, 'message' => collect($e->errors())->flatten()->first(), 'data' => null], 422);
         }
-
-        if ($this->grupKolektifBukanKoordinator($penugasan)) {
-            return $this->forbidden('Hanya koordinator grup yang bisa menerima tugas ini');
-        }
-
-        if ($penugasan->status !== Penugasan::STATUS_PENDING) {
-            return $this->unprocessable('Penugasan hanya bisa diterima jika berstatus pending');
-        }
-
-        $penugasan->update(['status' => Penugasan::STATUS_PROSES, 'diterima_at' => now()]);
-        $this->cascadeKeGrup($penugasan, ['status' => Penugasan::STATUS_PROSES, 'diterima_at' => now()]);
-
-        return response()->json(['status' => true, 'message' => 'Penugasan diterima dan mulai dikerjakan', 'data' => $penugasan]);
     }
 
     public function tolak(Request $request, string $id)
     {
-        $validated = $request->validate(['alasan_penolakan' => 'required|string|max:1000']);
-        $penugasan = Penugasan::findOrFail($id);
+        try {
+            $validated = $request->validate(['alasan_penolakan' => 'required|string|max:1000']);
+            $penugasan = Penugasan::findOrFail($id);
+            $this->actionService->tolak($penugasan, $request->user(), $validated['alasan_penolakan']);
 
-        if (! $this->userCanAuthorize('tolak', $penugasan)) {
-            return $this->forbidden();
+            return response()->json(['status' => true, 'message' => 'Penugasan berhasil ditolak', 'data' => null]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini', 'data' => null], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['status' => false, 'message' => collect($e->errors())->flatten()->first(), 'data' => $e->errors()], 422);
         }
-
-        if ($this->grupKolektifBukanKoordinator($penugasan)) {
-            return $this->forbidden('Hanya koordinator grup yang bisa menolak tugas ini');
-        }
-
-        if ($penugasan->status !== Penugasan::STATUS_PENDING) {
-            return $this->unprocessable('Hanya penugasan berstatus pending yang bisa ditolak');
-        }
-
-        $penugasan->update(['alasan_reject' => $validated['alasan_penolakan']]);
-
-        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
-            $penugasan->grupAnggota->each->delete();
-        }
-
-        $penugasan->delete();
-
-        return response()->json(['status' => true, 'message' => 'Penugasan berhasil ditolak', 'data' => null]);
     }
 
     public function submit(Request $request, string $id)
     {
-        $penugasan = Penugasan::findOrFail($id);
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->submit($penugasan, $request->user());
 
-        if (! $this->userCanAuthorize('submit', $penugasan)) {
-            return $this->forbidden();
+            return response()->json(['status' => true, 'message' => 'Penugasan berhasil diajukan Selesai', 'data' => $penugasan]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini', 'data' => null], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['status' => false, 'message' => collect($e->errors())->flatten()->first(), 'data' => null], 422);
         }
-
-        if ($this->grupKolektifBukanKoordinator($penugasan)) {
-            return $this->forbidden('Hanya koordinator grup yang bisa mengajukan Selesai untuk tugas ini');
-        }
-
-        if (! in_array($penugasan->status, [Penugasan::STATUS_PROSES, Penugasan::STATUS_REVISI, Penugasan::STATUS_TERLAMBAT])) {
-            return $this->unprocessable('Penugasan hanya bisa diajukan Selesai dari status proses, revisi, atau terlambat');
-        }
-
-        if ($penugasan->attachedFiles()->count() === 0) {
-            return $this->unprocessable('Harap upload bukti pengerjaan terlebih dahulu');
-        }
-
-        $selesaiAt = now();
-        $penugasan->update(['status' => Penugasan::STATUS_SELESAI, 'tanggal_diselesaikan' => $selesaiAt]);
-        $this->cascadeKeGrup($penugasan, ['status' => Penugasan::STATUS_SELESAI, 'tanggal_diselesaikan' => $selesaiAt]);
-
-        return response()->json(['status' => true, 'message' => 'Penugasan berhasil diajukan Selesai', 'data' => $penugasan]);
     }
 
     /**
@@ -707,46 +552,11 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('nilai', $penugasan);
+            $validated = $request->validate(PenugasanActionService::aturanNilai());
 
-            if ($penugasan->bobot_persen === null && ! $request->filled('bobot_persen')) {
-                throw ValidationException::withMessages([
-                    'bobot_persen' => 'Bobot belum pernah diisi, wajib disertakan saat menilai.',
-                ]);
-            }
+            $penugasan = $this->actionService->nilai($penugasan, $validated, $request->user());
 
-            $validated = $request->validate([
-                'realisasi_persen' => 'required|numeric|min:0|max:100',
-                'bobot_persen' => 'sometimes|numeric|min:0|max:100',
-                'catatan_validasi' => 'nullable|string',
-            ]);
-
-            $bobotPersen = (float) ($validated['bobot_persen'] ?? $penugasan->bobot_persen);
-            $realisasiPersen = (float) $validated['realisasi_persen'];
-
-            $deadline = $penugasan->deadline_terbaru ?? $penugasan->tanggal_selesai;
-            $tanggalDiselesaikan = $penugasan->tanggal_diselesaikan ?? now();
-            $persentaseTerlambat = app(HitungKeterlambatan::class)->persentase($deadline, $tanggalDiselesaikan);
-
-            $nilaiAwal = round(($bobotPersen * $realisasiPersen) / 100, 2);
-            $nilaiAkhir = $penugasan->hitungNilaiAkhir($nilaiAwal, $persentaseTerlambat);
-
-            $update = [
-                'bobot_persen' => $bobotPersen,
-                'realisasi_persen' => $realisasiPersen,
-                'nilai_awal' => $nilaiAwal,
-                'persentase_terlambat' => $persentaseTerlambat,
-                'nilai_akhir' => $nilaiAkhir,
-                'hasil_validasi' => Penugasan::VALIDASI_DITERIMA,
-                'catatan_validasi' => $validated['catatan_validasi'] ?? null,
-                'validator_id' => $request->user()->id,
-                'validated_at' => now(),
-            ];
-
-            $penugasan->update($update);
-            $this->cascadeKeGrup($penugasan, $update);
-
-            return response()->json(['status' => true, 'message' => 'Penilaian berhasil disimpan', 'data' => $penugasan->fresh()]);
+            return response()->json(['status' => true, 'message' => 'Penilaian berhasil disimpan', 'data' => $penugasan]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
         } catch (AuthorizationException $e) {
@@ -763,34 +573,14 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('revisi', $penugasan);
-
             $validated = $request->validate([
                 'catatan_revisi' => 'required|string',
                 'deadline_baru' => 'required|date|after:today',
             ]);
 
-            $revisiKe = HistoriRevisi::where('penugasan_id', $penugasan->id)->max('revisi_ke');
-            HistoriRevisi::create([
-                'penugasan_id' => $penugasan->id,
-                'revisi_ke' => ($revisiKe ?? 0) + 1,
-                'tanggal_revisi' => now(),
-                'catatan_revisi' => $validated['catatan_revisi'],
-                'deadline_revisi' => $validated['deadline_baru'],
-                'direvisi_oleh' => $request->user()->id,
-                'pegawai_id' => $penugasan->pegawai_id,
-            ]);
+            $penugasan = $this->actionService->revisi($penugasan, $validated, $request->user());
 
-            $update = [
-                'status' => Penugasan::STATUS_REVISI,
-                'deadline_terbaru' => $validated['deadline_baru'],
-                'tanggal_diselesaikan' => null,
-            ];
-
-            $penugasan->update($update);
-            $this->cascadeKeGrup($penugasan, $update);
-
-            return response()->json(['status' => true, 'message' => 'Revisi berhasil diberikan', 'data' => $penugasan->fresh()]);
+            return response()->json(['status' => true, 'message' => 'Revisi berhasil diberikan', 'data' => $penugasan]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
         } catch (AuthorizationException $e) {
@@ -807,12 +597,6 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('approveMandiri', $penugasan);
-
-            if ($penugasan->status !== Penugasan::STATUS_PENDING) {
-                return $this->unprocessable('Tugas mandiri ini sudah diproses sebelumnya');
-            }
-
             $validated = $request->validate([
                 'prioritas' => 'sometimes|in:'.implode(',', Penugasan::PRIORITASES),
                 'bobot_persen' => 'sometimes|numeric|min:0|max:100',
@@ -820,14 +604,9 @@ class PenugasanController extends Controller
                 'deadline_terbaru' => 'sometimes|date',
             ]);
 
-            $penugasan->update([
-                ...$validated,
-                'status' => Penugasan::STATUS_PROSES,
-                'status_approval' => Penugasan::APPROVAL_DITERIMA,
-                'diterima_at' => now(),
-            ]);
+            $penugasan = $this->actionService->approveMandiri($penugasan, $validated, $request->user());
 
-            return response()->json(['status' => true, 'message' => 'Tugas mandiri disetujui', 'data' => $penugasan->fresh()]);
+            return response()->json(['status' => true, 'message' => 'Tugas mandiri disetujui', 'data' => $penugasan]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
         } catch (AuthorizationException $e) {
@@ -844,23 +623,13 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('rejectMandiri', $penugasan);
-
-            if ($penugasan->status !== Penugasan::STATUS_PENDING) {
-                return $this->unprocessable('Tugas mandiri ini sudah diproses sebelumnya');
-            }
-
             $validated = $request->validate([
                 'alasan_reject' => 'required|string|max:1000',
             ]);
 
-            $penugasan->update([
-                'status' => Penugasan::STATUS_DITOLAK,
-                'status_approval' => Penugasan::APPROVAL_DITOLAK,
-                'alasan_reject' => $validated['alasan_reject'],
-            ]);
+            $penugasan = $this->actionService->rejectMandiri($penugasan, $validated, $request->user());
 
-            return response()->json(['status' => true, 'message' => 'Tugas mandiri ditolak', 'data' => $penugasan->fresh()]);
+            return response()->json(['status' => true, 'message' => 'Tugas mandiri ditolak', 'data' => $penugasan]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
         } catch (AuthorizationException $e) {
@@ -877,28 +646,12 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('ajukanPerpanjangan', $penugasan);
-
             $validated = $request->validate([
                 'deadline_diminta' => 'required|date|after:'.($penugasan->deadline_terbaru?->toDateString() ?? $penugasan->tanggal_selesai->toDateString()),
                 'alasan_pengajuan' => 'required|string',
             ]);
 
-            $jumlahDisetujui = $penugasan->perpanjanganWaktu()->where('status', PerpanjanganWaktu::STATUS_DISETUJUI)->count();
-
-            if ($jumlahDisetujui >= 3) {
-                return $this->unprocessable('Batas perpanjangan waktu (3x) sudah tercapai');
-            }
-
-            $pengajuan = PerpanjanganWaktu::create([
-                'penugasan_id' => $penugasan->id,
-                'pegawai_id' => $penugasan->pegawai_id,
-                'deadline_lama' => $penugasan->deadline_terbaru ?? $penugasan->tanggal_selesai,
-                'deadline_diminta' => $validated['deadline_diminta'],
-                'alasan_pengajuan' => $validated['alasan_pengajuan'],
-                'status' => PerpanjanganWaktu::STATUS_MENUNGGU,
-                'ke_berapa' => $jumlahDisetujui + 1,
-            ]);
+            $pengajuan = $this->actionService->ajukanPerpanjangan($penugasan, $validated, $request->user());
 
             return response()->json(['status' => true, 'message' => 'Pengajuan perpanjangan waktu berhasil dikirim', 'data' => $pengajuan], 201);
         } catch (ModelNotFoundException $e) {
@@ -940,45 +693,16 @@ class PenugasanController extends Controller
     {
         try {
             $penugasan = Penugasan::findOrFail($id);
-            $this->authorize('putuskanPerpanjangan', $penugasan);
 
-            $pengajuan = $penugasan->perpanjanganWaktu()->where('id', $perpanjanganId)->firstOrFail();
+            $validated = $disetujui
+                ? $request->validate(['deadline_disetujui' => 'required|date', 'catatan_atasan' => 'nullable|string'])
+                : $request->validate(['catatan_atasan' => 'nullable|string']);
 
-            if ($pengajuan->status !== PerpanjanganWaktu::STATUS_MENUNGGU) {
-                return $this->unprocessable('Pengajuan perpanjangan ini sudah diputuskan sebelumnya');
-            }
+            $pengajuan = $this->actionService->putuskanPerpanjangan($penugasan, $perpanjanganId, $disetujui, $validated, $request->user());
 
-            if ($disetujui) {
-                $validated = $request->validate([
-                    'deadline_disetujui' => 'required|date',
-                    'catatan_atasan' => 'nullable|string',
-                ]);
+            $message = $disetujui ? 'Perpanjangan waktu disetujui' : 'Perpanjangan waktu ditolak';
 
-                $pengajuan->update([
-                    'status' => PerpanjanganWaktu::STATUS_DISETUJUI,
-                    'deadline_disetujui' => $validated['deadline_disetujui'],
-                    'catatan_atasan' => $validated['catatan_atasan'] ?? null,
-                    'disetujui_oleh_id' => $request->user()->id,
-                ]);
-
-                $update = ['deadline_terbaru' => $validated['deadline_disetujui']];
-                $penugasan->update($update);
-                $this->cascadeKeGrup($penugasan, $update);
-
-                $message = 'Perpanjangan waktu disetujui';
-            } else {
-                $validated = $request->validate(['catatan_atasan' => 'nullable|string']);
-
-                $pengajuan->update([
-                    'status' => PerpanjanganWaktu::STATUS_DITOLAK,
-                    'catatan_atasan' => $validated['catatan_atasan'] ?? null,
-                    'disetujui_oleh_id' => $request->user()->id,
-                ]);
-
-                $message = 'Perpanjangan waktu ditolak';
-            }
-
-            return response()->json(['status' => true, 'message' => $message, 'data' => $pengajuan->fresh()]);
+            return response()->json(['status' => true, 'message' => $message, 'data' => $pengajuan]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => false, 'message' => 'Penugasan atau pengajuan tidak ditemukan', 'data' => null], 404);
         } catch (AuthorizationException $e) {
@@ -998,60 +722,15 @@ class PenugasanController extends Controller
             ]);
 
             $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->updateProgress($penugasan, $validated, $request->user());
 
-            if ($request->user()->id !== $penugasan->pegawai_id) {
-                return $this->forbidden();
-            }
-
-            Progress::create([
-                'penugasan_id' => $penugasan->id,
-                'pegawai_id' => $penugasan->pegawai_id,
-                'tanggal' => now()->toDateString(),
-                'progress_persen' => $validated['progress_persen'],
-                'deskripsi_kegiatan' => $validated['deskripsi_kegiatan'],
-                'kendala' => $validated['kendala'] ?? null,
-            ]);
-
-            $penugasan->update(['progress_persen' => $validated['progress_persen']]);
-
-            return response()->json(['status' => true, 'message' => 'Progress berhasil dicatat', 'data' => $penugasan->fresh()]);
+            return response()->json(['status' => true, 'message' => 'Progress berhasil dicatat', 'data' => $penugasan]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json(['status' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini', 'data' => null], 403);
         } catch (ValidationException $e) {
             return response()->json(['status' => false, 'message' => 'Validasi gagal', 'data' => $e->errors()], 422);
         }
-    }
-
-    private function userCanAuthorize(string $ability, Penugasan $penugasan): bool
-    {
-        return \Illuminate\Support\Facades\Gate::forUser(request()->user())->allows($ability, $penugasan);
-    }
-
-    /**
-     * Mode Kolektif: hanya koordinator yang boleh bertindak atas nama grup (§9.1 poin 4).
-     */
-    private function grupKolektifBukanKoordinator(Penugasan $penugasan): bool
-    {
-        return $penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $penugasan->is_koordinator;
-    }
-
-    /**
-     * Cascade perubahan status/nilai/deadline ke seluruh anggota grup pada mode Kolektif.
-     */
-    private function cascadeKeGrup(Penugasan $penugasan, array $attrs): void
-    {
-        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
-            $penugasan->grupAnggota()->update($attrs);
-        }
-    }
-
-    private function forbidden(string $message = 'Tidak memiliki izin untuk melakukan aksi ini')
-    {
-        return response()->json(['status' => false, 'message' => $message, 'data' => null], 403);
-    }
-
-    private function unprocessable(string $message)
-    {
-        return response()->json(['status' => false, 'message' => $message, 'data' => null], 422);
     }
 }

@@ -33,13 +33,15 @@ class PenugasanPolicy
 
     /**
      * Determine if user can create penugasan
-     * Hanya jabatan struktural yang bisa memberikan tugas (Admin bisa buat untuk siapa saja)
+     * Hanya jabatan struktural/fungsional yang bisa memberikan tugas (Admin bisa buat untuk siapa saja).
+     * Jafung disertakan mengikuti tabel "Siapa Bisa Memberi Tugas ke Siapa"
+     * (docs/analysis/aturan-penugasan-&-penilaian.md baris 14): Jafung -> Pelaksana & Gatek di bidangnya.
      */
     public function create(User $user): bool
     {
         $kodeJabatan = $user->profile?->jabatan?->kode;
 
-        return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG']);
+        return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG', 'JAFUNG']);
     }
 
     /**
@@ -61,6 +63,11 @@ class PenugasanPolicy
         if ($kodeJabatan === 'KASUBAG') {
             return $targetPegawai->profile?->atasan_langsung_id === $user->id
                 || $targetPegawai->profile?->jabatan?->kode === 'GATEK';
+        }
+
+        if ($kodeJabatan === 'JAFUNG') {
+            return in_array($targetPegawai->profile?->jabatan?->kode, ['PELAKSANA', 'GATEK'], true)
+                && $user->profile?->bidang_id === $targetPegawai->profile?->bidang_id;
         }
 
         return $targetPegawai->profile?->atasan_langsung_id === $user->id;

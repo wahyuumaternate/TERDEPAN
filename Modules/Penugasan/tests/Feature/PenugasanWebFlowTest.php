@@ -73,33 +73,44 @@ class PenugasanWebFlowTest extends TestCase
     public function test_bawahan_can_view_tugas_saya_and_create_pages(): void
     {
         $this->actingAs($this->bawahan)->get(route('penugasan.tugas-saya'))->assertStatus(200);
-        $this->actingAs($this->bawahan)->get(route('penugasan.tugas-saya', ['jenis' => 'pokok']))->assertStatus(200);
+        // Bawahan (Pelaksana) tidak punya hak create() -> tab diberikan otomatis jatuh ke tab saya, bukan 403.
+        $this->actingAs($this->bawahan)->get(route('penugasan.tugas-saya', ['tab' => 'diberikan']))->assertStatus(200);
         $this->actingAs($this->bawahan)->get(route('penugasan.create'))->assertStatus(200);
     }
 
     public function test_atasan_can_view_team_pages(): void
     {
         $this->actingAs($this->atasan)->get(route('penugasan.tim.index'))->assertStatus(200);
-        $this->actingAs($this->atasan)->get(route('penugasan.tim.form-berikan-tugas'))->assertStatus(200);
-        $this->actingAs($this->atasan)->get(route('penugasan.tim.daftar-validasi'))->assertStatus(200);
         $this->actingAs($this->atasan)->get(route('penugasan.tim.monitoring'))->assertStatus(200);
         $this->actingAs($this->atasan)->get(route('penugasan.tim.detail-anggota', $this->bawahan->id))->assertStatus(200);
         $this->actingAs($this->atasan)->get(route('penugasan.index'))->assertStatus(200);
+        $this->actingAs($this->atasan)->get(route('penugasan.tugas-saya', ['tab' => 'diberikan']))->assertStatus(200);
+        $this->actingAs($this->atasan)->get(route('penugasan.create'))->assertStatus(200);
     }
 
-    public function test_full_flow_berikan_tugas_sampai_validasi(): void
+    public function test_route_lama_berikan_tugas_dan_validasi_redirect_ke_tab_diberikan(): void
     {
-        // 1. Atasan memberikan tugas via form berikan-tugas
-        $response = $this->actingAs($this->atasan)->post(route('penugasan.tim.berikan-tugas'), [
+        $this->actingAs($this->atasan)->get(route('penugasan.tim.form-berikan-tugas'))
+            ->assertRedirect(route('penugasan.tugas-saya', ['tab' => 'diberikan']));
+
+        $this->actingAs($this->atasan)->get(route('penugasan.tim.daftar-validasi'))
+            ->assertRedirect(route('penugasan.tugas-saya', ['tab' => 'diberikan']));
+    }
+
+    public function test_full_flow_berikan_tugas_sampai_dinilai(): void
+    {
+        // 1. Atasan memberikan tugas lewat wizard (POST penugasan.store)
+        $response = $this->actingAs($this->atasan)->post(route('penugasan.store'), [
             'pegawai_id' => $this->bawahan->id,
             'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
             'nama_tugas' => 'Tugas Uji Alur',
             'deskripsi' => 'Deskripsi tugas uji',
             'tanggal_mulai' => now()->toDateString(),
             'tanggal_selesai' => now()->addDays(7)->toDateString(),
             'bobot_persen' => 50,
         ]);
-        $response->assertRedirect();
+        $response->assertRedirect(route('penugasan.tugas-saya', ['tab' => 'diberikan']));
 
         $penugasan = Penugasan::where('nama_tugas', 'Tugas Uji Alur')->firstOrFail();
         $this->assertSame($this->bawahan->id, $penugasan->pegawai_id);
@@ -133,26 +144,23 @@ class PenugasanWebFlowTest extends TestCase
             ])
             ->assertJson(['success' => true]);
 
-        // 5. Bawahan submit untuk validasi
+        // 5. Bawahan mengajukan Selesai
         $this->actingAs($this->bawahan)
             ->post(route('penugasan.submit', $penugasan->id))
             ->assertJson(['success' => true]);
         $this->assertSame('selesai', $penugasan->fresh()->status);
 
-        // 6. Atasan melihat daftar validasi & memvalidasi dengan realisasi 90%
-        $this->actingAs($this->atasan)->get(route('penugasan.tim.daftar-validasi'))->assertStatus(200);
-
-        $validasiResponse = $this->actingAs($this->atasan)
-            ->post(route('penugasan.tim.validasi-tugas', $penugasan->id), [
-                'status_validasi' => 'diterima',
+        // 6. Atasan menilai (POST penugasan.nilai, bukan tim.validasi-tugas lagi)
+        $nilaiResponse = $this->actingAs($this->atasan)
+            ->post(route('penugasan.nilai', $penugasan->id), [
                 'realisasi_persen' => 90,
             ]);
-        $validasiResponse->assertJson(['success' => true]);
+        $nilaiResponse->assertJson(['success' => true]);
 
         $penugasan->refresh();
         $this->assertSame('selesai', $penugasan->status);
         $this->assertEquals(90, $penugasan->realisasi_persen);
-        $this->assertEquals(45.0, (float) $penugasan->nilai_akhir); // 50 * 90 / 100
+        $this->assertEquals(45.0, (float) $penugasan->nilai_akhir); // 50 * 90 / 100, tanpa potongan terlambat
 
         // 7. Bawahan melihat hasil akhir di halaman detail
         $this->actingAs($this->bawahan)->get(route('penugasan.show', $penugasan->id))
@@ -160,9 +168,119 @@ class PenugasanWebFlowTest extends TestCase
             ->assertSee('45');
     }
 
+    public function test_wizard_berikan_tugas_grup_per_orang(): void
+    {
+        $bawahan2 = User::create([
+            'nama' => 'Bawahan Kedua',
+            'email' => 'bawahan2@test.com',
+            'password' => bcrypt('password'),
+        ]);
+        $bawahan2->profile()->create([
+            'nomor_identitas' => '1990000000000003',
+            'tipe_identitas' => 'NIP',
+            'jenis_kelamin' => 'L',
+            'status_kepegawaian' => 'PNS',
+            'status_aktif' => 'Aktif',
+            'jabatan_id' => 2,
+            'bidang_id' => $this->bidang->id,
+            'atasan_langsung_id' => $this->atasan->id,
+        ]);
+
+        $response = $this->actingAs($this->atasan)->post(route('penugasan.store-grup'), [
+            'pegawai_ids' => [$this->bawahan->id, $bawahan2->id],
+            'mode_grup' => 'per_orang',
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas Grup Uji',
+            'deskripsi' => 'Deskripsi',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(7)->toDateString(),
+        ]);
+
+        $response->assertRedirect(route('penugasan.tugas-saya', ['tab' => 'diberikan']));
+        $this->assertSame(2, Penugasan::where('nama_tugas', 'Tugas Grup Uji')->count());
+    }
+
+    public function test_wizard_mandiri_lalu_disetujui_atasan(): void
+    {
+        $store = $this->actingAs($this->bawahan)->post(route('penugasan.store'), [
+            'pegawai_id' => $this->bawahan->id,
+            'atasan_id' => $this->atasan->id,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas Mandiri Uji',
+            'deskripsi' => 'Deskripsi',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(7)->toDateString(),
+        ]);
+        $store->assertRedirect(route('penugasan.tugas-saya', ['tab' => 'saya']));
+
+        $penugasan = Penugasan::where('nama_tugas', 'Tugas Mandiri Uji')->firstOrFail();
+        $this->assertTrue($penugasan->is_mandiri);
+        $this->assertSame($this->atasan->id, $penugasan->pemberi_tugas_id);
+
+        $this->actingAs($this->atasan)
+            ->post(route('penugasan.approve-mandiri', $penugasan->id))
+            ->assertJson(['success' => true]);
+
+        $this->assertSame('proses', $penugasan->fresh()->status);
+    }
+
+    /**
+     * Regresi: halaman detail sempat error "Call to a member function getKey() on array"
+     * untuk tugas berstatus revisi yang belum punya log progress sama sekali. Penyebabnya
+     * override map() Eloquent Collection gagal mendeteksi hasil non-Model saat collection
+     * kosong, sehingga ->merge() berikutnya memanggil getKey() pada array biasa.
+     */
+    public function test_halaman_detail_tampil_untuk_tugas_revisi_tanpa_progress(): void
+    {
+        $penugasan = Penugasan::create([
+            'pegawai_id' => $this->bawahan->id,
+            'pemberi_tugas_id' => $this->atasan->id,
+            'is_mandiri' => false,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas Revisi Tanpa Progress',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now()->subDays(5),
+            'tanggal_selesai' => now()->addDays(2),
+            'deadline_terbaru' => now()->addDays(2),
+            'status' => Penugasan::STATUS_REVISI,
+        ]);
+
+        \Modules\Penugasan\Models\HistoriRevisi::create([
+            'penugasan_id' => $penugasan->id,
+            'revisi_ke' => 1,
+            'tanggal_revisi' => now(),
+            'catatan_revisi' => 'Mohon lengkapi data',
+            'deadline_revisi' => now()->addDays(2),
+            'direvisi_oleh' => $this->atasan->id,
+            'pegawai_id' => $this->bawahan->id,
+        ]);
+
+        $this->actingAs($this->bawahan)->get(route('penugasan.show', $penugasan->id))->assertStatus(200);
+        $this->actingAs($this->atasan)->get(route('penugasan.show', $penugasan->id))->assertStatus(200);
+    }
+
     public function test_preview_penilaian_endpoint(): void
     {
+        $penugasan = Penugasan::create([
+            'pegawai_id' => $this->bawahan->id,
+            'pemberi_tugas_id' => $this->atasan->id,
+            'is_mandiri' => false,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas Preview',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now()->subDays(3),
+            'tanggal_selesai' => now()->addDays(3),
+            'deadline_terbaru' => now()->addDays(3),
+            'status' => Penugasan::STATUS_SELESAI,
+            'tanggal_diselesaikan' => now(),
+        ]);
+
         $response = $this->actingAs($this->atasan)->postJson(route('penugasan.tim.preview-penilaian'), [
+            'penugasan_id' => $penugasan->id,
             'bobot_persen' => 60,
             'realisasi_persen' => 80,
         ]);

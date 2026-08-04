@@ -8,10 +8,11 @@
     };
     $statusBadgeMap = [
         'pending' => 'bg-secondary',
-        'dikerjakan' => 'bg-primary',
-        'revisi' => 'bg-danger',
-        'validasi' => 'bg-warning text-dark',
+        'proses' => 'bg-primary',
+        'revisi' => 'bg-warning text-dark',
+        'terlambat' => 'bg-danger',
         'selesai' => 'bg-success',
+        'ditolak' => 'bg-dark',
     ];
 @endphp
 
@@ -29,7 +30,7 @@
     <section class="section">
         <!-- Stats Cards -->
         <div class="row mb-4">
-            @foreach (['total' => ['Total', 'primary'], 'pending' => ['Pending', 'secondary'], 'dikerjakan' => ['Dikerjakan', 'info'], 'revisi' => ['Revisi', 'danger'], 'validasi' => ['Validasi', 'warning'], 'selesai' => ['Selesai', 'success']] as $key => [$label, $color])
+            @foreach (['total' => ['Total', 'primary'], 'pending' => ['Pending', 'secondary'], 'proses' => ['Proses', 'primary'], 'terlambat' => ['Terlambat', 'danger'], 'menunggu_nilai' => ['Menunggu Nilai', 'info'], 'selesai' => ['Selesai', 'success']] as $key => [$label, $color])
                 <div class="col">
                     <div class="card info-card shadow-sm border-0">
                         <div class="card-body text-center py-3">
@@ -58,7 +59,7 @@
                     <div class="col-lg-3">
                         <select class="form-select" name="status" onchange="this.form.submit()">
                             <option value="">Semua Status</option>
-                            @foreach (['pending', 'dikerjakan', 'revisi', 'validasi', 'selesai'] as $s)
+                            @foreach (['pending', 'proses', 'revisi', 'terlambat', 'selesai', 'ditolak'] as $s)
                                 <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>
                                     {{ ucfirst($s) }}</option>
                             @endforeach

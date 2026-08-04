@@ -19,7 +19,8 @@
             });
 
             $tugasPerluValidasi = \Modules\Penugasan\Models\Penugasan::whereIn('pegawai_id', $anggotaTim->pluck('id'))
-                ->where('status', 'validasi')
+                ->where('status', 'selesai')
+                ->whereNull('realisasi_persen')
                 ->count();
 
             $tugasTerlambat = $anggotaTim->sum('tugas_terlambat');

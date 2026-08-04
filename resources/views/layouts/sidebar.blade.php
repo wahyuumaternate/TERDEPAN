@@ -146,7 +146,7 @@
 
          <!-- Penugasan Nav -->
          @php
-             $canManagePenugasan = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
+             $canManagePenugasan = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'JAFUNG', 'KASUBAG']);
              $canManageTeam = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG']);
          @endphp
 
@@ -154,26 +154,10 @@
          <!-- BAGIAN 1: TUGAS SAYA (Semua Role)         -->
          <!-- ========================================== -->
          <li class="nav-item">
-             <a class="nav-link collapsed" data-bs-target="#tugas-saya-nav" data-bs-toggle="collapse" href="#">
-                 <i class="bi bi-person-check"></i><span>Tugas Saya</span><i class="bi bi-chevron-down ms-auto"></i>
+             <a href="{{ route('penugasan.tugas-saya') }}" class="nav-link collapsed">
+                 <i class="bi bi-person-check"></i><span>Tugas Saya</span>
              </a>
-             <ul id="tugas-saya-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                 <!-- Tugas Pokok Saya -->
-                 <li>
-                     <a href="{{ route('penugasan.tugas-saya', ['jenis' => 'pokok']) }}">
-                         <i class="bi bi-circle"></i><span>Tugas Pokok Saya</span>
-                     </a>
-                 </li>
-
-                 <!-- Tugas Tambahan Saya -->
-                 <li>
-                     <a href="{{ route('penugasan.tugas-saya', ['jenis' => 'tambahan']) }}">
-                         <i class="bi bi-circle"></i><span>Tugas Tambahan Saya</span>
-                     </a>
-                 </li>
-             </ul>
          </li><!-- End Tugas Saya Nav -->
-
 
          <!-- ========================================== -->
          <!-- BAGIAN 3: MANAJEMEN TIM (Atasan)          -->
@@ -193,24 +177,10 @@
                          </a>
                      </li>
 
-                     <!-- Berikan Tugas -->
+                     <!-- Tugas yang Saya Berikan (termasuk berikan tugas & antrean persetujuan) -->
                      <li>
-                         <a href="{{ route('penugasan.tim.form-berikan-tugas') }}">
-                             <i class="bi bi-circle"></i><span>Berikan Tugas</span>
-                         </a>
-                     </li>
-
-                     <!-- Validasi Tugas -->
-                     <li>
-                         <a href="{{ route('penugasan.tim.daftar-validasi') }}">
-                             <i class="bi bi-circle"></i><span>Validasi Tugas</span>
-                             @php
-                                 // Count pending validation (example - adjust based on your logic)
-                                 $pendingCount = 0; // You can add real count here
-                             @endphp
-                             @if ($pendingCount > 0)
-                                 <span class="badge bg-danger badge-number">{{ $pendingCount }}</span>
-                             @endif
+                         <a href="{{ route('penugasan.tugas-saya', ['tab' => 'diberikan']) }}">
+                             <i class="bi bi-circle"></i><span>Tugas yang Saya Berikan</span>
                          </a>
                      </li>
 
@@ -222,6 +192,12 @@
                      </li>
                  </ul>
              </li><!-- End Manajemen Tim Nav -->
+         @elseif ($canManagePenugasan)
+             <li class="nav-item">
+                 <a href="{{ route('penugasan.tugas-saya', ['tab' => 'diberikan']) }}" class="nav-link collapsed">
+                     <i class="bi bi-people"></i><span>Tugas yang Saya Berikan</span>
+                 </a>
+             </li>
          @endif
 
          <!-- Master Data -->

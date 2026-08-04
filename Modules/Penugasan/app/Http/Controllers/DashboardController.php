@@ -43,38 +43,44 @@ class DashboardController extends Controller
     {
         // Cache statistik untuk 5 menit
         $stats = Cache::remember("dashboard_stats_{$user->id}", 300, function () use ($user) {
+            $statusAktif = [Penugasan::STATUS_PROSES, Penugasan::STATUS_REVISI, Penugasan::STATUS_TERLAMBAT];
+
             return [
                 'tugas_pokok' => [
                     'total' => Penugasan::pokok()->where('pegawai_id', $user->id)->count(),
                     'aktif' => Penugasan::pokok()->where('pegawai_id', $user->id)
-                        ->where('status', 'dikerjakan')
+                        ->whereIn('status', $statusAktif)
                         ->count(),
                     'selesai' => Penugasan::pokok()->where('pegawai_id', $user->id)
-                        ->where('status', 'selesai')
+                        ->where('status', Penugasan::STATUS_SELESAI)
                         ->count(),
                 ],
                 'tugas_harian' => [
                     'total' => Penugasan::where('pegawai_id', $user->id)->count(),
                     'pending' => Penugasan::where('pegawai_id', $user->id)
-                        ->where('status', 'pending')
+                        ->where('status', Penugasan::STATUS_PENDING)
                         ->count(),
+                    // Kunci 'dikerjakan' dipertahankan demi kompatibilitas dashboard.blade.php,
+                    // isinya kini status proses (label lama warisan alur sebelum rencana 07).
                     'dikerjakan' => Penugasan::where('pegawai_id', $user->id)
-                        ->where('status', 'dikerjakan')
+                        ->where('status', Penugasan::STATUS_PROSES)
                         ->count(),
                     'validasi' => Penugasan::where('pegawai_id', $user->id)
-                        ->where('status', 'validasi')
+                        ->where('status', Penugasan::STATUS_SELESAI)
+                        ->whereNull('realisasi_persen')
                         ->count(),
                     'selesai' => Penugasan::where('pegawai_id', $user->id)
-                        ->where('status', 'selesai')
+                        ->where('status', Penugasan::STATUS_SELESAI)
+                        ->whereNotNull('realisasi_persen')
                         ->count(),
                 ],
                 'tugas_tambahan' => [
                     'total' => Penugasan::tambahan()->where('pegawai_id', $user->id)->count(),
                     'aktif' => Penugasan::tambahan()->where('pegawai_id', $user->id)
-                        ->whereIn('status', ['dikerjakan', 'validasi'])
+                        ->whereIn('status', $statusAktif)
                         ->count(),
                     'selesai' => Penugasan::tambahan()->where('pegawai_id', $user->id)
-                        ->where('status', 'selesai')
+                        ->where('status', Penugasan::STATUS_SELESAI)
                         ->count(),
                 ],
                 'nilai_rata_rata' => Penugasan::where('pegawai_id', $user->id)
@@ -85,8 +91,8 @@ class DashboardController extends Controller
 
         // Tugas baru/pending yang diberikan oleh atasan (bukan mandiri)
         $tugasBaruPending = Penugasan::where('pegawai_id', $user->id)
-            ->where('status', 'pending')
-            ->whereNotNull('pemberi_tugas_id')
+            ->where('status', Penugasan::STATUS_PENDING)
+            ->where('is_mandiri', false)
             ->with(['pemberiTugas:id,nama'])
             ->orderBy('created_at', 'desc')
             ->limit(10)

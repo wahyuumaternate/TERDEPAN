@@ -7,16 +7,20 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Modules\Penugasan\Models\Penugasan;
+use Modules\Penugasan\Services\HitungKeterlambatan;
 
 /**
  * TeamController
  *
  * Mengelola tim dan tugas untuk atasan/supervisor
- * Fitur: overview tim, berikan tugas, validasi, monitoring
+ * Fitur: overview tim, monitoring. Berikan tugas & validasi kini bagian dari
+ * halaman gabungan penugasan.tugas-saya (tab "diberikan") — lihat dok. 08 §4.1.
  */
 class TeamController extends Controller
 {
     use AuthorizesRequests;
+
+    private const STATUS_AKTIF = [Penugasan::STATUS_PROSES, Penugasan::STATUS_REVISI, Penugasan::STATUS_TERLAMBAT];
 
     /**
      * Menampilkan daftar anggota tim
@@ -33,13 +37,13 @@ class TeamController extends Controller
             ->with(['profile.jabatan', 'profile.bidang'])
             ->withCount([
                 'penugasan as tugas_aktif' => function ($q) {
-                    $q->whereIn('status', ['dikerjakan', 'validasi']);
+                    $q->whereIn('status', self::STATUS_AKTIF);
                 },
                 'penugasan as tugas_selesai' => function ($q) {
-                    $q->where('status', 'selesai');
+                    $q->where('status', Penugasan::STATUS_SELESAI);
                 },
                 'penugasan as tugas_pending' => function ($q) {
-                    $q->where('status', 'pending');
+                    $q->where('status', Penugasan::STATUS_PENDING);
                 },
             ])
             ->get()
@@ -69,16 +73,16 @@ class TeamController extends Controller
             ->with(['profile.jabatan', 'profile.bidang'])
             ->withCount([
                 'penugasan as tugas_selesai' => function ($q) {
-                    $q->where('status', 'selesai');
+                    $q->where('status', Penugasan::STATUS_SELESAI);
                 },
                 'penugasan as tugas_aktif' => function ($q) {
-                    $q->whereIn('status', ['dikerjakan', 'validasi']);
+                    $q->whereIn('status', self::STATUS_AKTIF);
                 },
                 'penugasan as tugas_pending' => function ($q) {
-                    $q->where('status', 'pending');
+                    $q->where('status', Penugasan::STATUS_PENDING);
                 },
                 'penugasan as tugas_tambahan_aktif' => function ($q) {
-                    $q->where('jenis', 'tambahan')->whereIn('status', ['dikerjakan', 'validasi']);
+                    $q->where('jenis', 'tambahan')->whereIn('status', self::STATUS_AKTIF);
                 },
             ])
             ->get()
@@ -95,11 +99,11 @@ class TeamController extends Controller
             'rata_rata_workload' => $anggotaTim->avg('workload_persen'),
             'total_tugas_aktif' => $anggotaTim->sum('tugas_aktif'),
             'perlu_validasi' => Penugasan::whereIn('pegawai_id', $anggotaTim->pluck('id'))
-                ->where('status', 'validasi')
+                ->where('status', Penugasan::STATUS_SELESAI)
+                ->whereNull('realisasi_persen')
                 ->count(),
             'tugas_terlambat' => Penugasan::whereIn('pegawai_id', $anggotaTim->pluck('id'))
-                ->whereIn('status', ['dikerjakan', 'validasi'])
-                ->where('tanggal_selesai', '<', now())
+                ->where('status', Penugasan::STATUS_TERLAMBAT)
                 ->count(),
         ];
 
@@ -152,9 +156,9 @@ class TeamController extends Controller
         $statsQuery = Penugasan::where('pegawai_id', $id)->whereYear('tanggal_mulai', $tahun);
         $stats = [
             'total' => (clone $statsQuery)->count(),
-            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
-            'dikerjakan' => (clone $statsQuery)->whereIn('status', ['dikerjakan', 'revisi'])->count(),
-            'selesai' => (clone $statsQuery)->where('status', 'selesai')->count(),
+            'pending' => (clone $statsQuery)->where('status', Penugasan::STATUS_PENDING)->count(),
+            'dikerjakan' => (clone $statsQuery)->whereIn('status', self::STATUS_AKTIF)->count(),
+            'selesai' => (clone $statsQuery)->where('status', Penugasan::STATUS_SELESAI)->count(),
             'pokok' => (clone $statsQuery)->where('jenis', 'pokok')->count(),
             'tambahan' => (clone $statsQuery)->where('jenis', 'tambahan')->count(),
         ];
@@ -163,160 +167,38 @@ class TeamController extends Controller
     }
 
     /**
-     * Menampilkan form untuk memberikan tugas
-     *
-     * @return \Illuminate\View\View
-     */
-    public function formBerikanTugas(Request $request)
-    {
-        $user = $request->user();
-        $kodeJabatan = $user->profile?->jabatan?->kode;
-
-        if (in_array($kodeJabatan, ['KABAN', 'SEKBAN'])) {
-            $bawahanLangsung = User::whereRelation('profile', 'status_aktif', 'Aktif')
-                ->where('id', '!=', $user->id)
-                ->whereHas('profile.jabatan', function ($q) {
-                    $q->where('kode', '!=', 'GATEK');
-                })
-                ->with(['profile.jabatan', 'profile.bidang'])
-                ->orderBy('nama')
-                ->get();
-        } elseif ($kodeJabatan === 'KABID') {
-            $bawahanLangsung = User::whereRelation('profile', 'status_aktif', 'Aktif')
-                ->where('id', '!=', $user->id)
-                ->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id)
-                ->with(['profile.jabatan', 'profile.bidang'])
-                ->orderBy('nama')
-                ->get();
-        } else {
-            $bawahanLangsung = User::whereRelation('profile', 'atasan_langsung_id', $user->id)
-                ->whereRelation('profile', 'status_aktif', 'Aktif')
-                ->with(['profile.jabatan', 'profile.bidang'])
-                ->orderBy('nama')
-                ->get();
-        }
-
-        $pegawaiTugasTambahan = collect();
-
-        if (in_array($kodeJabatan, ['KABAN', 'SEKBAN'])) {
-            $pegawaiTugasTambahan = User::whereRelation('profile', 'status_aktif', 'Aktif')
-                ->where('id', '!=', $user->id)
-                ->whereHas('profile.jabatan', function ($q) {
-                    $q->where('kode', '!=', 'GATEK');
-                })
-                ->with(['profile.jabatan', 'profile.bidang'])
-                ->orderBy('nama')
-                ->get();
-        } elseif ($kodeJabatan === 'KABID') {
-            $pegawaiTugasTambahan = User::whereRelation('profile', 'status_aktif', 'Aktif')
-                ->where('id', '!=', $user->id)
-                ->where(function ($q) use ($user) {
-                    $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id)
-                        ->orWhereHas('profile.jabatan', function ($subQ) {
-                            $subQ->where('kode', 'GATEK');
-                        });
-                })
-                ->with(['profile.jabatan', 'profile.bidang'])
-                ->orderBy('nama')
-                ->get();
-        } elseif ($kodeJabatan === 'KASUBAG') {
-            $pegawaiTugasTambahan = User::whereRelation('profile', 'status_aktif', 'Aktif')
-                ->where('id', '!=', $user->id)
-                ->where(function ($q) use ($user) {
-                    $q->whereRelation('profile', 'atasan_langsung_id', $user->id)
-                        ->orWhereHas('profile.jabatan', function ($subQ) {
-                            $subQ->where('kode', 'GATEK');
-                        });
-                })
-                ->with(['profile.jabatan', 'profile.bidang'])
-                ->orderBy('nama')
-                ->get();
-        } else {
-            $pegawaiTugasTambahan = $bawahanLangsung;
-        }
-
-        // Get recent assignments (7 hari terakhir)
-        $recentAssignments = Penugasan::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
-            ->where('created_at', '>=', now()->subDays(7))
-            ->with('pegawai')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-
-        $stats = [
-            'tugas_aktif' => Penugasan::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
-                ->whereIn('status', ['dikerjakan', 'validasi'])
-                ->count(),
-            'menunggu_validasi' => Penugasan::whereIn('pegawai_id', $bawahanLangsung->pluck('id'))
-                ->where('status', 'validasi')
-                ->count(),
-            'avg_progress' => 0,
-        ];
-
-        return view('penugasan::tim.berikan-tugas', compact('bawahanLangsung', 'pegawaiTugasTambahan', 'recentAssignments', 'stats'));
-    }
-
-    /**
-     * Proses memberikan tugas ke anggota tim
+     * Preview nilai_akhir (bobot × realisasi / 100, dipotong persentase keterlambatan)
+     * sebelum disimpan — dipakai modal "Beri Penilaian" di halaman detail tugas.
+     * Dihitung lewat HitungKeterlambatan yang sama dengan PenugasanActionService,
+     * bukan direplikasi di JavaScript (dok. 08 §6, Modal Beri Penilaian).
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function berikanTugas(Request $request)
+    public function previewPenilaian(Request $request, HitungKeterlambatan $hitungKeterlambatan)
     {
-        $controller = new PenugasanController;
+        $validated = $request->validate([
+            'penugasan_id' => 'required|exists:knj_penugasan,id',
+            'bobot_persen' => 'required|numeric|min:0|max:100',
+            'realisasi_persen' => 'required|numeric|min:0|max:100',
+        ]);
 
-        return $controller->berikanTugas($request);
-    }
+        $penugasan = Penugasan::findOrFail($validated['penugasan_id']);
 
-    /**
-     * Menampilkan daftar tugas yang perlu divalidasi
-     *
-     * @return \Illuminate\View\View
-     */
-    public function daftarValidasi(Request $request)
-    {
-        $user = $request->user();
+        $deadline = $penugasan->deadline_terbaru ?? $penugasan->tanggal_selesai;
+        $tanggalDiselesaikan = $penugasan->tanggal_diselesaikan ?? now();
+        $persentaseTerlambat = $hitungKeterlambatan->persentase($deadline, $tanggalDiselesaikan);
 
-        $tugasValidasi = Penugasan::whereHas('pegawai', function ($q) use ($user) {
-            $q->whereRelation('profile', 'atasan_langsung_id', $user->id);
-        })
-            ->where('status', 'validasi')
-            ->with([
-                'pegawai:id,nama',
-                'pegawai.profile:id,user_id,jabatan_id,bidang_id',
-                'pegawai.profile.jabatan:id,nama',
-                'pegawai.profile.bidang:id,nama',
-                'attachedFiles',
-            ])
-            ->orderBy('tanggal_selesai', 'asc')
-            ->paginate(20);
+        $nilaiAwal = round(($validated['bobot_persen'] * $validated['realisasi_persen']) / 100, 2);
+        $nilaiAkhir = $penugasan->hitungNilaiAkhir($nilaiAwal, $persentaseTerlambat);
 
-        return view('penugasan::tim.daftar-validasi', compact('tugasValidasi'));
-    }
-
-    /**
-     * Proses validasi tugas
-     *
-     * @param  string  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function validasiTugas(Request $request, $id)
-    {
-        $controller = new PenugasanController;
-
-        return $controller->validasiTugas($request, $id);
-    }
-
-    /**
-     * Preview penilaian sebelum validasi
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function previewPenilaian(Request $request)
-    {
-        $controller = new PenugasanController;
-
-        return $controller->previewPenilaian($request);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'nilai_awal' => $nilaiAwal,
+                'persentase_terlambat' => $persentaseTerlambat,
+                'nilai_akhir' => $nilaiAkhir,
+            ],
+        ]);
     }
 
     /**
@@ -333,16 +215,16 @@ class TeamController extends Controller
             ->with(['profile.jabatan', 'profile.bidang'])
             ->withCount([
                 'penugasan as tugas_aktif' => function ($q) {
-                    $q->whereIn('status', ['dikerjakan', 'validasi']);
+                    $q->whereIn('status', self::STATUS_AKTIF);
                 },
                 'penugasan as tugas_selesai' => function ($q) {
-                    $q->where('status', 'selesai');
+                    $q->where('status', Penugasan::STATUS_SELESAI);
                 },
                 'penugasan as tugas_pending' => function ($q) {
-                    $q->where('status', 'pending');
+                    $q->where('status', Penugasan::STATUS_PENDING);
                 },
                 'penugasan as tugas_terlambat' => function ($q) {
-                    $q->whereIn('status', ['dikerjakan', 'validasi'])->where('tanggal_selesai', '<', now());
+                    $q->where('status', Penugasan::STATUS_TERLAMBAT);
                 },
             ])
             ->get();

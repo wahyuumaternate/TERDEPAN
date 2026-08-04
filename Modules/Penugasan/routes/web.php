@@ -10,16 +10,15 @@ use Modules\Penugasan\Http\Controllers\TeamController;
 |--------------------------------------------------------------------------
 | Web Routes - Modul Penugasan
 |--------------------------------------------------------------------------
-| Tugas Pokok, Tugas Tambahan, dan Tugas Harian sudah digabung menjadi satu
-| entitas Penugasan (kolom `jenis` sebagai label klasifikasi). Seluruh view
-| Blade sudah disesuaikan penuh ke skema baru (lihat dok. 06 §6) sehingga
-| alias route lama (tugas-pokok.*, tugas-harian.*, tugas-tambahan.*) sudah
-| tidak diperlukan lagi dan telah dihapus.
+| Struktur mengikuti docs/plan/08-rencana_implementasi_tampilan_web_penugasan.md:
+| "Tugas Saya" dan "Tugas yang Saya Berikan" digabung jadi satu halaman
+| (penugasan.tugas-saya) dengan query param ?tab=saya|diberikan (§4.1).
+| Route lama form-berikan-tugas/daftar-validasi dipertahankan sebagai
+| redirect supaya bookmark/link lama (termasuk dashboard.blade.php) tidak 404.
 |--------------------------------------------------------------------------
 | PENTING: rute statis (tim/*, api/*, daftar, tugas-saya, create) harus
 | didaftarkan SEBELUM rute wildcard `/{id}` di bawah, supaya tidak ter-shadow
-| oleh wildcard tersebut (mis. GET /penugasan/tim salah tertangkap sebagai
-| show($id = 'tim') jika wildcard didaftarkan lebih dulu).
+| oleh wildcard tersebut.
 |--------------------------------------------------------------------------
 */
 
@@ -34,6 +33,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     Route::get('/tugas-saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-saya');
     Route::get('/create', [PenugasanController::class, 'create'])->name('create');
     Route::post('/', [PenugasanController::class, 'store'])->name('store');
+    Route::post('/grup', [PenugasanController::class, 'storeGrup'])->name('store-grup');
 
     // ============================================
     // TEAM MANAGEMENT (Untuk Atasan)
@@ -43,19 +43,19 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/overview', [TeamController::class, 'overview'])->name('overview');
         Route::get('/anggota/{pegawai}', [TeamController::class, 'detailAnggota'])->name('detail-anggota');
 
-        Route::get('/berikan-tugas', [TeamController::class, 'formBerikanTugas'])->name('form-berikan-tugas');
-        Route::post('/berikan-tugas', [TeamController::class, 'berikanTugas'])->name('berikan-tugas');
-
-        Route::get('/validasi', [TeamController::class, 'daftarValidasi'])->name('daftar-validasi');
-        Route::post('/validasi/{tugas}', [TeamController::class, 'validasiTugas'])->name('validasi-tugas');
-        Route::post('/preview-penilaian', [TeamController::class, 'previewPenilaian'])->name('preview-penilaian');
-
         Route::get('/monitoring', [TeamController::class, 'monitoring'])->name('monitoring');
         Route::post('/catatan-monitoring', [TeamController::class, 'catatanMonitoring'])->name('catatan-monitoring');
+        Route::post('/preview-penilaian', [TeamController::class, 'previewPenilaian'])->name('preview-penilaian');
+
+        // Redirect kompatibilitas — halaman lama digabung ke tab "diberikan" (dok. 08 §4.1)
+        Route::get('/berikan-tugas', fn () => redirect()->route('penugasan.tugas-saya', ['tab' => 'diberikan']))
+            ->name('form-berikan-tugas');
+        Route::get('/validasi', fn () => redirect()->route('penugasan.tugas-saya', ['tab' => 'diberikan']))
+            ->name('daftar-validasi');
     });
 
     // ============================================
-    // API ENDPOINTS (untuk AJAX calls)
+    // API ENDPOINTS (untuk AJAX calls) — lihat dok. 08 §8, sebagian orphan
     // ============================================
     Route::prefix('api')->name('api.')->group(function () {
         Route::get('/statistik', [ApiController::class, 'statistik'])->name('statistik');
@@ -70,16 +70,22 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // PENUGASAN — rute wildcard /{id} (harus PALING BAWAH, lihat catatan di atas)
     // ============================================
     Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [PenugasanController::class, 'edit'])->name('edit');
     Route::put('/{id}', [PenugasanController::class, 'update'])->name('update');
     Route::delete('/{id}', [PenugasanController::class, 'destroy'])->name('destroy');
 
     Route::post('/{id}/terima', [PenugasanController::class, 'terima'])->name('terima');
     Route::post('/{id}/tolak', [PenugasanController::class, 'tolak'])->name('tolak');
-    Route::post('/{id}/mulai', [PenugasanController::class, 'mulai'])->name('mulai');
     Route::post('/{id}/submit', [PenugasanController::class, 'submit'])->name('submit');
+    Route::post('/{id}/nilai', [PenugasanController::class, 'nilai'])->name('nilai');
+    Route::post('/{id}/revisi', [PenugasanController::class, 'revisi'])->name('revisi');
+    Route::post('/{id}/approve-mandiri', [PenugasanController::class, 'approveMandiri'])->name('approve-mandiri');
+    Route::post('/{id}/reject-mandiri', [PenugasanController::class, 'rejectMandiri'])->name('reject-mandiri');
+
+    Route::post('/{id}/perpanjangan-waktu', [PenugasanController::class, 'ajukanPerpanjangan'])->name('perpanjangan-waktu.ajukan');
+    Route::post('/{id}/perpanjangan-waktu/{perpanjanganId}/setujui', [PenugasanController::class, 'setujuiPerpanjangan'])->name('perpanjangan-waktu.setujui');
+    Route::post('/{id}/perpanjangan-waktu/{perpanjanganId}/tolak', [PenugasanController::class, 'tolakPerpanjangan'])->name('perpanjangan-waktu.tolak');
+
     Route::get('/{id}/upload-bukti', [PenugasanController::class, 'formUploadBukti'])->name('form-upload-bukti');
     Route::post('/{id}/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
     Route::post('/{id}/update-progress', [PenugasanController::class, 'updateProgress'])->name('update-progress');
-    Route::get('/{id}/history', [PenugasanController::class, 'history'])->name('history');
 });

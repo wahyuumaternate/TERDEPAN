@@ -65,7 +65,8 @@
                                         'pegawai_id',
                                         $anggotaTim->pluck('id'),
                                     )
-                                        ->where('status', 'validasi')
+                                        ->where('status', 'selesai')
+                                        ->whereNull('realisasi_persen')
                                         ->count();
                                 @endphp
                                 <h6 class="mb-0 fw-bold fs-2">{{ $validasiCount }}</h6>
@@ -268,7 +269,7 @@
                                                     class="btn btn-outline-info" title="Detail">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                <a href="{{ route('penugasan.tim.form-berikan-tugas') }}?pegawai={{ $anggota->id }}"
+                                                <a href="{{ route('penugasan.create', ['pegawai_id' => $anggota->id]) }}"
                                                     class="btn btn-outline-primary" title="Beri Tugas">
                                                     <i class="bi bi-send"></i>
                                                 </a>

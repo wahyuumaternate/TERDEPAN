@@ -701,4 +701,43 @@ class PenugasanApiTest extends TestCase
         // Cascade: anggota ikut berubah status meski yang bertindak koordinator
         $this->assertEquals('proses', $tugasAnggota->fresh()->status);
     }
+
+    public function test_jafung_bisa_memberi_tugas_ke_pelaksana_dan_gatek_di_bidangnya(): void
+    {
+        $jafung = $this->createUserWithJabatan('JAFUNG', bidang: $this->bidangUtama);
+        $pelaksana = $this->createUserWithJabatan('PELAKSANA', bidang: $this->bidangUtama);
+        $gatek = $this->createUserWithJabatan('GATEK', bidang: $this->bidangUtama);
+
+        foreach ([$pelaksana, $gatek] as $target) {
+            $response = $this->actingAs($jafung, 'sanctum')->postJson('/api/v1/penugasan', [
+                'pegawai_id' => $target->id,
+                'jenis' => 'tambahan',
+                'prioritas' => 'sedang',
+                'nama_tugas' => 'Tugas dari Jafung',
+                'deskripsi' => 'x',
+                'tanggal_mulai' => now()->toDateString(),
+                'tanggal_selesai' => now()->addDays(7)->toDateString(),
+            ]);
+
+            $response->assertStatus(201);
+        }
+    }
+
+    public function test_jafung_tidak_bisa_memberi_tugas_lintas_bidang(): void
+    {
+        $jafung = $this->createUserWithJabatan('JAFUNG', bidang: $this->bidangUtama);
+        $pelaksanaBidangLain = $this->createUserWithJabatan('PELAKSANA', bidang: $this->bidangSekretariat);
+
+        $response = $this->actingAs($jafung, 'sanctum')->postJson('/api/v1/penugasan', [
+            'pegawai_id' => $pelaksanaBidangLain->id,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas lintas bidang',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(7)->toDateString(),
+        ]);
+
+        $response->assertStatus(403);
+    }
 }

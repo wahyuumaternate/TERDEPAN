@@ -1,5 +1,16 @@
 @extends('layouts.main')
 
+@php
+    $statusBadgeMap = [
+        'pending' => 'bg-secondary',
+        'proses' => 'bg-primary',
+        'revisi' => 'bg-warning text-dark',
+        'terlambat' => 'bg-danger',
+        'selesai' => 'bg-success',
+        'ditolak' => 'bg-dark',
+    ];
+@endphp
+
 @section('main')
     <div class="pagetitle">
         <h1>Detail Anggota Tim</h1>
@@ -29,7 +40,7 @@
                                         {{ $pegawai->profile->bidang->nama ?? '-' }}</small>
                                 </div>
                             </div>
-                            <a href="{{ route('penugasan.tim.form-berikan-tugas') }}?pegawai={{ $pegawai->id }}"
+                            <a href="{{ route('penugasan.create', ['pegawai_id' => $pegawai->id]) }}"
                                 class="btn btn-primary">
                                 <i class="bi bi-send me-1"></i>Berikan Tugas
                             </a>
@@ -129,8 +140,7 @@
                                     <td class="text-center">{{ $tugas->bobot_persen }}%</td>
                                     <td class="text-center">{{ $tugas->progress_persen }}%</td>
                                     <td class="text-center">
-                                        <span
-                                            class="badge bg-{{ $tugas->status === 'selesai' ? 'success' : ($tugas->status === 'revisi' ? 'danger' : 'primary') }}">
+                                        <span class="badge {{ $statusBadgeMap[$tugas->status] ?? 'bg-secondary' }}">
                                             {{ ucfirst($tugas->status) }}
                                         </span>
                                     </td>
