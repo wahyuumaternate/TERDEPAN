@@ -53,7 +53,7 @@ class DashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_user_sees_merged_dashboard(): void
+    public function test_authenticated_user_sees_minimal_dashboard(): void
     {
         $user = $this->createUser();
 
@@ -61,7 +61,7 @@ class DashboardTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewIs('dashboard');
-        $response->assertSee('Ringkasan Terminal Data');
+        $response->assertSee($user->nama);
     }
 
     public function test_e_kinerja_alias_route_still_works(): void

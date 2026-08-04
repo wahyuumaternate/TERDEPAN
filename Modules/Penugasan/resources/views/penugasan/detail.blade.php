@@ -1,6 +1,12 @@
 @extends('layouts.main')
 
 @php
+    $prioritasBadgeMap = [
+        'rendah' => 'bg-secondary',
+        'sedang' => 'bg-info text-dark',
+        'tinggi' => 'bg-danger',
+    ];
+
     $warnaStatus = match ($penugasan->status) {
         'pending' => 'bg-secondary',
         'proses' => 'bg-primary',
@@ -9,6 +15,15 @@
         'selesai' => $penugasan->realisasi_persen === null ? 'bg-info text-dark' : 'bg-success',
         'ditolak' => 'bg-dark',
         default => 'bg-secondary',
+    };
+    $warnaBorder = match ($penugasan->status) {
+        'pending' => 'border-secondary',
+        'proses' => 'border-primary',
+        'revisi' => 'border-warning',
+        'terlambat' => 'border-danger',
+        'selesai' => $penugasan->realisasi_persen === null ? 'border-info' : 'border-success',
+        'ditolak' => 'border-dark',
+        default => 'border-secondary',
     };
     $labelStatus = $penugasan->status === 'selesai' && $penugasan->realisasi_persen === null
         ? 'Menunggu Nilai'
@@ -35,369 +50,423 @@
 @endphp
 
 @section('main')
-    <div class="pagetitle">
-        <h1>Detail Penugasan</h1>
-        <nav>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-saya') }}">Tugas Saya</a></li>
-                <li class="breadcrumb-item active">{{ Str::limit($penugasan->nama_tugas, 40) }}</li>
-            </ol>
-        </nav>
-    </div>
+    <div class="penugasan-detail-page">
+        <div class="pagetitle">
+            <h1>Detail Penugasan</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-saya') }}">Penugasan Pegawai</a></li>
+                    <li class="breadcrumb-item active">{{ Str::limit($penugasan->nama_tugas, 40) }}</li>
+                </ol>
+            </nav>
+        </div>
 
-    <section class="section">
-        <div class="row">
-            <div class="col-lg-8">
-                <!-- Header -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-                            <div>
-                                <span class="badge bg-info bg-opacity-10 text-info mb-2">
-                                    {{ $penugasan->jenis === 'pokok' ? 'Tugas Pokok' : 'Tugas Tambahan' }}
-                                </span>
-                                @if ($penugasan->is_mandiri)
-                                    <span class="badge bg-secondary bg-opacity-25 text-body mb-2"><i class="bi bi-person-check me-1"></i>Mandiri</span>
-                                @endif
-                                @if ($penugasan->mode_grup)
-                                    <span class="badge bg-secondary bg-opacity-25 text-body mb-2">
-                                        <i class="bi bi-people me-1"></i>{{ $penugasan->mode_grup === 'kolektif' ? 'Kolektif' : 'Per Orang' }}
-                                        {{ $penugasan->is_koordinator ? '(Koordinator)' : '' }}
-                                    </span>
-                                @endif
-                                <h4 class="fw-bold mb-0">{{ $penugasan->nama_tugas }}</h4>
-                            </div>
-                            <span class="badge {{ $warnaStatus }} fs-6">{{ $labelStatus }}</span>
-                        </div>
-
-                        @if ($penugasan->deskripsi)
-                            <p class="mb-3">{{ $penugasan->deskripsi }}</p>
-                        @endif
-
-                        @if ($penugasan->status === 'ditolak' && $penugasan->alasan_reject)
-                            <div class="alert alert-dark mb-3">
-                                <small class="text-muted d-block mb-1">Alasan Ditolak</small>
-                                {{ $penugasan->alasan_reject }}
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Aksi Kontekstual -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <h6 class="card-title mb-3">Aksi</h6>
-                        <div class="d-flex flex-wrap gap-2">
-                            @if ($izin['terima'] && ! $bukanKoordinatorGrupKolektif)
-                                <button class="btn btn-success" onclick="aksiSederhana('terima', 'Penugasan diterima')">
-                                    <i class="bi bi-check-circle me-1"></i>Terima Tugas
-                                </button>
-                            @endif
-                            @if ($izin['tolak'] && ! $bukanKoordinatorGrupKolektif)
-                                <button class="btn btn-outline-danger" onclick="tolakTugas()">
-                                    <i class="bi bi-x-circle me-1"></i>Tolak Tugas
-                                </button>
-                            @endif
-                            @if ($isPegawai && in_array($penugasan->status, ['proses', 'revisi', 'terlambat']))
-                                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#progressModal">
-                                    <i class="bi bi-graph-up me-1"></i>Catat Progress
-                                </button>
-                            @endif
-                            @if ($izin['uploadEviden'])
-                                <a href="{{ route('penugasan.form-upload-bukti', $penugasan->id) }}" class="btn btn-primary">
-                                    <i class="bi bi-cloud-upload me-1"></i>Upload Bukti Pengerjaan
-                                </a>
-                            @endif
-                            @if ($izin['ajukanPerpanjangan'])
-                                <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#perpanjanganModal">
-                                    <i class="bi bi-clock-history me-1"></i>Ajukan Perpanjangan
-                                </button>
-                            @endif
-                            @if ($izin['submit'] && ! $bukanKoordinatorGrupKolektif)
-                                <button class="btn btn-success" onclick="aksiSederhana('submit', 'Penugasan diajukan Selesai')">
-                                    <i class="bi bi-send-check me-1"></i>Selesaikan Tugas
-                                </button>
-                            @endif
-                            @if ($izin['approveMandiri'])
-                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveMandiriModal">
-                                    <i class="bi bi-check-circle me-1"></i>Setujui Tugas Mandiri
-                                </button>
-                            @endif
-                            @if ($izin['rejectMandiri'])
-                                <button class="btn btn-outline-danger" onclick="rejectMandiri()">
-                                    <i class="bi bi-x-circle me-1"></i>Tolak Tugas Mandiri
-                                </button>
-                            @endif
-                            @if ($izin['putuskanPerpanjangan'] && $pengajuanMenunggu)
-                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#putuskanPerpanjanganModal">
-                                    <i class="bi bi-hourglass-split me-1"></i>Putuskan Perpanjangan
-                                </button>
-                            @endif
-                            @if ($izin['revisi'])
-                                <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#revisiModal">
-                                    <i class="bi bi-arrow-repeat me-1"></i>Berikan Revisi
-                                </button>
-                            @endif
-                            @if ($izin['nilai'])
-                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nilaiModal">
-                                    <i class="bi bi-star me-1"></i>Beri Penilaian
-                                </button>
-                            @endif
-                            @if ($penugasan->is_mandiri && $penugasan->status === 'ditolak' && $izin['update'])
-                                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ubahAjukanUlangModal">
-                                    <i class="bi bi-pencil me-1"></i>Ubah &amp; Ajukan Ulang
-                                </button>
-                            @endif
-                            @if ($penugasan->is_mandiri && $penugasan->status === 'ditolak' && $izin['delete'])
-                                <button class="btn btn-outline-danger" onclick="hapusTugas()">
-                                    <i class="bi bi-trash me-1"></i>Hapus
-                                </button>
-                            @endif
-                            @if (!$izin['terima'] && !$izin['tolak'] && !$izin['submit'] && $penugasan->status === 'pending' && $penugasan->is_mandiri)
-                                <span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Menunggu persetujuan atasan</span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Accordion: Ringkasan, Progress & Timeline, Evidence, Penilaian -->
-                <div class="accordion" id="detailAccordion">
-                    <!-- Ringkasan -->
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRingkasan">
-                                Ringkasan
-                            </button>
-                        </h2>
-                        <div id="collapseRingkasan" class="accordion-collapse collapse show" data-bs-parent="#detailAccordion">
-                            <div class="accordion-body">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Pegawai</small>
-                                        <div class="fw-semibold">{{ $penugasan->pegawai->nama }}</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Pemberi Tugas</small>
-                                        <div class="fw-semibold">{{ $penugasan->pemberiTugas->nama ?? 'Mandiri' }}</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Prioritas</small>
-                                        @if ($izin['update'] && in_array($penugasan->status, ['pending', 'proses']))
-                                            <select class="form-select form-select-sm" style="max-width: 160px"
-                                                onchange="updatePrioritas(this.value)">
-                                                @foreach (['rendah', 'sedang', 'tinggi'] as $p)
-                                                    <option value="{{ $p }}" {{ $penugasan->prioritas === $p ? 'selected' : '' }}>{{ ucfirst($p) }}</option>
-                                                @endforeach
-                                            </select>
-                                        @else
-                                            <div class="fw-semibold">{{ ucfirst($penugasan->prioritas) }}</div>
+        <section class="section">
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Header -->
+                    <div class="card shadow-sm border-start border-4 {{ $warnaBorder }} mb-3 py-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                <div>
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        <span class="badge bg-info bg-opacity-10 text-info">
+                                            <i class="bi {{ $penugasan->jenis === 'pokok' ? 'bi-bookmark-star' : 'bi-bookmark-plus' }} me-1"></i>
+                                            {{ $penugasan->jenis === 'pokok' ? 'Tugas Pokok' : 'Tugas Tambahan' }}
+                                        </span>
+                                        @if ($penugasan->is_mandiri)
+                                            <span class="badge bg-secondary bg-opacity-25 text-body"><i class="bi bi-person-check me-1"></i>Mandiri</span>
                                         @endif
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Tanggal Mulai</small>
-                                        <div class="fw-semibold">{{ $penugasan->tanggal_mulai->format('d M Y') }}</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Deadline</small>
-                                        <div class="fw-semibold">
-                                            {{ optional($penugasan->deadline_terbaru)->format('d M Y') }}
-                                            @if ($penugasan->deadline_terbaru && ! $penugasan->deadline_terbaru->isSameDay($penugasan->tanggal_selesai))
-                                                <span class="badge bg-warning bg-opacity-25 text-warning-emphasis">
-                                                    Diperbarui dari {{ $penugasan->tanggal_selesai->format('d M Y') }}
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    @if ($penugasan->target_value)
-                                        <div class="col-md-4">
-                                            <small class="text-muted d-block">Target</small>
-                                            <div class="fw-semibold">{{ $penugasan->target_value }} {{ $penugasan->satuan }}</div>
-                                        </div>
-                                    @endif
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Bobot</small>
-                                        @if ($izin['update'] && $penugasan->realisasi_persen === null)
-                                            <div class="input-group input-group-sm" style="max-width: 160px">
-                                                <input type="number" class="form-control" id="bobotInput" min="0" max="100"
-                                                    step="0.01" value="{{ $penugasan->bobot_persen }}">
-                                                <button class="btn btn-outline-secondary" onclick="updateBobot()">Simpan</button>
-                                            </div>
-                                        @else
-                                            <div class="fw-semibold">{{ $penugasan->bobot_persen ?? '-' }}%</div>
+                                        @if ($penugasan->mode_grup)
+                                            <span class="badge bg-secondary bg-opacity-25 text-body">
+                                                <i class="bi bi-people me-1"></i>{{ $penugasan->mode_grup === 'kolektif' ? 'Kolektif' : 'Per Orang' }}{{ $penugasan->is_koordinator ? ' (Koordinator)' : '' }}
+                                            </span>
                                         @endif
+                                        <span class="badge {{ $prioritasBadgeMap[$penugasan->prioritas] ?? 'bg-secondary' }}">
+                                            <i class="bi bi-flag me-1"></i>{{ ucfirst($penugasan->prioritas) }}
+                                        </span>
                                     </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Progress</small>
-                                        <div class="fw-semibold">{{ $penugasan->progress_persen }}%</div>
-                                    </div>
+                                    <h4 class="fw-bold mb-0">{{ $penugasan->nama_tugas }}</h4>
                                 </div>
+                                <span class="badge {{ $warnaStatus }} fs-6 px-3 py-2">{{ $labelStatus }}</span>
                             </div>
+
+                            @if ($penugasan->deskripsi)
+                                <p class="text-muted mb-0">{{ $penugasan->deskripsi }}</p>
+                            @endif
+
+                            @if ($penugasan->status === 'ditolak' && $penugasan->alasan_reject)
+                                <div class="alert alert-dark mt-3 mb-0 py-2">
+                                    <small class="text-muted d-block mb-1"><i class="bi bi-info-circle me-1"></i>Alasan Ditolak</small>
+                                    {{ $penugasan->alasan_reject }}
+                                </div>
+                            @endif
                         </div>
                     </div>
 
-                    <!-- Progress & Timeline -->
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTimeline">
-                                Progress &amp; Timeline
-                            </button>
-                        </h2>
-                        <div id="collapseTimeline" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                            <div class="accordion-body">
-                                @forelse ($timeline as $entri)
-                                    @if ($entri['tipe'] === 'progress')
-                                        <div class="d-flex justify-content-between border-bottom py-2">
-                                            <div>
-                                                <div class="fw-semibold">{{ $entri['item']->deskripsi_kegiatan }}</div>
-                                                @if ($entri['item']->kendala)
-                                                    <small class="text-danger">Kendala: {{ $entri['item']->kendala }}</small>
-                                                @endif
-                                                <small class="text-muted d-block">{{ $entri['item']->tanggal->format('d M Y') }}</small>
-                                            </div>
-                                            <span class="badge bg-primary align-self-start">{{ $entri['item']->progress_persen }}%</span>
-                                        </div>
-                                    @else
-                                        <div class="border-bottom py-2">
-                                            <div class="d-flex justify-content-between">
-                                                <strong>Revisi ke-{{ $entri['item']->revisi_ke }}</strong>
-                                                <small class="text-muted">{{ optional($entri['item']->tanggal_revisi)->format('d M Y') }}</small>
-                                            </div>
-                                            <p class="mb-1 small">{{ $entri['item']->catatan_revisi }}</p>
-                                            <small class="text-muted">
-                                                Oleh: {{ $entri['item']->direvisiOleh->nama ?? '-' }} •
-                                                Deadline baru: {{ optional($entri['item']->deadline_revisi)->format('d M Y') }}
-                                            </small>
-                                        </div>
-                                    @endif
-                                @empty
-                                    <p class="text-muted mb-0">Belum ada catatan progress atau revisi.</p>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Evidence -->
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvidence">
-                                Evidence &amp; Perpanjangan Waktu ({{ $penugasan->attachedFiles->count() }})
-                            </button>
-                        </h2>
-                        <div id="collapseEvidence" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                            <div class="accordion-body">
-                                <h6 class="small text-muted text-uppercase">Bukti Pengerjaan</h6>
-                                @forelse ($penugasan->attachedFiles as $file)
-                                    <div class="d-flex align-items-center justify-content-between border-bottom py-2">
-                                        <div><i class="bi bi-file-earmark-text text-primary me-2"></i>{{ $file->original_name }}</div>
-                                        <a href="{{ route('terminaldata.filesData.download', $file->id) }}" class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-download"></i>
-                                        </a>
-                                    </div>
-                                @empty
-                                    <p class="text-muted small">Belum ada file bukti diupload.</p>
-                                @endforelse
-
-                                @if ($penugasan->perpanjanganWaktu->isNotEmpty())
-                                    <h6 class="small text-muted text-uppercase mt-3">Riwayat Perpanjangan Waktu</h6>
-                                    @foreach ($penugasan->perpanjanganWaktu as $pengajuan)
-                                        @php
-                                            $warnaPengajuan = match ($pengajuan->status) {
-                                                'disetujui' => 'bg-success',
-                                                'ditolak' => 'bg-dark',
-                                                default => 'bg-warning text-dark',
-                                            };
-                                        @endphp
-                                        <div class="border-bottom py-2">
-                                            <div class="d-flex justify-content-between">
-                                                <strong>Pengajuan ke-{{ $pengajuan->ke_berapa }}</strong>
-                                                <span class="badge {{ $warnaPengajuan }}">{{ ucfirst($pengajuan->status) }}</span>
-                                            </div>
-                                            <small class="text-muted d-block">
-                                                Minta sampai {{ optional($pengajuan->deadline_diminta)->format('d M Y') }}
-                                                @if ($pengajuan->deadline_disetujui)
-                                                    → disetujui sampai {{ $pengajuan->deadline_disetujui->format('d M Y') }}
-                                                @endif
-                                            </small>
-                                            <p class="small mb-0">{{ $pengajuan->alasan_pengajuan }}</p>
-                                        </div>
-                                    @endforeach
+                    <!-- Aksi Kontekstual -->
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title text-uppercase text-muted mb-3"><i class="bi bi-lightning-charge me-1"></i>Aksi</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @if ($izin['terima'] && ! $bukanKoordinatorGrupKolektif)
+                                    <button class="btn btn-success btn-sm" onclick="aksiSederhana('terima', 'Penugasan diterima')">
+                                        <i class="bi bi-check-circle me-1"></i>Terima Tugas
+                                    </button>
+                                @endif
+                                @if ($izin['tolak'] && ! $bukanKoordinatorGrupKolektif)
+                                    <button class="btn btn-outline-danger btn-sm" onclick="tolakTugas()">
+                                        <i class="bi bi-x-circle me-1"></i>Tolak Tugas
+                                    </button>
+                                @endif
+                                @if ($isPegawai && in_array($penugasan->status, ['proses', 'revisi', 'terlambat']))
+                                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#progressModal">
+                                        <i class="bi bi-graph-up me-1"></i>Catat Progress
+                                    </button>
+                                @endif
+                                @if ($izin['uploadEviden'])
+                                    <a href="{{ route('penugasan.form-upload-bukti', $penugasan->id) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-cloud-upload me-1"></i>Upload Bukti Pengerjaan
+                                    </a>
+                                @endif
+                                @if ($izin['ajukanPerpanjangan'])
+                                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#perpanjanganModal">
+                                        <i class="bi bi-clock-history me-1"></i>Ajukan Perpanjangan
+                                    </button>
+                                @endif
+                                @if ($izin['submit'] && ! $bukanKoordinatorGrupKolektif)
+                                    <button class="btn btn-success btn-sm" onclick="aksiSederhana('submit', 'Penugasan diajukan Selesai')">
+                                        <i class="bi bi-send-check me-1"></i>Selesaikan Tugas
+                                    </button>
+                                @endif
+                                @if ($izin['approveMandiri'])
+                                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveMandiriModal">
+                                        <i class="bi bi-check-circle me-1"></i>Setujui Tugas Mandiri
+                                    </button>
+                                @endif
+                                @if ($izin['rejectMandiri'])
+                                    <button class="btn btn-outline-danger btn-sm" onclick="rejectMandiri()">
+                                        <i class="bi bi-x-circle me-1"></i>Tolak Tugas Mandiri
+                                    </button>
+                                @endif
+                                @if ($izin['putuskanPerpanjangan'] && $pengajuanMenunggu)
+                                    <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#putuskanPerpanjanganModal">
+                                        <i class="bi bi-hourglass-split me-1"></i>Putuskan Perpanjangan
+                                    </button>
+                                @endif
+                                @if ($izin['revisi'])
+                                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#revisiModal">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Berikan Revisi
+                                    </button>
+                                @endif
+                                @if ($izin['nilai'])
+                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#nilaiModal">
+                                        <i class="bi bi-star me-1"></i>Beri Penilaian
+                                    </button>
+                                @endif
+                                @if ($penugasan->is_mandiri && $penugasan->status === 'ditolak' && $izin['update'])
+                                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ubahAjukanUlangModal">
+                                        <i class="bi bi-pencil me-1"></i>Ubah &amp; Ajukan Ulang
+                                    </button>
+                                @endif
+                                @if ($penugasan->is_mandiri && $penugasan->status === 'ditolak' && $izin['delete'])
+                                    <button class="btn btn-outline-danger btn-sm" onclick="hapusTugas()">
+                                        <i class="bi bi-trash me-1"></i>Hapus
+                                    </button>
+                                @endif
+                                @if (!$izin['terima'] && !$izin['tolak'] && !$izin['submit'] && $penugasan->status === 'pending' && $penugasan->is_mandiri)
+                                    <span class="text-muted small align-self-center"><i class="bi bi-hourglass-split me-1"></i>Menunggu persetujuan atasan</span>
                                 @endif
                             </div>
                         </div>
                     </div>
 
-                    <!-- Penilaian -->
-                    @if ($penugasan->status === 'selesai')
+                    <!-- Accordion: Ringkasan, Progress & Timeline, Evidence, Penilaian -->
+                    <div class="accordion detail-accordion" id="detailAccordion">
+                        <!-- Ringkasan -->
                         <div class="accordion-item">
                             <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePenilaian">
-                                    Penilaian
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRingkasan">
+                                    <i class="bi bi-card-checklist me-2"></i>Ringkasan
                                 </button>
                             </h2>
-                            <div id="collapsePenilaian" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
+                            <div id="collapseRingkasan" class="accordion-collapse collapse show" data-bs-parent="#detailAccordion">
                                 <div class="accordion-body">
-                                    @if ($penugasan->realisasi_persen === null)
-                                        <p class="text-muted mb-0">Belum dinilai oleh pemberi tugas.</p>
-                                    @else
-                                        <div class="row g-3">
-                                            <div class="col-md-3">
-                                                <small class="text-muted d-block">Realisasi</small>
-                                                <div class="fw-semibold">{{ $penugasan->realisasi_persen }}%</div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <small class="text-muted d-block">Nilai Awal</small>
-                                                <div class="fw-semibold">{{ $penugasan->nilai_awal }}</div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <small class="text-muted d-block">Potongan Terlambat</small>
-                                                <div class="fw-semibold">{{ $penugasan->persentase_terlambat }}%</div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <small class="text-muted d-block">Nilai Akhir</small>
-                                                <div class="fw-bold text-success fs-5">{{ $penugasan->nilai_akhir }}</div>
+                                    <div class="row g-3">
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-person"></i></div>
+                                            <div>
+                                                <small class="text-muted d-block">Pegawai</small>
+                                                <div class="fw-semibold">{{ $penugasan->pegawai->nama }}</div>
                                             </div>
                                         </div>
-                                        @if ($penugasan->catatan_validasi)
-                                            <div class="alert alert-success mt-3 mb-0">
-                                                <small class="text-muted d-block mb-1">Catatan ({{ $penugasan->validator->nama ?? '-' }})</small>
-                                                {{ $penugasan->catatan_validasi }}
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-person-badge"></i></div>
+                                            <div>
+                                                <small class="text-muted d-block">Pemberi Tugas</small>
+                                                <div class="fw-semibold">{{ $penugasan->pemberiTugas->nama ?? 'Mandiri' }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-flag"></i></div>
+                                            <div class="flex-grow-1">
+                                                <small class="text-muted d-block">Prioritas</small>
+                                                @if ($izin['update'] && in_array($penugasan->status, ['pending', 'proses']))
+                                                    <select class="form-select form-select-sm mt-1" style="max-width: 160px"
+                                                        onchange="updatePrioritas(this.value)">
+                                                        @foreach (['rendah', 'sedang', 'tinggi'] as $p)
+                                                            <option value="{{ $p }}" {{ $penugasan->prioritas === $p ? 'selected' : '' }}>{{ ucfirst($p) }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @else
+                                                    <div class="fw-semibold">{{ ucfirst($penugasan->prioritas) }}</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-calendar-event"></i></div>
+                                            <div>
+                                                <small class="text-muted d-block">Tanggal Mulai</small>
+                                                <div class="fw-semibold">{{ $penugasan->tanggal_mulai->format('d M Y') }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-calendar-check"></i></div>
+                                            <div>
+                                                <small class="text-muted d-block">Deadline</small>
+                                                <div class="fw-semibold">
+                                                    {{ optional($penugasan->deadline_terbaru)->format('d M Y') }}
+                                                    @if ($penugasan->deadline_terbaru && ! $penugasan->deadline_terbaru->isSameDay($penugasan->tanggal_selesai))
+                                                        <span class="badge bg-warning bg-opacity-25 text-warning-emphasis">
+                                                            Diperbarui dari {{ $penugasan->tanggal_selesai->format('d M Y') }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @if ($penugasan->target_value)
+                                            <div class="col-md-4 info-tile">
+                                                <div class="info-tile-icon"><i class="bi bi-bullseye"></i></div>
+                                                <div>
+                                                    <small class="text-muted d-block">Target</small>
+                                                    <div class="fw-semibold">{{ $penugasan->target_value }} {{ $penugasan->satuan }}</div>
+                                                </div>
                                             </div>
                                         @endif
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-percent"></i></div>
+                                            <div class="flex-grow-1">
+                                                <small class="text-muted d-block">Bobot</small>
+                                                @if ($izin['update'] && $penugasan->realisasi_persen === null)
+                                                    <div class="input-group input-group-sm mt-1" style="max-width: 160px">
+                                                        <input type="number" class="form-control" id="bobotInput" min="0" max="100"
+                                                            step="0.01" value="{{ $penugasan->bobot_persen }}">
+                                                        <button class="btn btn-outline-secondary" onclick="updateBobot()">Simpan</button>
+                                                    </div>
+                                                @else
+                                                    <div class="fw-semibold">{{ $penugasan->bobot_persen ?? '-' }}%</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 info-tile">
+                                            <div class="info-tile-icon"><i class="bi bi-speedometer2"></i></div>
+                                            <div class="flex-grow-1">
+                                                <small class="text-muted d-block">Progress</small>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="progress flex-grow-1" style="height: 6px;">
+                                                        <div class="progress-bar" role="progressbar" style="width: {{ $penugasan->progress_persen }}%"></div>
+                                                    </div>
+                                                    <span class="fw-semibold small">{{ $penugasan->progress_persen }}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress & Timeline -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTimeline">
+                                    <i class="bi bi-clock-history me-2"></i>Progress &amp; Timeline
+                                    <span class="badge bg-secondary bg-opacity-50 text-body ms-2">{{ $timeline->count() }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseTimeline" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
+                                <div class="accordion-body">
+                                    @forelse ($timeline as $entri)
+                                        <div class="timeline-item">
+                                            <div class="timeline-marker {{ $entri['tipe'] === 'progress' ? 'bg-primary' : 'bg-warning' }}">
+                                                <i class="bi {{ $entri['tipe'] === 'progress' ? 'bi-graph-up' : 'bi-arrow-repeat' }}"></i>
+                                            </div>
+                                            <div class="timeline-content">
+                                                @if ($entri['tipe'] === 'progress')
+                                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                                        <div class="fw-semibold">{{ $entri['item']->deskripsi_kegiatan }}</div>
+                                                        <span class="badge bg-primary flex-shrink-0">{{ $entri['item']->progress_persen }}%</span>
+                                                    </div>
+                                                    @if ($entri['item']->kendala)
+                                                        <small class="text-danger d-block">Kendala: {{ $entri['item']->kendala }}</small>
+                                                    @endif
+                                                    <small class="text-muted">{{ $entri['item']->tanggal->format('d M Y') }}</small>
+                                                @else
+                                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                                        <strong>Revisi ke-{{ $entri['item']->revisi_ke }}</strong>
+                                                        <small class="text-muted flex-shrink-0">{{ optional($entri['item']->tanggal_revisi)->format('d M Y') }}</small>
+                                                    </div>
+                                                    <p class="mb-1 small">{{ $entri['item']->catatan_revisi }}</p>
+                                                    <small class="text-muted">
+                                                        Oleh: {{ $entri['item']->direvisiOleh->nama ?? '-' }} •
+                                                        Deadline baru: {{ optional($entri['item']->deadline_revisi)->format('d M Y') }}
+                                                    </small>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <p class="text-muted mb-0">Belum ada catatan progress atau revisi.</p>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evidence -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvidence">
+                                    <i class="bi bi-paperclip me-2"></i>Evidence &amp; Perpanjangan Waktu
+                                    <span class="badge bg-secondary bg-opacity-50 text-body ms-2">{{ $penugasan->attachedFiles->count() }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapseEvidence" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
+                                <div class="accordion-body">
+                                    <h6 class="small text-muted text-uppercase mb-2">Bukti Pengerjaan</h6>
+                                    @forelse ($penugasan->attachedFiles as $file)
+                                        <div class="d-flex align-items-center justify-content-between file-item px-2 py-2 rounded-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-file-earmark-text text-primary fs-5"></i>
+                                                <span class="small">{{ $file->original_name }}</span>
+                                            </div>
+                                            <a href="{{ route('terminaldata.filesData.download', $file->id) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                        </div>
+                                    @empty
+                                        <p class="text-muted small">Belum ada file bukti diupload.</p>
+                                    @endforelse
+
+                                    @if ($penugasan->perpanjanganWaktu->isNotEmpty())
+                                        <h6 class="small text-muted text-uppercase mt-4 mb-2">Riwayat Perpanjangan Waktu</h6>
+                                        @foreach ($penugasan->perpanjanganWaktu as $pengajuan)
+                                            @php
+                                                $warnaPengajuan = match ($pengajuan->status) {
+                                                    'disetujui' => 'bg-success',
+                                                    'ditolak' => 'bg-dark',
+                                                    default => 'bg-warning text-dark',
+                                                };
+                                            @endphp
+                                            <div class="border rounded-3 px-3 py-2 mb-2">
+                                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                                    <strong class="small">Pengajuan ke-{{ $pengajuan->ke_berapa }}</strong>
+                                                    <span class="badge {{ $warnaPengajuan }}">{{ ucfirst($pengajuan->status) }}</span>
+                                                </div>
+                                                <small class="text-muted d-block">
+                                                    Minta sampai {{ optional($pengajuan->deadline_diminta)->format('d M Y') }}
+                                                    @if ($pengajuan->deadline_disetujui)
+                                                        → disetujui sampai {{ $pengajuan->deadline_disetujui->format('d M Y') }}
+                                                    @endif
+                                                </small>
+                                                <p class="small mb-0 mt-1">{{ $pengajuan->alasan_pengajuan }}</p>
+                                            </div>
+                                        @endforeach
                                     @endif
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Penilaian -->
+                        @if ($penugasan->status === 'selesai')
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePenilaian">
+                                        <i class="bi bi-star me-2"></i>Penilaian
+                                    </button>
+                                </h2>
+                                <div id="collapsePenilaian" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
+                                    <div class="accordion-body">
+                                        @if ($penugasan->realisasi_persen === null)
+                                            <p class="text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Belum dinilai oleh pemberi tugas.</p>
+                                        @else
+                                            <div class="row g-3">
+                                                <div class="col-6 col-md-3">
+                                                    <small class="text-muted d-block">Realisasi</small>
+                                                    <div class="fw-semibold">{{ $penugasan->realisasi_persen }}%</div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <small class="text-muted d-block">Nilai Awal</small>
+                                                    <div class="fw-semibold">{{ $penugasan->nilai_awal }}</div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <small class="text-muted d-block">Potongan Terlambat</small>
+                                                    <div class="fw-semibold">{{ $penugasan->persentase_terlambat }}%</div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <small class="text-muted d-block">Nilai Akhir</small>
+                                                    <div class="fw-bold text-success fs-5">{{ $penugasan->nilai_akhir }}</div>
+                                                </div>
+                                            </div>
+                                            @if ($penugasan->catatan_validasi)
+                                                <div class="alert alert-success mt-3 mb-0">
+                                                    <small class="text-muted d-block mb-1">Catatan ({{ $penugasan->validator->nama ?? '-' }})</small>
+                                                    {{ $penugasan->catatan_validasi }}
+                                                </div>
+                                            @endif
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    @if ($penugasan->mode_grup && $penugasan->grupAnggota->isNotEmpty())
+                        <div class="card shadow-sm border-0 mb-3">
+                            <div class="card-header bg-white">
+                                <h6 class="card-title mb-0"><i class="bi bi-people me-2 text-primary"></i>Anggota Grup</h6>
+                            </div>
+                            <div class="card-body">
+                                @foreach ($penugasan->grupAnggota as $anggota)
+                                    <div class="d-flex justify-content-between align-items-center anggota-item px-2 py-2 rounded-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="avatar-circle-sm bg-primary bg-opacity-10 text-primary">
+                                                {{ strtoupper(substr($anggota->pegawai->nama ?? '-', 0, 2)) }}
+                                            </div>
+                                            <div>
+                                                <div class="small fw-semibold">{{ $anggota->pegawai->nama ?? '-' }}</div>
+                                                @if ($anggota->is_koordinator)
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 0.65rem;">Koordinator</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <a href="{{ route('penugasan.show', $anggota->id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
                     @endif
                 </div>
             </div>
-
-            <div class="col-lg-4">
-                @if ($penugasan->mode_grup && $penugasan->grupAnggota->isNotEmpty())
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-light">
-                            <h6 class="card-title mb-0"><i class="bi bi-people me-2"></i>Anggota Grup</h6>
-                        </div>
-                        <div class="card-body">
-                            @foreach ($penugasan->grupAnggota as $anggota)
-                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                    <span>{{ $anggota->pegawai->nama ?? '-' }} {{ $anggota->is_koordinator ? '(Koordinator)' : '' }}</span>
-                                    <a href="{{ route('penugasan.show', $anggota->id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </section>
+        </section>
+    </div>
 
     <!-- Modal Catat Progress -->
     <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="progressModalLabel">Catat Progress</h5>
+                    <h5 class="modal-title" id="progressModalLabel"><i class="bi bi-graph-up me-2"></i>Catat Progress</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
                 <div class="modal-body">
@@ -427,7 +496,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="perpanjanganModalLabel">Ajukan Perpanjangan Waktu</h5>
+                    <h5 class="modal-title" id="perpanjanganModalLabel"><i class="bi bi-clock-history me-2"></i>Ajukan Perpanjangan Waktu</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
                 <div class="modal-body">
@@ -457,7 +526,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="putuskanPerpanjanganModalLabel">Putuskan Perpanjangan Waktu</h5>
+                        <h5 class="modal-title" id="putuskanPerpanjanganModalLabel"><i class="bi bi-hourglass-split me-2"></i>Putuskan Perpanjangan Waktu</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                     </div>
                     <div class="modal-body">
@@ -492,7 +561,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="revisiModalLabel">Berikan Revisi</h5>
+                        <h5 class="modal-title" id="revisiModalLabel"><i class="bi bi-arrow-repeat me-2"></i>Berikan Revisi</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                     </div>
                     <div class="modal-body">
@@ -520,7 +589,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="nilaiModalLabel">Beri Penilaian</h5>
+                        <h5 class="modal-title" id="nilaiModalLabel"><i class="bi bi-star me-2"></i>Beri Penilaian</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                     </div>
                     <div class="modal-body">
@@ -561,7 +630,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="approveMandiriModalLabel">Setujui Tugas Mandiri</h5>
+                        <h5 class="modal-title" id="approveMandiriModalLabel"><i class="bi bi-check-circle me-2"></i>Setujui Tugas Mandiri</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                     </div>
                     <div class="modal-body">
@@ -591,7 +660,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="ubahAjukanUlangModalLabel">Ubah &amp; Ajukan Ulang</h5>
+                        <h5 class="modal-title" id="ubahAjukanUlangModalLabel"><i class="bi bi-pencil me-2"></i>Ubah &amp; Ajukan Ulang</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                     </div>
                     <div class="modal-body">
@@ -619,262 +688,150 @@
             </div>
         </div>
     @endif
-@endsection
 
-@push('scripts')
-    <script>
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-        const penugasanId = '{{ $penugasan->id }}';
-
-        function reloadWithMessage(message) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: message,
-                timer: 1500,
-                showConfirmButton: false
-            }).then(() => window.location.reload());
-        }
-
-        function showError(message) {
-            Swal.fire('Gagal', message || 'Terjadi kesalahan', 'error');
-        }
-
-        function postJson(url, payload = {}) {
-            return fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                })
-                .then(r => r.json());
-        }
-
-        function aksiSederhana(aksi, pesanSukses) {
-            postJson(`{{ url('/penugasan') }}/${penugasanId}/${aksi}`)
-                .then(data => data.success ? reloadWithMessage(data.message || pesanSukses) : showError(data.message));
-        }
-
-        function tolakTugas() {
-            Swal.fire({
-                title: 'Alasan Penolakan',
-                input: 'textarea',
-                inputPlaceholder: 'Jelaskan alasan menolak tugas ini...',
-                showCancelButton: true,
-                confirmButtonText: 'Tolak Tugas',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed && result.value) {
-                    postJson(`{{ url('/penugasan') }}/${penugasanId}/tolak`, {
-                            alasan_penolakan: result.value
-                        })
-                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
-                }
-            });
-        }
-
-        function hapusTugas() {
-            Swal.fire({
-                title: 'Hapus Penugasan?',
-                text: 'Tindakan ini tidak bisa dibatalkan.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Hapus',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-CSRF-TOKEN': csrfToken,
-                                'Accept': 'application/json'
-                            }
-                        })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire('Berhasil', data.message, 'success')
-                                    .then(() => window.location.href = "{{ route('penugasan.tugas-saya') }}");
-                            } else {
-                                showError(data.message);
-                            }
-                        });
-                }
-            });
-        }
-
-        function simpanProgress() {
-            const payload = {
-                progress_persen: document.getElementById('progressPersen').value,
-                deskripsi_kegiatan: document.getElementById('deskripsiKegiatan').value,
-                kendala: document.getElementById('kendala').value,
-            };
-            postJson(`{{ url('/penugasan') }}/${penugasanId}/update-progress`, payload)
-                .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
-        }
-
-        function ajukanPerpanjangan() {
-            const payload = {
-                deadline_diminta: document.getElementById('deadlineDiminta').value,
-                alasan_pengajuan: document.getElementById('alasanPengajuan').value,
-            };
-            postJson(`{{ url('/penugasan') }}/${penugasanId}/perpanjangan-waktu`, payload)
-                .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
-        }
-
-        @if ($izin['putuskanPerpanjangan'] && $pengajuanMenunggu)
-            function putuskanPerpanjangan(disetujui) {
-                const url =
-                    `{{ url('/penugasan') }}/${penugasanId}/perpanjangan-waktu/{{ $pengajuanMenunggu->id }}/${disetujui ? 'setujui' : 'tolak'}`;
-                const payload = {
-                    catatan_atasan: document.getElementById('catatanAtasanPerpanjangan').value,
-                };
-                if (disetujui) {
-                    payload.deadline_disetujui = document.getElementById('deadlineDisetujui').value;
-                }
-                postJson(url, payload).then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+    @push('styles')
+        <style>
+            /* Konsistensi tipografi/tombol dengan halaman Penugasan Pegawai */
+            .penugasan-detail-page {
+                font-size: 0.925rem;
             }
-        @endif
 
-        @if ($izin['revisi'])
-            function simpanRevisi() {
-                const payload = {
-                    catatan_revisi: document.getElementById('catatanRevisi').value,
-                    deadline_baru: document.getElementById('deadlineBaruRevisi').value,
-                };
-                postJson(`{{ url('/penugasan') }}/${penugasanId}/revisi`, payload)
-                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+            .penugasan-detail-page .pagetitle h1 {
+                font-size: 1.6rem;
             }
-        @endif
 
-        @if ($izin['nilai'])
-            function hitungPreviewNilai() {
-                const bobot = document.getElementById('nilaiBobot')?.value ?? '{{ $penugasan->bobot_persen }}';
-                const realisasi = document.getElementById('nilaiRealisasi').value;
-                if (!bobot || realisasi === '') {
-                    document.getElementById('previewNilaiAlert').classList.add('d-none');
-                    return;
-                }
-
-                fetch("{{ route('penugasan.tim.preview-penilaian') }}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            penugasan_id: penugasanId,
-                            bobot_persen: bobot,
-                            realisasi_persen: realisasi
-                        })
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById('previewTerlambat').textContent = data.data.persentase_terlambat;
-                            document.getElementById('previewNilaiAkhir').textContent = data.data.nilai_akhir;
-                            document.getElementById('previewNilaiAlert').classList.remove('d-none');
-                        }
-                    });
+            .penugasan-detail-page .btn {
+                font-size: 0.825rem;
             }
-            document.getElementById('nilaiRealisasi')?.addEventListener('input', hitungPreviewNilai);
-            document.getElementById('nilaiBobot')?.addEventListener('input', hitungPreviewNilai);
 
-            function simpanNilai() {
-                const payload = {
-                    realisasi_persen: document.getElementById('nilaiRealisasi').value,
-                    catatan_validasi: document.getElementById('catatanValidasi').value,
-                };
-                const bobotInput = document.getElementById('nilaiBobot');
-                if (bobotInput) {
-                    payload.bobot_persen = bobotInput.value;
-                }
-                postJson(`{{ url('/penugasan') }}/${penugasanId}/nilai`, payload)
-                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+            .penugasan-detail-page .badge {
+                font-weight: 600;
             }
-        @endif
 
-        @if ($izin['rejectMandiri'])
-            function rejectMandiri() {
+            /* Accordion */
+            .detail-accordion .accordion-item {
+                border: none;
+                margin-bottom: 0.5rem;
+                border-radius: 0.5rem !important;
+                overflow: hidden;
+                box-shadow: 0 1px 2px rgba(1, 41, 112, 0.06);
+            }
+
+            .detail-accordion .accordion-button {
+                font-weight: 600;
+                font-size: 0.9rem;
+                background-color: #fff;
+            }
+
+            .detail-accordion .accordion-button:not(.collapsed) {
+                background-color: rgba(65, 84, 241, 0.06);
+                color: #4154f1;
+                box-shadow: none;
+            }
+
+            .detail-accordion .accordion-button:focus {
+                box-shadow: none;
+            }
+
+            /* Ringkasan info tiles */
+            .info-tile {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.65rem;
+            }
+
+            .info-tile-icon {
+                flex-shrink: 0;
+                width: 34px;
+                height: 34px;
+                border-radius: 8px;
+                background: rgba(65, 84, 241, 0.08);
+                color: #4154f1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.95rem;
+            }
+
+            /* Timeline */
+            .timeline-item {
+                position: relative;
+                padding-left: 2.5rem;
+                padding-bottom: 1.25rem;
+            }
+
+            .timeline-item:not(:last-child)::before {
+                content: '';
+                position: absolute;
+                left: 15px;
+                top: 32px;
+                bottom: 0;
+                width: 2px;
+                background-color: #e9ecef;
+            }
+
+            .timeline-marker {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-size: 0.85rem;
+            }
+
+            .timeline-content {
+                background: #f8f9fb;
+                border-radius: 0.5rem;
+                padding: 0.6rem 0.85rem;
+            }
+
+            /* File & anggota list hover */
+            .file-item:hover,
+            .anggota-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .avatar-circle-sm {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+        </style>
+    @endpush
+
+    @push('scripts')
+        <script>
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+            const penugasanId = '{{ $penugasan->id }}';
+
+            function reloadWithMessage(message) {
                 Swal.fire({
-                    title: 'Alasan Penolakan Tugas Mandiri',
-                    input: 'textarea',
-                    inputPlaceholder: 'Jelaskan alasan menolak tugas mandiri ini...',
-                    showCancelButton: true,
-                    confirmButtonText: 'Tolak',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed && result.value) {
-                        postJson(`{{ url('/penugasan') }}/${penugasanId}/reject-mandiri`, {
-                                alasan_reject: result.value
-                            })
-                            .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
-                    }
-                });
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => window.location.reload());
             }
-        @endif
 
-        @if ($izin['approveMandiri'])
-            function approveMandiri() {
-                const prioritas = document.getElementById('approvePrioritas').value;
-                const payload = prioritas ? {
-                    prioritas
-                } : {};
-                postJson(`{{ url('/penugasan') }}/${penugasanId}/approve-mandiri`, payload)
-                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+            function showError(message) {
+                Swal.fire('Gagal', message || 'Terjadi kesalahan', 'error');
             }
-        @endif
 
-        @if ($izin['update'] && in_array($penugasan->status, ['pending', 'proses']))
-            function updatePrioritas(value) {
-                fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            prioritas: value
-                        })
-                    })
-                    .then(r => r.json())
-                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
-            }
-        @endif
-
-        @if ($izin['update'] && $penugasan->realisasi_persen === null)
-            function updateBobot() {
-                const value = document.getElementById('bobotInput').value;
-                fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            bobot_persen: value
-                        })
-                    })
-                    .then(r => r.json())
-                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
-            }
-        @endif
-
-        @if ($penugasan->is_mandiri && $penugasan->status === 'ditolak' && $izin['update'])
-            function ubahAjukanUlang() {
-                const payload = {
-                    nama_tugas: document.getElementById('ubahNamaTugas').value,
-                    deskripsi: document.getElementById('ubahDeskripsi').value,
-                    tanggal_selesai: document.getElementById('ubahTanggalSelesai').value,
-                };
-                fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
-                        method: 'PUT',
+            function postJson(url, payload = {}) {
+                return fetch(url, {
+                        method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': csrfToken,
                             'Content-Type': 'application/json',
@@ -882,9 +839,242 @@
                         },
                         body: JSON.stringify(payload)
                     })
-                    .then(r => r.json())
+                    .then(r => r.json());
+            }
+
+            function aksiSederhana(aksi, pesanSukses) {
+                postJson(`{{ url('/penugasan') }}/${penugasanId}/${aksi}`)
+                    .then(data => data.success ? reloadWithMessage(data.message || pesanSukses) : showError(data.message));
+            }
+
+            function tolakTugas() {
+                Swal.fire({
+                    title: 'Alasan Penolakan',
+                    input: 'textarea',
+                    inputPlaceholder: 'Jelaskan alasan menolak tugas ini...',
+                    showCancelButton: true,
+                    confirmButtonText: 'Tolak Tugas',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed && result.value) {
+                        postJson(`{{ url('/penugasan') }}/${penugasanId}/tolak`, {
+                                alasan_penolakan: result.value
+                            })
+                            .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                    }
+                });
+            }
+
+            function hapusTugas() {
+                Swal.fire({
+                    title: 'Hapus Penugasan?',
+                    text: 'Tindakan ini tidak bisa dibatalkan.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': csrfToken,
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire('Berhasil', data.message, 'success')
+                                        .then(() => window.location.href = "{{ route('penugasan.tugas-saya') }}");
+                                } else {
+                                    showError(data.message);
+                                }
+                            });
+                    }
+                });
+            }
+
+            function simpanProgress() {
+                const payload = {
+                    progress_persen: document.getElementById('progressPersen').value,
+                    deskripsi_kegiatan: document.getElementById('deskripsiKegiatan').value,
+                    kendala: document.getElementById('kendala').value,
+                };
+                postJson(`{{ url('/penugasan') }}/${penugasanId}/update-progress`, payload)
                     .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
             }
-        @endif
-    </script>
-@endpush
+
+            function ajukanPerpanjangan() {
+                const payload = {
+                    deadline_diminta: document.getElementById('deadlineDiminta').value,
+                    alasan_pengajuan: document.getElementById('alasanPengajuan').value,
+                };
+                postJson(`{{ url('/penugasan') }}/${penugasanId}/perpanjangan-waktu`, payload)
+                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+            }
+
+            @if ($izin['putuskanPerpanjangan'] && $pengajuanMenunggu)
+                function putuskanPerpanjangan(disetujui) {
+                    const url =
+                        `{{ url('/penugasan') }}/${penugasanId}/perpanjangan-waktu/{{ $pengajuanMenunggu->id }}/${disetujui ? 'setujui' : 'tolak'}`;
+                    const payload = {
+                        catatan_atasan: document.getElementById('catatanAtasanPerpanjangan').value,
+                    };
+                    if (disetujui) {
+                        payload.deadline_disetujui = document.getElementById('deadlineDisetujui').value;
+                    }
+                    postJson(url, payload).then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+
+            @if ($izin['revisi'])
+                function simpanRevisi() {
+                    const payload = {
+                        catatan_revisi: document.getElementById('catatanRevisi').value,
+                        deadline_baru: document.getElementById('deadlineBaruRevisi').value,
+                    };
+                    postJson(`{{ url('/penugasan') }}/${penugasanId}/revisi`, payload)
+                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+
+            @if ($izin['nilai'])
+                function hitungPreviewNilai() {
+                    const bobot = document.getElementById('nilaiBobot')?.value ?? '{{ $penugasan->bobot_persen }}';
+                    const realisasi = document.getElementById('nilaiRealisasi').value;
+                    if (!bobot || realisasi === '') {
+                        document.getElementById('previewNilaiAlert').classList.add('d-none');
+                        return;
+                    }
+
+                    fetch("{{ route('penugasan.tim.preview-penilaian') }}", {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                penugasan_id: penugasanId,
+                                bobot_persen: bobot,
+                                realisasi_persen: realisasi
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById('previewTerlambat').textContent = data.data.persentase_terlambat;
+                                document.getElementById('previewNilaiAkhir').textContent = data.data.nilai_akhir;
+                                document.getElementById('previewNilaiAlert').classList.remove('d-none');
+                            }
+                        });
+                }
+                document.getElementById('nilaiRealisasi')?.addEventListener('input', hitungPreviewNilai);
+                document.getElementById('nilaiBobot')?.addEventListener('input', hitungPreviewNilai);
+
+                function simpanNilai() {
+                    const payload = {
+                        realisasi_persen: document.getElementById('nilaiRealisasi').value,
+                        catatan_validasi: document.getElementById('catatanValidasi').value,
+                    };
+                    const bobotInput = document.getElementById('nilaiBobot');
+                    if (bobotInput) {
+                        payload.bobot_persen = bobotInput.value;
+                    }
+                    postJson(`{{ url('/penugasan') }}/${penugasanId}/nilai`, payload)
+                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+
+            @if ($izin['rejectMandiri'])
+                function rejectMandiri() {
+                    Swal.fire({
+                        title: 'Alasan Penolakan Tugas Mandiri',
+                        input: 'textarea',
+                        inputPlaceholder: 'Jelaskan alasan menolak tugas mandiri ini...',
+                        showCancelButton: true,
+                        confirmButtonText: 'Tolak',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed && result.value) {
+                            postJson(`{{ url('/penugasan') }}/${penugasanId}/reject-mandiri`, {
+                                    alasan_reject: result.value
+                                })
+                                .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                        }
+                    });
+                }
+            @endif
+
+            @if ($izin['approveMandiri'])
+                function approveMandiri() {
+                    const prioritas = document.getElementById('approvePrioritas').value;
+                    const payload = prioritas ? {
+                        prioritas
+                    } : {};
+                    postJson(`{{ url('/penugasan') }}/${penugasanId}/approve-mandiri`, payload)
+                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+
+            @if ($izin['update'] && in_array($penugasan->status, ['pending', 'proses']))
+                function updatePrioritas(value) {
+                    fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                prioritas: value
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+
+            @if ($izin['update'] && $penugasan->realisasi_persen === null)
+                function updateBobot() {
+                    const value = document.getElementById('bobotInput').value;
+                    fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                bobot_persen: value
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+
+            @if ($penugasan->is_mandiri && $penugasan->status === 'ditolak' && $izin['update'])
+                function ubahAjukanUlang() {
+                    const payload = {
+                        nama_tugas: document.getElementById('ubahNamaTugas').value,
+                        deskripsi: document.getElementById('ubahDeskripsi').value,
+                        tanggal_selesai: document.getElementById('ubahTanggalSelesai').value,
+                    };
+                    fetch(`{{ url('/penugasan') }}/${penugasanId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(r => r.json())
+                        .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                }
+            @endif
+        </script>
+    @endpush
+@endsection

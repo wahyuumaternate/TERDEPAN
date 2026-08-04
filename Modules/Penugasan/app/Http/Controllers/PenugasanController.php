@@ -133,12 +133,59 @@ class PenugasanController extends Controller
     {
         $user = $request->user();
         $bisaMemberi = Gate::forUser($user)->allows('create', Penugasan::class);
+        $tab = $this->resolveTabTugasSaya($request, $bisaMemberi);
 
-        $tab = $request->get('tab', 'saya');
-        if (! in_array($tab, ['saya', 'diberikan'], true) || ($tab === 'diberikan' && ! $bisaMemberi)) {
-            $tab = 'saya';
+        $penugasan = $this->queryTugasSaya($request, $tab, $user)->paginate(12)->withQueryString();
+        $stats = $this->statsTugasSaya($tab, $user);
+
+        $perpanjanganMenunggu = collect();
+        if ($tab === 'diberikan') {
+            $perpanjanganMenunggu = PerpanjanganWaktu::where('status', PerpanjanganWaktu::STATUS_MENUNGGU)
+                ->whereHas('penugasan', fn ($q) => $q->where('pemberi_tugas_id', $user->id))
+                ->with(['penugasan:id,nama_tugas,pegawai_id', 'penugasan.pegawai:id,nama'])
+                ->get();
         }
 
+        $statusOptions = Penugasan::STATUSES;
+        $prioritasOptions = Penugasan::PRIORITASES;
+
+        return view('penugasan::penugasan.tugas-saya', compact(
+            'penugasan', 'tab', 'bisaMemberi', 'statusOptions', 'prioritasOptions', 'perpanjanganMenunggu', 'stats'
+        ));
+    }
+
+    /**
+     * Endpoint AJAX yang di-polling berkala oleh halaman Tugas Saya (fetch tiap
+     * beberapa detik) supaya tabel & statistik ringkas ter-update tanpa reload penuh.
+     * Mengembalikan potongan HTML yang sama persis dengan render awal, satu sumber
+     * markup/badge di partial `penugasan.partials.tugas-saya-tabel` — bukan
+     * duplikasi logic warna status di JavaScript.
+     */
+    public function tugasSayaData(Request $request)
+    {
+        $user = $request->user();
+        $bisaMemberi = Gate::forUser($user)->allows('create', Penugasan::class);
+        $tab = $this->resolveTabTugasSaya($request, $bisaMemberi);
+
+        $penugasan = $this->queryTugasSaya($request, $tab, $user)->paginate(12)->withQueryString();
+        $stats = $this->statsTugasSaya($tab, $user);
+
+        return view('penugasan::penugasan.partials.tugas-saya-tabel', compact('penugasan', 'tab', 'stats'));
+    }
+
+    private function resolveTabTugasSaya(Request $request, bool $bisaMemberi): string
+    {
+        $tab = $request->get('tab', 'saya');
+
+        if (! in_array($tab, ['saya', 'diberikan'], true) || ($tab === 'diberikan' && ! $bisaMemberi)) {
+            return 'saya';
+        }
+
+        return $tab;
+    }
+
+    private function queryTugasSaya(Request $request, string $tab, User $user)
+    {
         if ($tab === 'diberikan') {
             $query = Penugasan::where('pemberi_tugas_id', $user->id)
                 ->with([
@@ -164,34 +211,51 @@ class PenugasanController extends Controller
             $query->where('prioritas', $request->string('prioritas'));
         }
 
-        // Urutan prioritas kemendesakan: terlambat > revisi > proses > pending > sisanya (fix bug orderByRaw lama
-        // yang memakai literal status 'dikerjakan' yang sudah tidak ada sejak rencana 07, lihat dok. 08 §3.3).
-        $query->orderByRaw("
-            CASE status
-                WHEN 'terlambat' THEN 1
-                WHEN 'revisi' THEN 2
-                WHEN 'proses' THEN 3
-                WHEN 'pending' THEN 4
-                ELSE 5
-            END
-        ")->orderBy('deadline_terbaru', 'asc');
+        return match ($request->get('sort', 'urgensi')) {
+            'prioritas' => $query->orderByRaw("
+                CASE prioritas
+                    WHEN 'tinggi' THEN 1
+                    WHEN 'sedang' THEN 2
+                    ELSE 3
+                END
+            ")->orderBy('deadline_terbaru', 'asc'),
+            'terbaru' => $query->orderByDesc('created_at'),
+            'nama' => $query->orderBy('nama_tugas'),
+            // 'urgensi' (default): terlambat > revisi > proses > pending > sisanya (fix bug orderByRaw lama
+            // yang memakai literal status 'dikerjakan' yang sudah tidak ada sejak rencana 07, lihat dok. 08 §3.3).
+            default => $query->orderByRaw("
+                CASE status
+                    WHEN 'terlambat' THEN 1
+                    WHEN 'revisi' THEN 2
+                    WHEN 'proses' THEN 3
+                    WHEN 'pending' THEN 4
+                    ELSE 5
+                END
+            ")->orderBy('deadline_terbaru', 'asc'),
+        };
+    }
 
-        $penugasan = $query->paginate(12)->withQueryString();
+    /**
+     * Statistik ringkas per status untuk tab aktif — sengaja dihitung dari seluruh data
+     * tab (tidak ikut filter status/prioritas/jenis) supaya angka totalnya stabil sebagai
+     * acuan, terlepas dari filter yang sedang diterapkan pada tabel di bawahnya.
+     *
+     * @return array<string, int>
+     */
+    private function statsTugasSaya(string $tab, User $user): array
+    {
+        $base = $tab === 'diberikan'
+            ? Penugasan::where('pemberi_tugas_id', $user->id)
+            : Penugasan::where('pegawai_id', $user->id);
 
-        $perpanjanganMenunggu = collect();
-        if ($tab === 'diberikan') {
-            $perpanjanganMenunggu = PerpanjanganWaktu::where('status', PerpanjanganWaktu::STATUS_MENUNGGU)
-                ->whereHas('penugasan', fn ($q) => $q->where('pemberi_tugas_id', $user->id))
-                ->with(['penugasan:id,nama_tugas,pegawai_id', 'penugasan.pegawai:id,nama'])
-                ->get();
-        }
-
-        $statusOptions = Penugasan::STATUSES;
-        $prioritasOptions = Penugasan::PRIORITASES;
-
-        return view('penugasan::penugasan.tugas-saya', compact(
-            'penugasan', 'tab', 'bisaMemberi', 'statusOptions', 'prioritasOptions', 'perpanjanganMenunggu'
-        ));
+        return [
+            'total' => (clone $base)->count(),
+            'pending' => (clone $base)->where('status', Penugasan::STATUS_PENDING)->count(),
+            'proses' => (clone $base)->where('status', Penugasan::STATUS_PROSES)->count(),
+            'revisi' => (clone $base)->where('status', Penugasan::STATUS_REVISI)->count(),
+            'terlambat' => (clone $base)->where('status', Penugasan::STATUS_TERLAMBAT)->count(),
+            'selesai' => (clone $base)->where('status', Penugasan::STATUS_SELESAI)->count(),
+        ];
     }
 
     /**

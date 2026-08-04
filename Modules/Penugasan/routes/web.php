@@ -31,6 +31,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // ============================================
     Route::get('/daftar', [PenugasanController::class, 'index'])->name('index');
     Route::get('/tugas-saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-saya');
+    Route::get('/tugas-saya/data', [PenugasanController::class, 'tugasSayaData'])->name('tugas-saya.data');
     Route::get('/create', [PenugasanController::class, 'create'])->name('create');
     Route::post('/', [PenugasanController::class, 'store'])->name('store');
     Route::post('/grup', [PenugasanController::class, 'storeGrup'])->name('store-grup');

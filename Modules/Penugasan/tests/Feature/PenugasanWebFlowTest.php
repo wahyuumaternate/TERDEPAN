@@ -78,6 +78,34 @@ class PenugasanWebFlowTest extends TestCase
         $this->actingAs($this->bawahan)->get(route('penugasan.create'))->assertStatus(200);
     }
 
+    /**
+     * Regresi: endpoint AJAX yang di-polling halaman Tugas Saya (dok. 08 update — tabel
+     * realtime tanpa reload) harus mengembalikan potongan HTML tabel yang valid, konsisten
+     * dengan filter/tab yang sama seperti halaman utama, bukan halaman penuh ber-layout.
+     */
+    public function test_tugas_saya_data_endpoint_mengembalikan_potongan_tabel(): void
+    {
+        Penugasan::create([
+            'pegawai_id' => $this->bawahan->id,
+            'pemberi_tugas_id' => $this->atasan->id,
+            'is_mandiri' => false,
+            'jenis' => 'tambahan',
+            'prioritas' => 'tinggi',
+            'nama_tugas' => 'Tugas Polling Uji',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now(),
+            'tanggal_selesai' => now()->addDays(5),
+            'deadline_terbaru' => now()->addDays(5),
+            'status' => Penugasan::STATUS_PENDING,
+        ]);
+
+        $response = $this->actingAs($this->bawahan)->get(route('penugasan.tugas-saya.data', ['tab' => 'saya']));
+
+        $response->assertStatus(200)
+            ->assertSee('Tugas Polling Uji')
+            ->assertDontSee('<html', false);
+    }
+
     public function test_atasan_can_view_team_pages(): void
     {
         $this->actingAs($this->atasan)->get(route('penugasan.tim.index'))->assertStatus(200);

@@ -32,6 +32,24 @@
     <link href="{{ asset('assets/vendor/bootstrap/css/select2.min.css') }}" rel="stylesheet">
     <!-- Template Main CSS File -->
     <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
+    <style>
+        /* Sticky footer: footer tetap di bawah viewport saat konten halaman tidak memenuhi tinggi layar.
+           #header dan .sidebar sudah position:fixed (di luar alur normal), jadi aman diberi flex di sini —
+           hanya #main dan #footer (elemen alur normal) yang jadi anak flex. */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #main {
+            flex: 1 0 auto;
+        }
+
+        #footer {
+            flex-shrink: 0;
+        }
+    </style>
     @stack('styles')
 </head>
 

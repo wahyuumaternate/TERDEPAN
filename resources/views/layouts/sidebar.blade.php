@@ -39,9 +39,9 @@
              // Variabel ini dipakai lintas menu (Master Data, Monitoring, Sistem di bawah),
              // jadi tetap dihitung di sini terlepas dari status modul PerjanjianKinerja.
              $kodeJabatan = auth()->user()->profile?->jabatan?->kode;
-             $canAccessMasterData = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
-             $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
-             $canAccessSistem = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
+             $canAccessMasterData = in_array($kodeJabatan, ['ADMIN']);
+             $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN']);
+             $canAccessSistem = in_array($kodeJabatan, ['ADMIN']);
          @endphp
 
          {{-- Perjanjian Kinerja Nav — modul untuk sementara dinonaktifkan (lihat modules_statuses.json).
@@ -155,7 +155,7 @@
          <!-- ========================================== -->
          <li class="nav-item">
              <a href="{{ route('penugasan.tugas-saya') }}" class="nav-link collapsed">
-                 <i class="bi bi-person-check"></i><span>Tugas Saya</span>
+                 <i class="bi bi-list"></i><span>Penugasan</span>
              </a>
          </li><!-- End Tugas Saya Nav -->
 
@@ -174,13 +174,6 @@
                      <li>
                          <a href="{{ route('penugasan.tim.index') }}">
                              <i class="bi bi-circle"></i><span>Tim Saya</span>
-                         </a>
-                     </li>
-
-                     <!-- Tugas yang Saya Berikan (termasuk berikan tugas & antrean persetujuan) -->
-                     <li>
-                         <a href="{{ route('penugasan.tugas-saya', ['tab' => 'diberikan']) }}">
-                             <i class="bi bi-circle"></i><span>Tugas yang Saya Berikan</span>
                          </a>
                      </li>
 
