@@ -65,6 +65,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     // PENUGASAN — rute wildcard /{id} (harus PALING BAWAH, lihat catatan di atas)
     // ============================================
     Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
+    Route::get('/{id}/meta', [PenugasanController::class, 'meta'])->name('meta');
     Route::put('/{id}', [PenugasanController::class, 'update'])->name('update');
     Route::delete('/{id}', [PenugasanController::class, 'destroy'])->name('destroy');
 
@@ -82,5 +83,6 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
 
     Route::get('/{id}/upload-bukti', [PenugasanController::class, 'formUploadBukti'])->name('form-upload-bukti');
     Route::post('/{id}/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
+    Route::delete('/{id}/upload-bukti/{fileId}', [PenugasanController::class, 'hapusBukti'])->name('hapus-bukti');
     Route::post('/{id}/update-progress', [PenugasanController::class, 'updateProgress'])->name('update-progress');
 });

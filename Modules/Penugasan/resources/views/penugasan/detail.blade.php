@@ -29,6 +29,12 @@
         ? 'Menunggu Nilai'
         : ucfirst($penugasan->status);
 
+    // Tugas yang sudah Selesai selalu 100% progress (aturan E6) — pengaman tampilan untuk
+    // data lama, akar masalahnya sudah diperbaiki di PenugasanActionService::submit().
+    // Cast ke float supaya nol di belakang koma dari kolom decimal (mis. "70.00") tidak ikut tampil.
+    $progressTampil = $penugasan->status === 'selesai' ? 100 : (float) $penugasan->progress_persen;
+    $bobotTampil = $penugasan->bobot_persen !== null ? (float) $penugasan->bobot_persen : null;
+
     $isPegawai = auth()->id() === $penugasan->pegawai_id;
     $bukanKoordinatorGrupKolektif = $penugasan->mode_grup === 'kolektif' && ! $penugasan->is_koordinator;
     $pengajuanMenunggu = $penugasan->perpanjanganWaktu->firstWhere('status', 'menunggu');
@@ -51,19 +57,25 @@
 
 @section('main')
     <div class="penugasan-detail-page">
-        <div class="pagetitle">
-            <h1>Detail Penugasan</h1>
-            <nav>
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-saya') }}">Penugasan Pegawai</a></li>
-                    <li class="breadcrumb-item active">{{ Str::limit($penugasan->nama_tugas, 40) }}</li>
-                </ol>
-            </nav>
+        <div class="pagetitle d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h1>Detail Penugasan</h1>
+                <nav>
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-saya') }}">Penugasan Pegawai</a></li>
+                        <li class="breadcrumb-item active">{{ Str::limit($penugasan->nama_tugas, 40) }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <a href="{{ route('penugasan.tugas-saya') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Kembali
+            </a>
         </div>
 
         <section class="section">
             <div class="row">
+                <!-- ===================== KOLOM KIRI: Info utama & aksi ===================== -->
                 <div class="col-lg-8">
                     <!-- Header -->
                     <div class="card shadow-sm border-start border-4 {{ $warnaBorder }} mb-3 py-3">
@@ -89,7 +101,7 @@
                                     </div>
                                     <h4 class="fw-bold mb-0">{{ $penugasan->nama_tugas }}</h4>
                                 </div>
-                                <span class="badge {{ $warnaStatus }} fs-6 px-3 py-2">{{ $labelStatus }}</span>
+                                <span class="badge {{ $warnaStatus }} fs-6 px-3 py-2" id="statusBadge">{{ $labelStatus }}</span>
                             </div>
 
                             @if ($penugasan->deskripsi)
@@ -120,17 +132,17 @@
                                         <i class="bi bi-x-circle me-1"></i>Tolak Tugas
                                     </button>
                                 @endif
-                                @if ($isPegawai && in_array($penugasan->status, ['proses', 'revisi', 'terlambat']))
+                                @if ($isPegawai && in_array($penugasan->status, ['proses', 'revisi', 'terlambat']) && ! $bukanKoordinatorGrupKolektif)
                                     <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#progressModal">
                                         <i class="bi bi-graph-up me-1"></i>Catat Progress
                                     </button>
                                 @endif
-                                @if ($izin['uploadEviden'])
+                                @if ($izin['uploadEviden'] && ! $bukanKoordinatorGrupKolektif)
                                     <a href="{{ route('penugasan.form-upload-bukti', $penugasan->id) }}" class="btn btn-primary btn-sm">
                                         <i class="bi bi-cloud-upload me-1"></i>Upload Bukti Pengerjaan
                                     </a>
                                 @endif
-                                @if ($izin['ajukanPerpanjangan'])
+                                @if ($izin['ajukanPerpanjangan'] && ! $bukanKoordinatorGrupKolektif)
                                     <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#perpanjanganModal">
                                         <i class="bi bi-clock-history me-1"></i>Ajukan Perpanjangan
                                     </button>
@@ -182,259 +194,253 @@
                         </div>
                     </div>
 
-                    <!-- Accordion: Ringkasan, Progress & Timeline, Evidence, Penilaian -->
-                    <div class="accordion detail-accordion" id="detailAccordion">
-                        <!-- Ringkasan -->
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRingkasan">
-                                    <i class="bi bi-card-checklist me-2"></i>Ringkasan
-                                </button>
-                            </h2>
-                            <div id="collapseRingkasan" class="accordion-collapse collapse show" data-bs-parent="#detailAccordion">
-                                <div class="accordion-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-person"></i></div>
-                                            <div>
-                                                <small class="text-muted d-block">Pegawai</small>
-                                                <div class="fw-semibold">{{ $penugasan->pegawai->nama }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-person-badge"></i></div>
-                                            <div>
-                                                <small class="text-muted d-block">Pemberi Tugas</small>
-                                                <div class="fw-semibold">{{ $penugasan->pemberiTugas->nama ?? 'Mandiri' }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-flag"></i></div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Prioritas</small>
-                                                @if ($izin['update'] && in_array($penugasan->status, ['pending', 'proses']))
-                                                    <select class="form-select form-select-sm mt-1" style="max-width: 160px"
-                                                        onchange="updatePrioritas(this.value)">
-                                                        @foreach (['rendah', 'sedang', 'tinggi'] as $p)
-                                                            <option value="{{ $p }}" {{ $penugasan->prioritas === $p ? 'selected' : '' }}>{{ ucfirst($p) }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                @else
-                                                    <div class="fw-semibold">{{ ucfirst($penugasan->prioritas) }}</div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-calendar-event"></i></div>
-                                            <div>
-                                                <small class="text-muted d-block">Tanggal Mulai</small>
-                                                <div class="fw-semibold">{{ $penugasan->tanggal_mulai->format('d M Y') }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-calendar-check"></i></div>
-                                            <div>
-                                                <small class="text-muted d-block">Deadline</small>
-                                                <div class="fw-semibold">
-                                                    {{ optional($penugasan->deadline_terbaru)->format('d M Y') }}
-                                                    @if ($penugasan->deadline_terbaru && ! $penugasan->deadline_terbaru->isSameDay($penugasan->tanggal_selesai))
-                                                        <span class="badge bg-warning bg-opacity-25 text-warning-emphasis">
-                                                            Diperbarui dari {{ $penugasan->tanggal_selesai->format('d M Y') }}
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-                                        @if ($penugasan->target_value)
-                                            <div class="col-md-4 info-tile">
-                                                <div class="info-tile-icon"><i class="bi bi-bullseye"></i></div>
-                                                <div>
-                                                    <small class="text-muted d-block">Target</small>
-                                                    <div class="fw-semibold">{{ $penugasan->target_value }} {{ $penugasan->satuan }}</div>
-                                                </div>
-                                            </div>
-                                        @endif
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-percent"></i></div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Bobot</small>
-                                                @if ($izin['update'] && $penugasan->realisasi_persen === null)
-                                                    <div class="input-group input-group-sm mt-1" style="max-width: 160px">
-                                                        <input type="number" class="form-control" id="bobotInput" min="0" max="100"
-                                                            step="0.01" value="{{ $penugasan->bobot_persen }}">
-                                                        <button class="btn btn-outline-secondary" onclick="updateBobot()">Simpan</button>
-                                                    </div>
-                                                @else
-                                                    <div class="fw-semibold">{{ $penugasan->bobot_persen ?? '-' }}%</div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 info-tile">
-                                            <div class="info-tile-icon"><i class="bi bi-speedometer2"></i></div>
-                                            <div class="flex-grow-1">
-                                                <small class="text-muted d-block">Progress</small>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <div class="progress flex-grow-1" style="height: 6px;">
-                                                        <div class="progress-bar" role="progressbar" style="width: {{ $penugasan->progress_persen }}%"></div>
-                                                    </div>
-                                                    <span class="fw-semibold small">{{ $penugasan->progress_persen }}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                    <!-- Ringkasan -->
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white">
+                            <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-card-checklist me-2 text-primary"></i>Ringkasan</h6>
+                        </div>
+                        <div class="card-body pt-2">
+                            <div class="row g-3">
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-person"></i></div>
+                                    <div>
+                                        <small class="text-muted d-block">Pegawai</small>
+                                        <div class="fw-semibold">{{ $penugasan->pegawai->nama }}</div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Progress & Timeline -->
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTimeline">
-                                    <i class="bi bi-clock-history me-2"></i>Progress &amp; Timeline
-                                    <span class="badge bg-secondary bg-opacity-50 text-body ms-2">{{ $timeline->count() }}</span>
-                                </button>
-                            </h2>
-                            <div id="collapseTimeline" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                                <div class="accordion-body">
-                                    @forelse ($timeline as $entri)
-                                        <div class="timeline-item">
-                                            <div class="timeline-marker {{ $entri['tipe'] === 'progress' ? 'bg-primary' : 'bg-warning' }}">
-                                                <i class="bi {{ $entri['tipe'] === 'progress' ? 'bi-graph-up' : 'bi-arrow-repeat' }}"></i>
-                                            </div>
-                                            <div class="timeline-content">
-                                                @if ($entri['tipe'] === 'progress')
-                                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                                        <div class="fw-semibold">{{ $entri['item']->deskripsi_kegiatan }}</div>
-                                                        <span class="badge bg-primary flex-shrink-0">{{ $entri['item']->progress_persen }}%</span>
-                                                    </div>
-                                                    @if ($entri['item']->kendala)
-                                                        <small class="text-danger d-block">Kendala: {{ $entri['item']->kendala }}</small>
-                                                    @endif
-                                                    <small class="text-muted">{{ $entri['item']->tanggal->format('d M Y') }}</small>
-                                                @else
-                                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                                        <strong>Revisi ke-{{ $entri['item']->revisi_ke }}</strong>
-                                                        <small class="text-muted flex-shrink-0">{{ optional($entri['item']->tanggal_revisi)->format('d M Y') }}</small>
-                                                    </div>
-                                                    <p class="mb-1 small">{{ $entri['item']->catatan_revisi }}</p>
-                                                    <small class="text-muted">
-                                                        Oleh: {{ $entri['item']->direvisiOleh->nama ?? '-' }} •
-                                                        Deadline baru: {{ optional($entri['item']->deadline_revisi)->format('d M Y') }}
-                                                    </small>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @empty
-                                        <p class="text-muted mb-0">Belum ada catatan progress atau revisi.</p>
-                                    @endforelse
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-person-badge"></i></div>
+                                    <div>
+                                        <small class="text-muted d-block">Pemberi Tugas</small>
+                                        <div class="fw-semibold">{{ $penugasan->pemberiTugas->nama ?? 'Mandiri' }}</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Evidence -->
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvidence">
-                                    <i class="bi bi-paperclip me-2"></i>Evidence &amp; Perpanjangan Waktu
-                                    <span class="badge bg-secondary bg-opacity-50 text-body ms-2">{{ $penugasan->attachedFiles->count() }}</span>
-                                </button>
-                            </h2>
-                            <div id="collapseEvidence" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                                <div class="accordion-body">
-                                    <h6 class="small text-muted text-uppercase mb-2">Bukti Pengerjaan</h6>
-                                    @forelse ($penugasan->attachedFiles as $file)
-                                        <div class="d-flex align-items-center justify-content-between file-item px-2 py-2 rounded-2">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <i class="bi bi-file-earmark-text text-primary fs-5"></i>
-                                                <span class="small">{{ $file->original_name }}</span>
-                                            </div>
-                                            <a href="{{ route('terminaldata.filesData.download', $file->id) }}" class="btn btn-sm btn-outline-secondary">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                        </div>
-                                    @empty
-                                        <p class="text-muted small">Belum ada file bukti diupload.</p>
-                                    @endforelse
-
-                                    @if ($penugasan->perpanjanganWaktu->isNotEmpty())
-                                        <h6 class="small text-muted text-uppercase mt-4 mb-2">Riwayat Perpanjangan Waktu</h6>
-                                        @foreach ($penugasan->perpanjanganWaktu as $pengajuan)
-                                            @php
-                                                $warnaPengajuan = match ($pengajuan->status) {
-                                                    'disetujui' => 'bg-success',
-                                                    'ditolak' => 'bg-dark',
-                                                    default => 'bg-warning text-dark',
-                                                };
-                                            @endphp
-                                            <div class="border rounded-3 px-3 py-2 mb-2">
-                                                <div class="d-flex justify-content-between align-items-start gap-2">
-                                                    <strong class="small">Pengajuan ke-{{ $pengajuan->ke_berapa }}</strong>
-                                                    <span class="badge {{ $warnaPengajuan }}">{{ ucfirst($pengajuan->status) }}</span>
-                                                </div>
-                                                <small class="text-muted d-block">
-                                                    Minta sampai {{ optional($pengajuan->deadline_diminta)->format('d M Y') }}
-                                                    @if ($pengajuan->deadline_disetujui)
-                                                        → disetujui sampai {{ $pengajuan->deadline_disetujui->format('d M Y') }}
-                                                    @endif
-                                                </small>
-                                                <p class="small mb-0 mt-1">{{ $pengajuan->alasan_pengajuan }}</p>
-                                            </div>
-                                        @endforeach
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Penilaian -->
-                        @if ($penugasan->status === 'selesai')
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePenilaian">
-                                        <i class="bi bi-star me-2"></i>Penilaian
-                                    </button>
-                                </h2>
-                                <div id="collapsePenilaian" class="accordion-collapse collapse" data-bs-parent="#detailAccordion">
-                                    <div class="accordion-body">
-                                        @if ($penugasan->realisasi_persen === null)
-                                            <p class="text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Belum dinilai oleh pemberi tugas.</p>
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-flag"></i></div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Prioritas</small>
+                                        @if ($izin['update'] && in_array($penugasan->status, ['pending', 'proses']))
+                                            <select class="form-select form-select-sm mt-1" style="max-width: 160px"
+                                                onchange="updatePrioritas(this.value)">
+                                                @foreach (['rendah', 'sedang', 'tinggi'] as $p)
+                                                    <option value="{{ $p }}" {{ $penugasan->prioritas === $p ? 'selected' : '' }}>{{ ucfirst($p) }}</option>
+                                                @endforeach
+                                            </select>
                                         @else
-                                            <div class="row g-3">
-                                                <div class="col-6 col-md-3">
-                                                    <small class="text-muted d-block">Realisasi</small>
-                                                    <div class="fw-semibold">{{ $penugasan->realisasi_persen }}%</div>
-                                                </div>
-                                                <div class="col-6 col-md-3">
-                                                    <small class="text-muted d-block">Nilai Awal</small>
-                                                    <div class="fw-semibold">{{ $penugasan->nilai_awal }}</div>
-                                                </div>
-                                                <div class="col-6 col-md-3">
-                                                    <small class="text-muted d-block">Potongan Terlambat</small>
-                                                    <div class="fw-semibold">{{ $penugasan->persentase_terlambat }}%</div>
-                                                </div>
-                                                <div class="col-6 col-md-3">
-                                                    <small class="text-muted d-block">Nilai Akhir</small>
-                                                    <div class="fw-bold text-success fs-5">{{ $penugasan->nilai_akhir }}</div>
-                                                </div>
-                                            </div>
-                                            @if ($penugasan->catatan_validasi)
-                                                <div class="alert alert-success mt-3 mb-0">
-                                                    <small class="text-muted d-block mb-1">Catatan ({{ $penugasan->validator->nama ?? '-' }})</small>
-                                                    {{ $penugasan->catatan_validasi }}
-                                                </div>
-                                            @endif
+                                            <div class="fw-semibold">{{ ucfirst($penugasan->prioritas) }}</div>
                                         @endif
                                     </div>
                                 </div>
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-calendar-event"></i></div>
+                                    <div>
+                                        <small class="text-muted d-block">Tanggal Mulai</small>
+                                        <div class="fw-semibold">{{ $penugasan->tanggal_mulai->format('d M Y') }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-calendar-check"></i></div>
+                                    <div>
+                                        <small class="text-muted d-block">Deadline</small>
+                                        <div class="fw-semibold">
+                                            {{ optional($penugasan->deadline_terbaru)->format('d M Y') }}
+                                            @if ($penugasan->deadline_terbaru && ! $penugasan->deadline_terbaru->isSameDay($penugasan->tanggal_selesai))
+                                                <span class="badge bg-warning bg-opacity-25 text-warning-emphasis">
+                                                    Diperbarui dari {{ $penugasan->tanggal_selesai->format('d M Y') }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                @if ($penugasan->target_value)
+                                    <div class="col-md-4 info-tile">
+                                        <div class="info-tile-icon"><i class="bi bi-bullseye"></i></div>
+                                        <div>
+                                            <small class="text-muted d-block">Target</small>
+                                            <div class="fw-semibold">{{ $penugasan->target_value }} {{ $penugasan->satuan }}</div>
+                                        </div>
+                                    </div>
+                                @endif
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-percent"></i></div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Bobot</small>
+                                        @if ($izin['update'] && $penugasan->realisasi_persen === null)
+                                            <div class="input-group input-group-sm mt-1" style="max-width: 160px">
+                                                <input type="number" class="form-control" id="bobotInput" min="0" max="100"
+                                                    step="0.01" value="{{ $bobotTampil }}">
+                                                <button class="btn btn-outline-secondary" onclick="updateBobot()">Simpan</button>
+                                            </div>
+                                        @else
+                                            <div class="fw-semibold">{{ $bobotTampil ?? '-' }}%</div>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="col-md-4 info-tile">
+                                    <div class="info-tile-icon"><i class="bi bi-speedometer2"></i></div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">Progress</small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-grow-1" style="height: 6px;">
+                                                <div class="progress-bar" role="progressbar" style="width: {{ $progressTampil }}%"></div>
+                                            </div>
+                                            <span class="fw-semibold small">{{ $progressTampil }}%</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        @endif
+                        </div>
                     </div>
+
+                    <!-- Penilaian -->
+                    @if ($penugasan->status === 'selesai')
+                        <div class="card shadow-sm border-0 mb-3">
+                            <div class="card-header bg-white">
+                                <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-star me-2 text-primary"></i>Penilaian</h6>
+                            </div>
+                            <div class="card-body pt-2">
+                                @if ($penugasan->realisasi_persen === null)
+                                    <p class="text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Belum dinilai oleh pemberi tugas.</p>
+                                @else
+                                    <div class="row g-3">
+                                        <div class="col-6 col-md-3">
+                                            <small class="text-muted d-block">Realisasi</small>
+                                            <div class="fw-semibold">{{ (float) $penugasan->realisasi_persen }}%</div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <small class="text-muted d-block">Nilai Awal</small>
+                                            <div class="fw-semibold">{{ $penugasan->nilai_awal }}</div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <small class="text-muted d-block">Potongan Terlambat</small>
+                                            <div class="fw-semibold">{{ (float) $penugasan->persentase_terlambat }}%</div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <small class="text-muted d-block">Nilai Akhir</small>
+                                            <div class="fw-bold text-success fs-5">{{ $penugasan->nilai_akhir }}</div>
+                                        </div>
+                                    </div>
+                                    @if ($penugasan->catatan_validasi)
+                                        <div class="alert alert-success mt-3 mb-0">
+                                            <small class="text-muted d-block mb-1">Catatan ({{ $penugasan->validator->nama ?? '-' }})</small>
+                                            {{ $penugasan->catatan_validasi }}
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
+                <!-- ===================== KOLOM KANAN: Progress, Evidence, Anggota Grup ===================== -->
                 <div class="col-lg-4">
+                    <!-- Progress & Timeline -->
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                            <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Progress &amp; Timeline</h6>
+                            <span class="badge bg-secondary bg-opacity-50 text-body">{{ $timeline->count() }}</span>
+                        </div>
+                        <div class="card-body pt-2">
+                            @forelse ($timeline as $entri)
+                                <div class="timeline-item">
+                                    <div class="timeline-marker {{ $entri['tipe'] === 'progress' ? 'bg-primary' : 'bg-warning' }}">
+                                        <i class="bi {{ $entri['tipe'] === 'progress' ? 'bi-graph-up' : 'bi-arrow-repeat' }}"></i>
+                                    </div>
+                                    <div class="timeline-content">
+                                        @if ($entri['tipe'] === 'progress')
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <div class="fw-semibold">{{ $entri['item']->deskripsi_kegiatan }}</div>
+                                                <span class="badge bg-primary flex-shrink-0">{{ (float) $entri['item']->progress_persen }}%</span>
+                                            </div>
+                                            @if ($entri['item']->kendala)
+                                                <small class="text-danger d-block">Kendala: {{ $entri['item']->kendala }}</small>
+                                            @endif
+                                            <small class="text-muted">{{ $entri['item']->tanggal->format('d M Y') }}</small>
+                                        @else
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <strong>Revisi ke-{{ $entri['item']->revisi_ke }}</strong>
+                                                <small class="text-muted flex-shrink-0">{{ optional($entri['item']->tanggal_revisi)->format('d M Y') }}</small>
+                                            </div>
+                                            <p class="mb-1 small">{{ $entri['item']->catatan_revisi }}</p>
+                                            <small class="text-muted">
+                                                Oleh: {{ $entri['item']->direvisiOleh->nama ?? '-' }} •
+                                                Deadline baru: {{ optional($entri['item']->deadline_revisi)->format('d M Y') }}
+                                            </small>
+                                        @endif
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-muted mb-0 small">Belum ada catatan progress atau revisi.</p>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <!-- Evidence -->
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                            <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-paperclip me-2 text-primary"></i>Evidence &amp; Perpanjangan</h6>
+                            <span class="badge bg-secondary bg-opacity-50 text-body">{{ $penugasan->attachedFiles->count() }}</span>
+                        </div>
+                        <div class="card-body pt-2">
+                            <h6 class="small text-muted text-uppercase mb-2">Bukti Pengerjaan</h6>
+                            @forelse ($penugasan->attachedFiles as $file)
+                                <div class="d-flex align-items-center justify-content-between file-item px-2 py-2 rounded-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-file-earmark-text text-primary fs-5"></i>
+                                        <span class="small">{{ $file->original_name }}</span>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" title="Preview"
+                                            onclick="bukaPreviewEviden({{ Js::from($file->original_name) }}, {{ Js::from(route('terminaldata.filesData.serve', $file->id)) }}, {{ Js::from(route('terminaldata.filesData.download', $file->id)) }}, {{ $file->isImage() ? 'true' : 'false' }}, {{ $file->isPdf() ? 'true' : 'false' }})">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <a href="{{ route('terminaldata.filesData.download', $file->id) }}" class="btn btn-sm btn-outline-secondary" title="Download">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-muted small">Belum ada file bukti diupload.</p>
+                            @endforelse
+
+                            @if ($penugasan->perpanjanganWaktu->isNotEmpty())
+                                <h6 class="small text-muted text-uppercase mt-4 mb-2">Riwayat Perpanjangan Waktu</h6>
+                                @foreach ($penugasan->perpanjanganWaktu as $pengajuan)
+                                    @php
+                                        $warnaPengajuan = match ($pengajuan->status) {
+                                            'disetujui' => 'bg-success',
+                                            'ditolak' => 'bg-dark',
+                                            default => 'bg-warning text-dark',
+                                        };
+                                    @endphp
+                                    <div class="border rounded-3 px-3 py-2 mb-2">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <strong class="small">Pengajuan ke-{{ $pengajuan->ke_berapa }}</strong>
+                                            <span class="badge {{ $warnaPengajuan }}">{{ ucfirst($pengajuan->status) }}</span>
+                                        </div>
+                                        <small class="text-muted d-block">
+                                            Minta sampai {{ optional($pengajuan->deadline_diminta)->format('d M Y') }}
+                                            @if ($pengajuan->deadline_disetujui)
+                                                → disetujui sampai {{ $pengajuan->deadline_disetujui->format('d M Y') }}
+                                            @endif
+                                        </small>
+                                        <p class="small mb-0 mt-1">{{ $pengajuan->alasan_pengajuan }}</p>
+                                        @if ($pengajuan->catatan_atasan)
+                                            <div class="border-top mt-2 pt-2">
+                                                <small class="text-muted d-block mb-1">Catatan Atasan</small>
+                                                <p class="small mb-0">{{ $pengajuan->catatan_atasan }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @endif
+                        </div>
+                    </div>
+
                     @if ($penugasan->mode_grup && $penugasan->grupAnggota->isNotEmpty())
                         <div class="card shadow-sm border-0 mb-3">
                             <div class="card-header bg-white">
-                                <h6 class="card-title mb-0"><i class="bi bi-people me-2 text-primary"></i>Anggota Grup</h6>
+                                <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-people me-2 text-primary"></i>Anggota Tim</h6>
                             </div>
                             <div class="card-body">
                                 @foreach ($penugasan->grupAnggota as $anggota)
@@ -450,7 +456,9 @@
                                                 @endif
                                             </div>
                                         </div>
-                                        <a href="{{ route('penugasan.show', $anggota->id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                        @if (auth()->id() === $anggota->pemberi_tugas_id)
+                                            <a href="{{ route('penugasan.show', $anggota->id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>
@@ -459,6 +467,25 @@
                 </div>
             </div>
         </section>
+    </div>
+
+    <!-- Modal Preview Dokumen Eviden -->
+    <div class="modal fade" id="previewEvidenModal" tabindex="-1" aria-labelledby="previewEvidenModalLabel">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-truncate" id="previewEvidenModalLabel">Preview Dokumen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body text-center" id="previewEvidenBody" style="min-height: 300px;"></div>
+                <div class="modal-footer">
+                    <a href="#" id="previewEvidenDownload" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-download me-1"></i>Download
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Catat Progress -->
@@ -600,7 +627,7 @@
                                 <small class="text-muted">Bobot belum pernah diisi — wajib diisi sekarang.</small>
                             </div>
                         @else
-                            <p class="small text-muted">Bobot tugas: <strong>{{ $penugasan->bobot_persen }}%</strong></p>
+                            <p class="small text-muted">Bobot tugas: <strong>{{ $bobotTampil }}%</strong></p>
                         @endif
                         <div class="mb-3">
                             <label class="form-label">Realisasi (%) <span class="text-danger">*</span></label>
@@ -708,29 +735,8 @@
                 font-weight: 600;
             }
 
-            /* Accordion */
-            .detail-accordion .accordion-item {
-                border: none;
-                margin-bottom: 0.5rem;
-                border-radius: 0.5rem !important;
-                overflow: hidden;
-                box-shadow: 0 1px 2px rgba(1, 41, 112, 0.06);
-            }
-
-            .detail-accordion .accordion-button {
+            .penugasan-detail-page .card-header {
                 font-weight: 600;
-                font-size: 0.9rem;
-                background-color: #fff;
-            }
-
-            .detail-accordion .accordion-button:not(.collapsed) {
-                background-color: rgba(65, 84, 241, 0.06);
-                color: #4154f1;
-                box-shadow: none;
-            }
-
-            .detail-accordion .accordion-button:focus {
-                box-shadow: none;
             }
 
             /* Ringkasan info tiles */
@@ -829,6 +835,45 @@
                 Swal.fire('Gagal', message || 'Terjadi kesalahan', 'error');
             }
 
+            // Input type="number" masih meloloskan karakter huruf seperti "e"/"E" (notasi ilmiah) di
+            // beberapa browser — bersihkan setiap ketikan supaya cuma angka & satu titik desimal yang tersisa.
+            function bersihkanInputAngka(input) {
+                input.addEventListener('input', function() {
+                    let value = this.value.replace(/[^0-9.]/g, '');
+                    const bagian = value.split('.');
+                    if (bagian.length > 2) {
+                        value = bagian[0] + '.' + bagian.slice(1).join('');
+                    }
+                    this.value = value;
+                });
+            }
+            ['progressPersen', 'bobotInput', 'nilaiBobot', 'nilaiRealisasi'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    bersihkanInputAngka(el);
+                }
+            });
+
+            function bukaPreviewEviden(nama, urlServe, urlDownload, isImage, isPdf) {
+                document.getElementById('previewEvidenModalLabel').textContent = nama;
+                document.getElementById('previewEvidenDownload').href = urlDownload;
+                const body = document.getElementById('previewEvidenBody');
+
+                if (isImage) {
+                    body.innerHTML = `<img src="${urlServe}" class="img-fluid rounded" alt="${nama}">`;
+                } else if (isPdf) {
+                    body.innerHTML = `<iframe src="${urlServe}" style="width:100%;height:75vh;border:0"></iframe>`;
+                } else {
+                    body.innerHTML = `
+                        <div class="py-5">
+                            <i class="bi bi-file-earmark-text fs-1 text-muted d-block mb-2"></i>
+                            <p class="text-muted mb-0">Preview tidak tersedia untuk tipe file ini.<br>Silakan download untuk membukanya.</p>
+                        </div>`;
+                }
+
+                new bootstrap.Modal(document.getElementById('previewEvidenModal')).show();
+            }
+
             function postJson(url, payload = {}) {
                 return fetch(url, {
                         method: 'POST',
@@ -860,7 +905,21 @@
                         postJson(`{{ url('/penugasan') }}/${penugasanId}/tolak`, {
                                 alasan_penolakan: result.value
                             })
-                            .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
+                            .then(data => {
+                                if (data.success) {
+                                    // Record dihapus oleh server saat ditolak — reload ke halaman yang sama
+                                    // akan 404, jadi arahkan kembali ke daftar Tugas Saya.
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Berhasil!',
+                                        text: data.message,
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    }).then(() => window.location.href = "{{ route('penugasan.tugas-saya') }}");
+                                } else {
+                                    showError(data.message);
+                                }
+                            });
                     }
                 });
             }
@@ -964,18 +1023,27 @@
                         .then(r => r.json())
                         .then(data => {
                             if (data.success) {
-                                document.getElementById('previewTerlambat').textContent = data.data.persentase_terlambat;
-                                document.getElementById('previewNilaiAkhir').textContent = data.data.nilai_akhir;
+                                document.getElementById('previewTerlambat').textContent = Number(data.data.persentase_terlambat);
+                                document.getElementById('previewNilaiAkhir').textContent = Number(data.data.nilai_akhir);
                                 document.getElementById('previewNilaiAlert').classList.remove('d-none');
                             }
                         });
                 }
-                document.getElementById('nilaiRealisasi')?.addEventListener('input', hitungPreviewNilai);
+                document.getElementById('nilaiRealisasi')?.addEventListener('input', function() {
+                    if (this.value !== '' && Number(this.value) > 100) {
+                        this.value = 100;
+                    }
+                    hitungPreviewNilai();
+                });
                 document.getElementById('nilaiBobot')?.addEventListener('input', hitungPreviewNilai);
 
                 function simpanNilai() {
+                    const realisasiInput = document.getElementById('nilaiRealisasi');
+                    if (realisasiInput.value !== '' && Number(realisasiInput.value) > 100) {
+                        realisasiInput.value = 100;
+                    }
                     const payload = {
-                        realisasi_persen: document.getElementById('nilaiRealisasi').value,
+                        realisasi_persen: realisasiInput.value,
                         catatan_validasi: document.getElementById('catatanValidasi').value,
                     };
                     const bobotInput = document.getElementById('nilaiBobot');
@@ -1075,6 +1143,59 @@
                         .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
                 }
             @endif
+
+            // Halaman dinamis: polling ringan mendeteksi perubahan (status, progress, bukti baru,
+            // revisi, pengajuan perpanjangan) dari pihak lain (mis. atasan menilai saat pegawai
+            // masih membuka halaman ini) lalu memuat ulang otomatis — dilewati selagi ada modal
+            // terbuka supaya tidak mengganggu input yang sedang diisi pengguna.
+            (function() {
+                const metaAwal = {
+                    updatedAt: @json(optional($penugasan->updated_at)->toIso8601String()),
+                    status: @json($penugasan->status),
+                    progressPersen: @json((float) $penugasan->progress_persen),
+                    attachedFilesCount: {{ $penugasan->attachedFiles->count() }},
+                    progressCount: {{ $penugasan->progress->count() }},
+                    historyRevisiCount: {{ $penugasan->historyRevisi->count() }},
+                    perpanjanganWaktuCount: {{ $penugasan->perpanjanganWaktu->count() }},
+                };
+                const metaUrl = `{{ url('/penugasan') }}/${penugasanId}/meta`;
+                const intervalMs = 12000;
+
+                function adaModalTerbuka() {
+                    return document.querySelector('.modal.show') !== null;
+                }
+
+                function cekPembaruan() {
+                    if (document.hidden || adaModalTerbuka()) {
+                        return;
+                    }
+
+                    fetch(metaUrl, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(r => r.ok ? r.json() : Promise.reject())
+                        .then(data => {
+                            const berubah = data.updated_at !== metaAwal.updatedAt ||
+                                data.status !== metaAwal.status ||
+                                Number(data.progress_persen) !== metaAwal.progressPersen ||
+                                data.attached_files_count !== metaAwal.attachedFilesCount ||
+                                data.progress_count !== metaAwal.progressCount ||
+                                data.history_revisi_count !== metaAwal.historyRevisiCount ||
+                                data.perpanjangan_waktu_count !== metaAwal.perpanjanganWaktuCount;
+
+                            if (berubah) {
+                                window.location.reload();
+                            }
+                        })
+                        .catch(() => {
+                            // Diamkan kegagalan sesaat (mis. koneksi terputus) — dicoba lagi di interval berikutnya.
+                        });
+                }
+
+                setInterval(cekPembaruan, intervalMs);
+            })();
         </script>
     @endpush
 @endsection

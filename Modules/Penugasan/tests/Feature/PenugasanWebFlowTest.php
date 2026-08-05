@@ -330,4 +330,71 @@ class PenugasanWebFlowTest extends TestCase
             'data' => ['nilai_akhir' => 48.0],
         ]);
     }
+
+    /**
+     * Regresi: halaman detail dibuat dinamis lewat polling ke endpoint meta() —
+     * pastikan endpointnya benar mendeteksi perubahan (status, jumlah progress).
+     */
+    public function test_meta_endpoint_mendeteksi_perubahan_status_dan_progress(): void
+    {
+        $penugasan = Penugasan::create([
+            'pegawai_id' => $this->bawahan->id,
+            'pemberi_tugas_id' => $this->atasan->id,
+            'is_mandiri' => false,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas Meta Uji',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now(),
+            'tanggal_selesai' => now()->addDays(7),
+            'deadline_terbaru' => now()->addDays(7),
+            'status' => Penugasan::STATUS_PROSES,
+            'progress_persen' => 20,
+        ]);
+
+        $sebelum = $this->actingAs($this->bawahan)->getJson(route('penugasan.meta', $penugasan->id))
+            ->assertStatus(200)
+            ->json();
+
+        $this->assertSame('proses', $sebelum['status']);
+        $this->assertSame(0, $sebelum['progress_count']);
+
+        $this->actingAs($this->bawahan)->post(route('penugasan.update-progress', $penugasan->id), [
+            'progress_persen' => 60,
+            'deskripsi_kegiatan' => 'Update progress',
+        ]);
+
+        $sesudah = $this->actingAs($this->bawahan)->getJson(route('penugasan.meta', $penugasan->id))->json();
+
+        // progress_count adalah sinyal deteksi perubahan yang diandalkan JS (bukan updated_at, karena
+        // presisi kolom timestamp per-detik bisa membuat dua polling dalam detik yang sama tampak identik).
+        $this->assertSame(1, $sesudah['progress_count']);
+    }
+
+    /**
+     * Regresi: halaman detail sekarang pakai card biasa (bukan accordion) untuk
+     * Ringkasan/Progress/Evidence, dan Progress & Evidence dipindah ke kolom kanan.
+     */
+    public function test_halaman_detail_tidak_lagi_pakai_accordion(): void
+    {
+        $penugasan = Penugasan::create([
+            'pegawai_id' => $this->bawahan->id,
+            'pemberi_tugas_id' => $this->atasan->id,
+            'is_mandiri' => false,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Tugas Layout Uji',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now(),
+            'tanggal_selesai' => now()->addDays(7),
+            'deadline_terbaru' => now()->addDays(7),
+            'status' => Penugasan::STATUS_PROSES,
+        ]);
+
+        $html = $this->actingAs($this->bawahan)->get(route('penugasan.show', $penugasan->id))->getContent();
+
+        $this->assertStringNotContainsString('accordion', $html);
+        $this->assertStringContainsString('Ringkasan', $html);
+        $this->assertStringContainsString('Progress &amp; Timeline', $html);
+    }
 }

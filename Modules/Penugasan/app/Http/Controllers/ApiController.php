@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\Penugasan\Models\Penugasan;
+use Modules\Penugasan\Services\NotifikasiService;
 
 /**
  * ApiController
@@ -97,75 +98,20 @@ class ApiController extends Controller
     }
 
     /**
-     * Mendapatkan notifikasi pengguna
+     * Mendapatkan notifikasi pengguna — dihitung langsung dari kondisi tugas
+     * terkini lewat NotifikasiService (satu sumber logic yang sama dipakai
+     * dropdown header & halaman notifikasi penuh).
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function notifikasi(Request $request)
+    public function notifikasi(Request $request, NotifikasiService $notifikasiService)
     {
-        $user = $request->user();
-
-        $notifikasi = [];
-
-        $tugasBaru = Penugasan::where('pegawai_id', $user->id)
-            ->where('status', 'pending')
-            ->where('created_at', '>=', now()->subDays(7))
-            ->count();
-
-        if ($tugasBaru > 0) {
-            $notifikasi[] = [
-                'type' => 'info',
-                'message' => "Anda memiliki {$tugasBaru} tugas baru yang perlu ditindaklanjuti",
-                'link' => route('penugasan.tugas-saya', ['status' => 'pending']),
-            ];
-        }
-
-        // Tugas mendesak (deadline < 3 hari)
-        $tugasMendesak = Penugasan::where('pegawai_id', $user->id)
-            ->whereIn('status', ['pending', 'dikerjakan'])
-            ->where('tanggal_selesai', '<=', now()->addDays(3))
-            ->where('tanggal_selesai', '>', now())
-            ->count();
-
-        if ($tugasMendesak > 0) {
-            $notifikasi[] = [
-                'type' => 'warning',
-                'message' => "{$tugasMendesak} tugas akan jatuh tempo dalam 3 hari ke depan",
-                'link' => route('penugasan.dashboard'),
-            ];
-        }
-
-        // Tugas terlambat
-        $tugasTerlambat = Penugasan::where('pegawai_id', $user->id)
-            ->whereIn('status', ['dikerjakan', 'validasi'])
-            ->where('tanggal_selesai', '<', now())
-            ->count();
-
-        if ($tugasTerlambat > 0) {
-            $notifikasi[] = [
-                'type' => 'danger',
-                'message' => "Ada {$tugasTerlambat} tugas yang melewati deadline",
-                'link' => route('penugasan.tugas-saya'),
-            ];
-        }
-
-        // Tugas perlu revisi
-        $tugasRevisi = Penugasan::where('pegawai_id', $user->id)
-            ->where('status', 'revisi')
-            ->count();
-
-        if ($tugasRevisi > 0) {
-            $notifikasi[] = [
-                'type' => 'warning',
-                'message' => "{$tugasRevisi} tugas perlu diperbaiki",
-                'link' => route('penugasan.tugas-saya', ['status' => 'revisi']),
-            ];
-        }
+        $notifikasi = $notifikasiService->untuk($request->user());
 
         return response()->json([
             'success' => true,
             'data' => $notifikasi,
-            'count' => count($notifikasi),
+            'count' => $notifikasi->count(),
         ]);
     }
 

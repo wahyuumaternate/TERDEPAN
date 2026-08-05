@@ -362,6 +362,31 @@ class PenugasanController extends Controller
         return view('penugasan::penugasan.detail', compact('penugasan', 'izin'));
     }
 
+    /**
+     * Endpoint ringan yang di-polling halaman detail tugas untuk mendeteksi ada tidaknya
+     * perubahan (status, progress, bukti baru, revisi, pengajuan perpanjangan) sejak
+     * halaman dimuat — supaya halaman detail terasa dinamis tanpa perlu partial-render
+     * ulang seluruh tombol aksi/modal yang bergantung pada $izin per status/role.
+     */
+    public function meta(Request $request, string $id)
+    {
+        $penugasan = Penugasan::findOrFail($id);
+        $this->authorize('view', $penugasan);
+
+        // Dihitung lewat query relasi biasa (bukan withCount) — subquery withCount() pada relasi
+        // polimorfik attachedFiles (morphMany, kolom UUID) gagal di Postgres ("operator does not
+        // exist: uuid = character varying") karena binding tipe tidak otomatis ter-cast di subquery.
+        return response()->json([
+            'updated_at' => optional($penugasan->updated_at)->toIso8601String(),
+            'status' => $penugasan->status,
+            'progress_persen' => (float) $penugasan->progress_persen,
+            'attached_files_count' => $penugasan->attachedFiles()->count(),
+            'progress_count' => $penugasan->progress()->count(),
+            'history_revisi_count' => $penugasan->historyRevisi()->count(),
+            'perpanjangan_waktu_count' => $penugasan->perpanjanganWaktu()->count(),
+        ]);
+    }
+
     public function update(Request $request, string $id)
     {
         try {
@@ -589,6 +614,10 @@ class PenugasanController extends Controller
             abort(403, 'Tidak memiliki akses');
         }
 
+        if ($tugas->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $tugas->is_koordinator) {
+            abort(403, 'Hanya koordinator grup yang bisa upload bukti pengerjaan untuk tugas ini');
+        }
+
         return view('penugasan::penugasan.upload-eviden', ['tugas' => $tugas, 'jenisTugas' => $tugas->jenis]);
     }
 
@@ -601,6 +630,10 @@ class PenugasanController extends Controller
 
         if ($request->user()->id !== $penugasan->pegawai_id) {
             return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $penugasan->is_koordinator) {
+            return response()->json(['success' => false, 'message' => 'Hanya koordinator grup yang bisa upload bukti pengerjaan untuk tugas ini'], 403);
         }
 
         $validated = $request->validate([
@@ -628,7 +661,7 @@ class PenugasanController extends Controller
             $path = $uploadedFile->storeAs($storagePath, $filename);
             $hash = hash_file('sha256', $uploadedFile->getRealPath());
 
-            $file = $penugasan->attachedFiles()->create([
+            $atributFile = [
                 'folder_id' => $folder->id,
                 'bidang_id' => $folder->bidang_id,
                 'sub_bidang_id' => $folder->sub_bidang_id,
@@ -642,7 +675,20 @@ class PenugasanController extends Controller
                 'version' => 1,
                 'is_latest_version' => true,
                 'created_by' => $request->user()->id,
-            ]);
+            ];
+
+            $file = $penugasan->attachedFiles()->create($atributFile);
+
+            // Penilaian tim (mode_grup kolektif) dinilai satu kesatuan — bukti pengerjaan harus
+            // ikut disinkronkan ke record penugasan setiap anggota grup, bukan hanya ke record
+            // pengunggah, supaya semua anggota (dan atasan saat membuka detail siapa pun) melihat
+            // bukti yang sama. TdFile hanya bisa menempel ke satu attachable, jadi bukan reuse baris,
+            // melainkan baris TdFile baru per anggota yang menunjuk ke file fisik yang sama di disk.
+            if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
+                foreach ($penugasan->grupAnggota as $anggota) {
+                    $anggota->attachedFiles()->create($atributFile);
+                }
+            }
 
             $folder->updateStats();
 
@@ -657,6 +703,45 @@ class PenugasanController extends Controller
                 'message' => 'Anda tidak memiliki izin untuk upload file ke folder ini.',
             ], 403);
         }
+    }
+
+    /**
+     * Hapus bukti pengerjaan (eviden). Otorisasi mengikuti aturan yang sama dengan upload
+     * (pemilik tugas, status masih proses/revisi/terlambat) — bukan lewat TdFilePolicy generik,
+     * karena itu tidak mengecek status penugasan.
+     */
+    public function hapusBukti(Request $request, string $id, string $fileId)
+    {
+        $penugasan = Penugasan::findOrFail($id);
+
+        try {
+            Gate::forUser($request->user())->authorize('uploadEviden', $penugasan);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $penugasan->is_koordinator) {
+            return response()->json(['success' => false, 'message' => 'Hanya koordinator grup yang bisa menghapus bukti pengerjaan untuk tugas ini'], 403);
+        }
+
+        $file = $penugasan->attachedFiles()->find($fileId);
+
+        if (! $file) {
+            return response()->json(['success' => false, 'message' => 'File tidak ditemukan'], 404);
+        }
+
+        // Mode kolektif: satu upload menghasilkan beberapa baris TdFile (satu per anggota grup) yang
+        // menunjuk ke file fisik yang sama di disk (lihat uploadBukti()). Menghapus satu baris saja
+        // akan menghapus file fisik dan membuat baris anggota lain jadi orphan — jadi semua baris
+        // yang menunjuk storage_path yang sama ikut dihapus sekaligus. attachable_type disimpan
+        // sebagai alias morph map ("penugasan"), BUKAN nama class penuh — pakai getMorphClass()
+        // supaya query ini cocok dengan nilai yang sebenarnya tersimpan (lihat AppServiceProvider::boot()).
+        TdFile::where('attachable_type', $penugasan->getMorphClass())
+            ->where('storage_path', $file->storage_path)
+            ->get()
+            ->each->delete();
+
+        return response()->json(['success' => true, 'message' => 'Bukti pengerjaan berhasil dihapus']);
     }
 
     /**

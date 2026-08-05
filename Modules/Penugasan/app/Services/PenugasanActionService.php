@@ -275,7 +275,9 @@ class PenugasanActionService
         }
 
         $selesaiAt = now();
-        $update = ['status' => Penugasan::STATUS_SELESAI, 'tanggal_diselesaikan' => $selesaiAt];
+        // Progress otomatis 100% saat diajukan Selesai — sebelumnya nilai ini hanya berubah lewat
+        // catatan progress manual, jadi bar-nya bisa tampak < 100% padahal tugas sudah selesai.
+        $update = ['status' => Penugasan::STATUS_SELESAI, 'tanggal_diselesaikan' => $selesaiAt, 'progress_persen' => 100];
         $penugasan->update($update);
         $this->cascadeKeGrup($penugasan, $update);
 
@@ -335,13 +337,16 @@ class PenugasanActionService
         Gate::forUser($actor)->authorize('revisi', $penugasan);
 
         $revisiKe = HistoriRevisi::where('penugasan_id', $penugasan->id)->max('revisi_ke');
-        HistoriRevisi::create([
-            'penugasan_id' => $penugasan->id,
+        $atributRevisi = [
             'revisi_ke' => ($revisiKe ?? 0) + 1,
             'tanggal_revisi' => now(),
             'catatan_revisi' => $validated['catatan_revisi'],
             'deadline_revisi' => $validated['deadline_baru'],
             'direvisi_oleh' => $actor->id,
+        ];
+
+        HistoriRevisi::create($atributRevisi + [
+            'penugasan_id' => $penugasan->id,
             'pegawai_id' => $penugasan->pegawai_id,
         ]);
 
@@ -353,6 +358,18 @@ class PenugasanActionService
 
         $penugasan->update($update);
         $this->cascadeKeGrup($penugasan, $update);
+
+        // Catatan revisi bukan field skalar — tidak ikut cascadeKeGrup(), jadi buat baris
+        // HistoriRevisi baru per anggota grup juga, supaya timeline setiap anggota menampilkan
+        // catatan & deadline revisi yang sama, bukan cuma status yang berubah tanpa detailnya.
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
+            foreach ($penugasan->grupAnggota as $anggota) {
+                HistoriRevisi::create($atributRevisi + [
+                    'penugasan_id' => $anggota->id,
+                    'pegawai_id' => $anggota->pegawai_id,
+                ]);
+            }
+        }
 
         return $penugasan->fresh();
     }
@@ -410,6 +427,7 @@ class PenugasanActionService
     public function ajukanPerpanjangan(Penugasan $penugasan, array $validated, User $actor): PerpanjanganWaktu
     {
         Gate::forUser($actor)->authorize('ajukanPerpanjangan', $penugasan);
+        $this->tolakJikaBukanKoordinatorGrup($penugasan, 'Hanya koordinator grup yang bisa mengajukan perpanjangan waktu untuk tugas ini');
 
         $jumlahDisetujui = $penugasan->perpanjanganWaktu()->where('status', PerpanjanganWaktu::STATUS_DISETUJUI)->count();
 
@@ -475,17 +493,35 @@ class PenugasanActionService
         if ($actor->id !== $penugasan->pegawai_id) {
             throw new AuthorizationException('Tidak memiliki izin untuk melakukan aksi ini');
         }
+        $this->tolakJikaBukanKoordinatorGrup($penugasan, 'Hanya koordinator grup yang bisa mencatat progress untuk tugas ini');
 
-        Progress::create([
-            'penugasan_id' => $penugasan->id,
-            'pegawai_id' => $penugasan->pegawai_id,
+        $atributProgress = [
             'tanggal' => now()->toDateString(),
             'progress_persen' => $validated['progress_persen'],
             'deskripsi_kegiatan' => $validated['deskripsi_kegiatan'],
             'kendala' => $validated['kendala'] ?? null,
+        ];
+
+        Progress::create($atributProgress + [
+            'penugasan_id' => $penugasan->id,
+            'pegawai_id' => $penugasan->pegawai_id,
         ]);
 
-        $penugasan->update(['progress_persen' => $validated['progress_persen']]);
+        $update = ['progress_persen' => $validated['progress_persen']];
+        $penugasan->update($update);
+        $this->cascadeKeGrup($penugasan, $update);
+
+        // Progress bukan field skalar (ada baris histori per pencatatan), jadi tidak ikut
+        // cascadeKeGrup() yang cuma mass-update kolom — buat baris Progress baru per anggota
+        // grup juga, sama seperti pola sinkronisasi bukti eviden (PenugasanController::uploadBukti()).
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
+            foreach ($penugasan->grupAnggota as $anggota) {
+                Progress::create($atributProgress + [
+                    'penugasan_id' => $anggota->id,
+                    'pegawai_id' => $anggota->pegawai_id,
+                ]);
+            }
+        }
 
         return $penugasan->fresh();
     }

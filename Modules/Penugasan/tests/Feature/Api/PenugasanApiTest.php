@@ -631,6 +631,30 @@ class PenugasanApiTest extends TestCase
         $this->assertTrue(app(\Illuminate\Contracts\Auth\Access\Gate::class)->forUser($bawahan)->allows('submit', $tugas));
     }
 
+    /**
+     * Regresi: progress bar sempat tampak < 100% pada tugas yang sudah Selesai karena
+     * progress_persen hanya berubah lewat catatan progress manual, tidak otomatis
+     * mengikuti aturan E6 (Selesai berarti progress tuntas). Diperbaiki di submit().
+     */
+    public function test_submit_menetapkan_progress_persen_ke_seratus(): void
+    {
+        $atasan = $this->createUserWithJabatan('KABID');
+        $bawahan = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $tugas = $this->createPenugasan($bawahan, $atasan, [
+            'status' => Penugasan::STATUS_PROSES,
+            'progress_persen' => 45,
+        ]);
+        $folder = \Modules\TerminalData\Models\TdFolder::factory()->create(['created_by' => $atasan->id]);
+        $tugas->attachedFiles()->save(
+            \Modules\TerminalData\Models\TdFile::factory()->make(['folder_id' => $folder->id, 'created_by' => $bawahan->id])
+        );
+
+        $response = $this->actingAs($bawahan, 'sanctum')->postJson("/api/v1/penugasan/{$tugas->id}/submit");
+
+        $response->assertStatus(200)->assertJsonPath('data.progress_persen', '100.00');
+        $this->assertEquals(100, (float) $tugas->fresh()->progress_persen);
+    }
+
     // --- Penugasan Grup (Fase 6) ---
 
     public function test_berikan_tugas_grup_mode_per_orang_independen(): void

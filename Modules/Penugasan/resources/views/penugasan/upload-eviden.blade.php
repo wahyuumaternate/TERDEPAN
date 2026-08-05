@@ -21,13 +21,6 @@
                         <h5 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>{{ $tugas->nama_tugas }}</h5>
                     </div>
                     <div class="card-body p-4">
-                        @if ($tugas->status === 'revisi')
-                            <div class="alert alert-warning">
-                                <strong>Perlu Revisi</strong>
-                                <p class="mb-0">{{ $tugas->catatan_validasi ?? 'Tidak ada catatan' }}</p>
-                            </div>
-                        @endif
-
                         @if ($tugas->attachedFiles->isNotEmpty())
                             <div class="card bg-light mb-4">
                                 <div class="card-header bg-transparent">
@@ -40,9 +33,19 @@
                                             <div
                                                 class="list-group-item border-0 px-0 d-flex justify-content-between align-items-center">
                                                 <span><i class="bi bi-file-earmark-text text-danger me-2"></i>{{ $file->original_name }}</span>
-                                                <a href="{{ route('terminaldata.filesData.download', $file->id) }}"
-                                                    class="btn btn-sm btn-outline-secondary"><i
-                                                        class="bi bi-download"></i></a>
+                                                <div class="d-flex gap-1">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Preview"
+                                                        onclick="bukaPreviewEviden({{ Js::from($file->original_name) }}, {{ Js::from(route('terminaldata.filesData.serve', $file->id)) }}, {{ Js::from(route('terminaldata.filesData.download', $file->id)) }}, {{ $file->isImage() ? 'true' : 'false' }}, {{ $file->isPdf() ? 'true' : 'false' }})">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                    <a href="{{ route('terminaldata.filesData.download', $file->id) }}"
+                                                        class="btn btn-sm btn-outline-secondary" title="Download"><i
+                                                            class="bi bi-download"></i></a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus"
+                                                        onclick="hapusBukti({{ Js::from($file->id) }}, {{ Js::from($file->original_name) }})">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         @endforeach
                                     </div>
@@ -80,11 +83,88 @@
             </div>
         </div>
     </section>
+
+    <!-- Modal Preview Dokumen Eviden -->
+    <div class="modal fade" id="previewEvidenModal" tabindex="-1" aria-labelledby="previewEvidenModalLabel">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-truncate" id="previewEvidenModalLabel">Preview Dokumen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body text-center" id="previewEvidenBody" style="min-height: 300px;"></div>
+                <div class="modal-footer">
+                    <a href="#" id="previewEvidenDownload" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-download me-1"></i>Download
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
     <script>
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+        function bukaPreviewEviden(nama, urlServe, urlDownload, isImage, isPdf) {
+            document.getElementById('previewEvidenModalLabel').textContent = nama;
+            document.getElementById('previewEvidenDownload').href = urlDownload;
+            const body = document.getElementById('previewEvidenBody');
+
+            if (isImage) {
+                body.innerHTML = `<img src="${urlServe}" class="img-fluid rounded" alt="${nama}">`;
+            } else if (isPdf) {
+                body.innerHTML = `<iframe src="${urlServe}" style="width:100%;height:75vh;border:0"></iframe>`;
+            } else {
+                body.innerHTML = `
+                    <div class="py-5">
+                        <i class="bi bi-file-earmark-text fs-1 text-muted d-block mb-2"></i>
+                        <p class="text-muted mb-0">Preview tidak tersedia untuk tipe file ini.<br>Silakan download untuk membukanya.</p>
+                    </div>`;
+            }
+
+            new bootstrap.Modal(document.getElementById('previewEvidenModal')).show();
+        }
+
+        function hapusBukti(fileId, nama) {
+            Swal.fire({
+                title: 'Hapus Bukti Pengerjaan?',
+                text: `"${nama}" akan dihapus permanen.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`{{ url('/penugasan') }}/{{ $tugas->id }}/upload-bukti/${fileId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil!',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => window.location.reload());
+                            } else {
+                                Swal.fire('Gagal', data.message || 'Terjadi kesalahan', 'error');
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire('Gagal', 'Terjadi kesalahan saat menghapus', 'error');
+                        });
+                }
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             fetch("{{ route('terminaldata.foldersData.index') }}")

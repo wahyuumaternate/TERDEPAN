@@ -39,20 +39,6 @@
                 </a>
             </div>
 
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
-
             @if ($tab === 'diberikan' && $perpanjanganMenunggu->isNotEmpty())
                 <div class="alert alert-warning" role="alert">
                     <h6 class="alert-heading"><i class="bi bi-hourglass-split me-2"></i>Menunggu Keputusan Anda</h6>
@@ -172,6 +158,30 @@
 
     @push('scripts')
         <script>
+            @if (session('success'))
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: @json(session('success')),
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                });
+            @endif
+
+            @if (session('error'))
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: @json(session('error')),
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true,
+                });
+            @endif
+
             (function() {
                 const wrapper = document.getElementById('tabelPenugasanWrapper');
                 const dataUrl = "{{ route('penugasan.tugas-saya.data') }}";

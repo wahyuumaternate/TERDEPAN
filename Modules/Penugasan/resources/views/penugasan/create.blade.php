@@ -13,15 +13,20 @@
 @endphp
 
 @section('main')
-    <div class="pagetitle">
-        <h1>Buat Tugas</h1>
-        <nav>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-saya') }}">Tugas Saya</a></li>
-                <li class="breadcrumb-item active">Buat Tugas</li>
-            </ol>
-        </nav>
+    <div class="pagetitle d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <h1>Buat Tugas</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('penugasan.tugas-saya') }}">Tugas Saya</a></li>
+                    <li class="breadcrumb-item active">Buat Tugas</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{{ route('penugasan.tugas-saya') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Kembali
+        </a>
     </div>
 
     <section class="section">
@@ -233,11 +238,11 @@
                     <div class="card shadow-sm border-0 jalur-panel" id="panel-b"
                         style="{{ $jalurAwal === 'b' ? '' : 'display:none' }}">
                         <div class="card-header bg-light">
-                            <h6 class="card-title mb-0"><i class="bi bi-person-check me-2"></i>Buat Tugas Mandiri</h6>
+                            <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-person-check me-2"></i>Buat Tugas Mandiri</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body pt-2">
                             <div class="alert alert-info">
-                                <i class="bi bi-info-circle me-2"></i>Tugas mandiri (self-initiated) akan menunggu
+                                <i class="bi bi-info-circle me-2"></i>Tugas mandiri akan menunggu
                                 persetujuan atasan yang Anda pilih sebelum bisa dikerjakan.
                             </div>
 
@@ -311,7 +316,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <small class="text-muted d-block mb-4">Atasan bisa mengubah prioritas saat menyetujui tugas. Bobot boleh dikosongkan — bisa diisi nanti sebelum tugas dinilai.</small>
+                                <small class="text-muted d-block mb-4">Atasan bisa mengubah prioritas saat menyetujui tugas. Bobot boleh dikosongkan — dapat diisi nanti oleh atasan sebelum tugas dinilai.</small>
 
                                 <div class="d-flex justify-content-end">
                                     <button type="submit" class="btn btn-success"><i class="bi bi-send me-1"></i>Ajukan Tugas</button>
@@ -569,6 +574,23 @@
                     this.action = "{{ route('penugasan.store-grup') }}";
                     pegawaiIdSingle.disabled = true;
                 }
+            });
+
+            // Input type="number" masih meloloskan karakter huruf seperti "e"/"E" (notasi ilmiah) di
+            // beberapa browser, dan atribut max="100" tidak ditegakkan otomatis — bersihkan tiap ketikan
+            // supaya cuma angka & satu titik desimal yang tersisa, lalu pangkas ke maksimal 100.
+            document.querySelectorAll('input[name="bobot_persen"]').forEach(input => {
+                input.addEventListener('input', function() {
+                    let value = this.value.replace(/[^0-9.]/g, '');
+                    const bagian = value.split('.');
+                    if (bagian.length > 2) {
+                        value = bagian[0] + '.' + bagian.slice(1).join('');
+                    }
+                    if (value !== '' && Number(value) > 100) {
+                        value = '100';
+                    }
+                    this.value = value;
+                });
             });
 
             document.querySelectorAll('input[name="tanggal_selesai"]').forEach(input => {

@@ -44,35 +44,65 @@
      <nav class="header-nav ms-auto">
          <ul class="d-flex align-items-center">
 
+             @php
+                 $notifikasiHeader = auth()->check()
+                     ? app(\Modules\Penugasan\Services\NotifikasiService::class)->untuk(auth()->user())
+                     : collect();
+                 $warnaNotifHeader = [
+                     'info' => 'text-info',
+                     'warning' => 'text-warning',
+                     'danger' => 'text-danger',
+                     'success' => 'text-success',
+                 ];
+             @endphp
+
              <li class="nav-item dropdown">
-                 <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown">
+                 <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-label="Notifikasi">
                      <i class="bi bi-bell"></i>
-                     <span class="badge bg-primary badge-number">4</span>
+                     @if ($notifikasiHeader->isNotEmpty())
+                         <span class="badge bg-primary badge-number">{{ $notifikasiHeader->count() }}</span>
+                     @endif
                  </a><!-- End Notification Icon -->
 
                  <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
                      <li class="dropdown-header">
-                         You have 4 new notifications
-                         <a href="#"><span class="badge rounded-pill bg-primary p-2 ms-2">View all</span></a>
+                         @if ($notifikasiHeader->isNotEmpty())
+                             Anda memiliki {{ $notifikasiHeader->count() }} notifikasi
+                         @else
+                             Tidak ada notifikasi baru
+                         @endif
+                         <a href="{{ route('notifications.index') }}"><span class="badge rounded-pill bg-primary p-2 ms-2">Lihat semua</span></a>
                      </li>
                      <li>
                          <hr class="dropdown-divider">
                      </li>
 
-                     <li class="notification-item">
-                         <i class="bi bi-exclamation-circle text-primary"></i>
-                         <div>
-                             <h4>Lorem Ipsum</h4>
-                             <p>Quae dolorem earum veritatis oditseno</p>
-                             <p>30 min. ago</p>
-                         </div>
-                     </li>
+                     @forelse ($notifikasiHeader->take(5) as $item)
+                         <li class="notification-item">
+                             <i class="bi {{ $item['ikon'] }} {{ $warnaNotifHeader[$item['tipe']] ?? 'text-primary' }}"></i>
+                             <a href="{{ $item['link'] }}" class="d-block text-reset text-decoration-none">
+                                 <p class="mb-0">{{ $item['pesan'] }}</p>
+                             </a>
+                         </li>
+                         @if (!$loop->last)
+                             <li>
+                                 <hr class="dropdown-divider">
+                             </li>
+                         @endif
+                     @empty
+                         <li class="notification-item">
+                             <i class="bi bi-check-circle text-success"></i>
+                             <div>
+                                 <p class="mb-0">Tidak ada yang perlu ditindaklanjuti saat ini.</p>
+                             </div>
+                         </li>
+                     @endforelse
 
                      <li>
                          <hr class="dropdown-divider">
                      </li>
                      <li class="dropdown-footer">
-                         <a href="#">Show all notifications</a>
+                         <a href="{{ route('notifications.index') }}">Lihat semua notifikasi</a>
                      </li>
 
                  </ul><!-- End Notification Dropdown Items -->

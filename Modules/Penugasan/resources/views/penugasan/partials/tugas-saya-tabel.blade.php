@@ -69,6 +69,10 @@
             @forelse ($penugasan as $tugas)
                 @php
                     $antrianPersetujuan = $tab === 'diberikan' && $tugas->is_mandiri && $tugas->status === 'pending';
+                    // Tugas yang sudah Selesai selalu 100% progress (aturan E6) — pengaman tampilan untuk
+                    // data lama, akar masalahnya sudah diperbaiki di PenugasanActionService::submit().
+                    // Cast ke float supaya nol di belakang koma dari kolom decimal (mis. "70.00") tidak ikut tampil.
+                    $progressTampil = $tugas->status === 'selesai' ? 100 : (float) $tugas->progress_persen;
                 @endphp
                 <tr class="{{ $antrianPersetujuan ? 'table-warning' : '' }}">
                     <td>
@@ -111,10 +115,10 @@
                     </td>
                     <td class="text-center" style="min-width: 100px;">
                         <div class="progress" style="height: 5px;">
-                            <div class="progress-bar" role="progressbar" style="width: {{ $tugas->progress_persen }}%"
-                                aria-valuenow="{{ $tugas->progress_persen }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div class="progress-bar" role="progressbar" style="width: {{ $progressTampil }}%"
+                                aria-valuenow="{{ $progressTampil }}" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <small class="text-muted">{{ $tugas->progress_persen }}%</small>
+                        <small class="text-muted">{{ $progressTampil }}%</small>
                     </td>
                     <td class="text-center">
                         <a href="{{ route('penugasan.show', $tugas->id) }}" class="btn btn-sm btn-outline-primary" title="Lihat Detail">

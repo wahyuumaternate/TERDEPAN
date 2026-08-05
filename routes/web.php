@@ -5,6 +5,7 @@ use App\Http\Controllers\Master\MasterBidangController;
 use App\Http\Controllers\Master\MasterJabatanController;
 use App\Http\Controllers\Master\MasterPegawaiController;
 use App\Http\Controllers\Master\MasterSubBidangController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +13,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     // Alias lama, dipertahankan supaya link/bookmark yang ada tidak putus.
     Route::get('/e-kinerja', [DashboardController::class, 'index'])->name('e-kinerja.index');
+    Route::get('/notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
 });
 
 Route::middleware('auth')->prefix('master')->name('master.')->group(function () {
