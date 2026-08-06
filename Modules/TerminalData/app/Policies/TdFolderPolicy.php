@@ -6,6 +6,13 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\TerminalData\Models\TdFolder;
 
+/**
+ * Satu-satunya gate otorisasi untuk TdFolder. Sebelumnya ada jalur kedua, TdFolder::canAccess()
+ * (Spatie permission + TdShare), yang tidak dijamin sinkron dengan Policy ini — sudah dihapus
+ * setelah audit menemukan jalur itu tidak pernah dipanggil endpoint/blade mana pun, dan
+ * permission Spatie yang dicek di sana (mis. "td_folder_view_all") tidak pernah di-seed/assign
+ * ke role mana pun (lihat docs/analysis/rekomendasi-arsitektur-eviden-kinerja.md §2.6).
+ */
 class TdFolderPolicy
 {
     use HandlesAuthorization;

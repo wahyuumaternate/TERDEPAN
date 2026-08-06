@@ -645,9 +645,8 @@ class PenugasanApiTest extends TestCase
             'progress_persen' => 45,
         ]);
         $folder = \Modules\TerminalData\Models\TdFolder::factory()->create(['created_by' => $atasan->id]);
-        $tugas->attachedFiles()->save(
-            \Modules\TerminalData\Models\TdFile::factory()->make(['folder_id' => $folder->id, 'created_by' => $bawahan->id])
-        );
+        $file = \Modules\TerminalData\Models\TdFile::factory()->create(['folder_id' => $folder->id, 'created_by' => $bawahan->id]);
+        $tugas->eviden()->attach($file->id, ['created_by' => $bawahan->id]);
 
         $response = $this->actingAs($bawahan, 'sanctum')->postJson("/api/v1/penugasan/{$tugas->id}/submit");
 
@@ -724,6 +723,195 @@ class PenugasanApiTest extends TestCase
 
         // Cascade: anggota ikut berubah status meski yang bertindak koordinator
         $this->assertEquals('proses', $tugasAnggota->fresh()->status);
+    }
+
+    public function test_upload_eviden_grup_kolektif_tersinkron_lewat_pivot_dan_hapus_untuk_semua(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $atasan = $this->createUserWithJabatan('KABID');
+        $koordinator = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $anggota = $this->createUserWithJabatan('PELAKSANA', $atasan);
+
+        $response = $this->actingAs($atasan, 'sanctum')->postJson('/api/v1/penugasan/berikan-tugas-grup', [
+            'pegawai_ids' => [$koordinator->id, $anggota->id],
+            'mode_grup' => 'kolektif',
+            'koordinator_id' => $koordinator->id,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Laporan bersama eviden',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(7)->toDateString(),
+            'bobot_persen' => 30,
+        ]);
+
+        $rows = Penugasan::where('grup_id', $response->json('data.0.grup_id'))->get();
+        $tugasKoordinator = $rows->firstWhere('pegawai_id', $koordinator->id);
+        $tugasAnggota = $rows->firstWhere('pegawai_id', $anggota->id);
+
+        $this->actingAs($koordinator, 'sanctum')->postJson("/api/v1/penugasan/{$tugasKoordinator->id}/terima");
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('bukti-grup.pdf', 50, 'application/pdf');
+        $uploadResponse = $this->actingAs($koordinator)->post(route('penugasan.upload-bukti', $tugasKoordinator->id), [
+            'file' => $file,
+        ]);
+        $uploadResponse->assertJson(['success' => true]);
+
+        // Satu baris TdFile fisik, ditautkan ke DUA penugasan (koordinator + anggota) lewat pivot —
+        // bukan dua baris TdFile terduplikasi seperti pola attachable lama.
+        $this->assertSame(1, \Modules\TerminalData\Models\TdFile::count());
+        $this->assertSame(1, $tugasKoordinator->fresh()->eviden()->count());
+        $this->assertSame(1, $tugasAnggota->fresh()->eviden()->count());
+        $fileId = $tugasKoordinator->fresh()->eviden()->first()->id;
+        $this->assertSame($fileId, $tugasAnggota->fresh()->eviden()->first()->id);
+
+        // Hapus lewat sisi koordinator harus menghilangkannya juga dari sisi anggota, dan
+        // baris TdFile fisiknya benar-benar terhapus (bukan orphan).
+        $this->actingAs($koordinator)
+            ->delete(route('penugasan.hapus-bukti', [$tugasKoordinator->id, $fileId]))
+            ->assertJson(['success' => true]);
+
+        $this->assertSame(0, $tugasKoordinator->fresh()->eviden()->count());
+        $this->assertSame(0, $tugasAnggota->fresh()->eviden()->count());
+        $this->assertSame(0, \Modules\TerminalData\Models\TdFile::count());
+    }
+
+    public function test_tolak_tugas_solo_masuk_masa_tenggang_bukan_langsung_hapus(): void
+    {
+        $atasan = $this->createUserWithJabatan('KABID');
+        $bawahan = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $tugas = $this->createPenugasan($bawahan, $atasan, ['status' => Penugasan::STATUS_PENDING]);
+
+        $response = $this->actingAs($bawahan, 'sanctum')
+            ->postJson("/api/v1/penugasan/{$tugas->id}/tolak", ['alasan_penolakan' => 'Tidak relevan']);
+
+        $response->assertStatus(200);
+
+        $tugas->refresh();
+        $this->assertSame(Penugasan::STATUS_DITOLAK, $tugas->status);
+        $this->assertNotNull($tugas->ditolak_pada);
+        $this->assertNotNull(Penugasan::find($tugas->id), 'Record belum boleh terhapus selama masa tenggang');
+        $this->assertTrue($tugas->masihBisaBatalkanPenolakan());
+
+        $riwayat = \Modules\Penugasan\Models\RiwayatPenolakan::whereJsonContains('penugasan_ids', $tugas->id)->first();
+        $this->assertNotNull($riwayat);
+        $this->assertSame('Tidak relevan', $riwayat->alasan_reject);
+        $this->assertNull($riwayat->dibatalkan_pada);
+        $this->assertNull($riwayat->dieksekusi_pada);
+    }
+
+    public function test_batalkan_penolakan_mengembalikan_status_pending(): void
+    {
+        $atasan = $this->createUserWithJabatan('KABID');
+        $bawahan = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $tugas = $this->createPenugasan($bawahan, $atasan, ['status' => Penugasan::STATUS_PENDING]);
+
+        $this->actingAs($bawahan, 'sanctum')
+            ->postJson("/api/v1/penugasan/{$tugas->id}/tolak", ['alasan_penolakan' => 'Salah klik']);
+
+        $response = $this->actingAs($bawahan, 'sanctum')
+            ->postJson("/api/v1/penugasan/{$tugas->id}/batalkan-penolakan");
+
+        $response->assertStatus(200);
+
+        $tugas->refresh();
+        $this->assertSame(Penugasan::STATUS_PENDING, $tugas->status);
+        $this->assertNull($tugas->ditolak_pada);
+        $this->assertNull($tugas->alasan_reject);
+
+        $riwayat = \Modules\Penugasan\Models\RiwayatPenolakan::whereJsonContains('penugasan_ids', $tugas->id)->first();
+        $this->assertNotNull($riwayat->dibatalkan_pada);
+    }
+
+    public function test_batalkan_penolakan_grup_kolektif_hanya_koordinator_dan_cascade(): void
+    {
+        $atasan = $this->createUserWithJabatan('KABID');
+        $koordinator = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $anggota = $this->createUserWithJabatan('PELAKSANA', $atasan);
+
+        $response = $this->actingAs($atasan, 'sanctum')->postJson('/api/v1/penugasan/berikan-tugas-grup', [
+            'pegawai_ids' => [$koordinator->id, $anggota->id],
+            'mode_grup' => 'kolektif',
+            'koordinator_id' => $koordinator->id,
+            'jenis' => 'tambahan',
+            'prioritas' => 'sedang',
+            'nama_tugas' => 'Laporan bersama batal tolak',
+            'deskripsi' => 'x',
+            'tanggal_mulai' => now()->toDateString(),
+            'tanggal_selesai' => now()->addDays(7)->toDateString(),
+            'bobot_persen' => 30,
+        ]);
+
+        $rows = Penugasan::where('grup_id', $response->json('data.0.grup_id'))->get();
+        $tugasKoordinator = $rows->firstWhere('pegawai_id', $koordinator->id);
+        $tugasAnggota = $rows->firstWhere('pegawai_id', $anggota->id);
+
+        $this->actingAs($koordinator, 'sanctum')
+            ->postJson("/api/v1/penugasan/{$tugasKoordinator->id}/tolak", ['alasan_penolakan' => 'Batal ambil tugas ini'])
+            ->assertStatus(200);
+
+        $this->assertSame(Penugasan::STATUS_DITOLAK, $tugasAnggota->fresh()->status);
+
+        // Anggota non-koordinator tidak boleh membatalkan penolakan atas nama grup
+        $this->actingAs($anggota, 'sanctum')
+            ->postJson("/api/v1/penugasan/{$tugasAnggota->id}/batalkan-penolakan")
+            ->assertStatus(403);
+
+        // Koordinator boleh, dan cascade balik ke pending untuk seluruh anggota
+        $this->actingAs($koordinator, 'sanctum')
+            ->postJson("/api/v1/penugasan/{$tugasKoordinator->id}/batalkan-penolakan")
+            ->assertStatus(200);
+
+        $this->assertSame(Penugasan::STATUS_PENDING, $tugasAnggota->fresh()->status);
+        $this->assertSame(Penugasan::STATUS_PENDING, $tugasKoordinator->fresh()->status);
+    }
+
+    public function test_command_purge_tugas_ditolak_menghapus_setelah_masa_tenggang_dan_cascade_grup(): void
+    {
+        $atasan = $this->createUserWithJabatan('KABID');
+        $koordinator = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $anggota = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $grupId = (string) \Illuminate\Support\Str::uuid();
+
+        $tugasKoordinator = $this->createPenugasan($koordinator, $atasan, [
+            'status' => Penugasan::STATUS_DITOLAK,
+            'ditolak_pada' => now()->subHours(25),
+            'grup_id' => $grupId,
+            'mode_grup' => Penugasan::MODE_GRUP_KOLEKTIF,
+            'is_koordinator' => true,
+        ]);
+        $tugasAnggota = $this->createPenugasan($anggota, $atasan, [
+            'status' => Penugasan::STATUS_DITOLAK,
+            'ditolak_pada' => now()->subHours(25),
+            'grup_id' => $grupId,
+            'mode_grup' => Penugasan::MODE_GRUP_KOLEKTIF,
+            'is_koordinator' => false,
+        ]);
+
+        // Tugas solo yang baru saja ditolak (belum lewat masa tenggang) — tidak boleh ikut terhapus.
+        $bawahanLain = $this->createUserWithJabatan('PELAKSANA', $atasan);
+        $tugasBelumKedaluwarsa = $this->createPenugasan($bawahanLain, $atasan, [
+            'status' => Penugasan::STATUS_DITOLAK,
+            'ditolak_pada' => now()->subHours(1),
+        ]);
+
+        // Tugas mandiri ditolak (rejectMandiri) — permanen, tidak boleh disentuh job ini sama sekali.
+        $tugasMandiriDitolak = $this->createPenugasan($bawahanLain, null, [
+            'is_mandiri' => true,
+            'status' => Penugasan::STATUS_DITOLAK,
+            'ditolak_pada' => null,
+        ]);
+
+        $this->artisan('penugasan:purge-ditolak')->assertExitCode(0);
+
+        $this->assertNull(Penugasan::find($tugasKoordinator->id), 'Koordinator harus sudah terhapus');
+        $this->assertNull(Penugasan::find($tugasAnggota->id), 'Anggota harus ikut terhapus (cascade)');
+        $this->assertNotNull(Penugasan::withTrashed()->find($tugasKoordinator->id));
+        $this->assertNotNull(Penugasan::withTrashed()->find($tugasAnggota->id));
+
+        $this->assertNotNull(Penugasan::find($tugasBelumKedaluwarsa->id), 'Belum lewat masa tenggang, jangan dihapus');
+        $this->assertNotNull(Penugasan::find($tugasMandiriDitolak->id), 'Tugas mandiri ditolak permanen, jangan disentuh job ini');
     }
 
     public function test_jafung_bisa_memberi_tugas_ke_pelaksana_dan_gatek_di_bidangnya(): void

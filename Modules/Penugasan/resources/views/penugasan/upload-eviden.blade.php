@@ -21,15 +21,15 @@
                         <h5 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>{{ $tugas->nama_tugas }}</h5>
                     </div>
                     <div class="card-body p-4">
-                        @if ($tugas->attachedFiles->isNotEmpty())
+                        @if ($tugas->eviden->isNotEmpty())
                             <div class="card bg-light mb-4">
                                 <div class="card-header bg-transparent">
                                     <h6 class="mb-0"><i class="bi bi-paperclip me-2"></i>File yang Sudah Diupload
-                                        ({{ $tugas->attachedFiles->count() }})</h6>
+                                        ({{ $tugas->eviden->count() }})</h6>
                                 </div>
                                 <div class="card-body">
                                     <div class="list-group list-group-flush">
-                                        @foreach ($tugas->attachedFiles as $file)
+                                        @foreach ($tugas->eviden as $file)
                                             <div
                                                 class="list-group-item border-0 px-0 d-flex justify-content-between align-items-center">
                                                 <span><i class="bi bi-file-earmark-text text-danger me-2"></i>{{ $file->original_name }}</span>
@@ -54,12 +54,9 @@
                         @endif
 
                         <form id="uploadForm">
-                            <div class="mb-3">
-                                <label class="form-label">Folder Tujuan <span class="text-danger">*</span></label>
-                                <select class="form-select" id="folderSelect" required>
-                                    <option value="">Memuat folder...</option>
-                                </select>
-                                <small class="text-muted">File akan disimpan di folder Terminal Data yang dipilih</small>
+                            <div class="alert alert-light border small mb-3">
+                                <i class="bi bi-info-circle me-1"></i>File akan otomatis tersimpan rapi di folder
+                                Eviden Kinerja Anda sendiri, dikelompokkan per tahun &amp; bulan.
                             </div>
 
                             <div class="mb-3">
@@ -166,39 +163,17 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch("{{ route('terminaldata.foldersData.index') }}")
-                .then(r => r.json())
-                .then(response => {
-                    const folders = Array.isArray(response) ? response : (response.data || []);
-                    const select = document.getElementById('folderSelect');
-                    select.innerHTML = '<option value="">Pilih folder</option>';
-                    folders.forEach(folder => {
-                        const option = document.createElement('option');
-                        option.value = folder.id;
-                        option.textContent = folder.nama || folder.name || 'Folder';
-                        select.appendChild(option);
-                    });
-                })
-                .catch(() => {
-                    document.getElementById('folderSelect').innerHTML =
-                        '<option value="">Gagal memuat folder</option>';
-                });
-        });
-
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
-            const folderId = document.getElementById('folderSelect').value;
             const file = document.getElementById('fileInput').files[0];
 
-            if (!folderId || !file) {
-                Swal.fire('Perhatian', 'Folder dan file wajib dipilih', 'warning');
+            if (!file) {
+                Swal.fire('Perhatian', 'File wajib dipilih', 'warning');
                 return;
             }
 
             const formData = new FormData();
-            formData.append('folder_id', folderId);
             formData.append('file', file);
 
             const btn = document.getElementById('btnUpload');

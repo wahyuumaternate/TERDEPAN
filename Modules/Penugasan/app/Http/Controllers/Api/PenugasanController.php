@@ -433,7 +433,7 @@ class PenugasanController extends Controller
         try {
             $penugasan = Penugasan::with([
                 'pegawai:id,nama', 'pemberiTugas:id,nama', 'validator:id,nama',
-                'attachedFiles', 'progress' => fn ($q) => $q->orderByDesc('tanggal'),
+                'eviden', 'progress' => fn ($q) => $q->orderByDesc('tanggal'),
                 'historyRevisi' => fn ($q) => $q->orderByDesc('revisi_ke'),
                 'perpanjanganWaktu' => fn ($q) => $q->orderByDesc('created_at'),
             ])->findOrFail($id);
@@ -526,6 +526,20 @@ class PenugasanController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini', 'data' => null], 403);
         } catch (ValidationException $e) {
             return response()->json(['status' => false, 'message' => collect($e->errors())->flatten()->first(), 'data' => $e->errors()], 422);
+        }
+    }
+
+    public function batalkanPenolakan(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->batalkanPenolakan($penugasan, $request->user());
+
+            return response()->json(['status' => true, 'message' => 'Penolakan dibatalkan, tugas kembali berstatus Pending', 'data' => $penugasan]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['status' => false, 'message' => 'Penugasan tidak ditemukan', 'data' => null], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini', 'data' => null], 403);
         }
     }
 

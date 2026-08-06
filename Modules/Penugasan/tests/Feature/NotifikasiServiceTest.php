@@ -74,10 +74,19 @@ class NotifikasiServiceTest extends TestCase
             'pemberi_tugas_id' => $this->atasan->id,
         ]);
 
+        Penugasan::factory()->create([
+            'pegawai_id' => $this->bawahan->id,
+            'pemberi_tugas_id' => $this->atasan->id,
+            'is_mandiri' => false,
+            'status' => Penugasan::STATUS_DITOLAK,
+            'ditolak_pada' => now(),
+        ]);
+
         $notifikasi = app(NotifikasiService::class)->untuk($this->bawahan);
 
         $this->assertTrue($notifikasi->contains(fn ($n) => str_contains($n['pesan'], 'tugas baru')));
         $this->assertTrue($notifikasi->contains(fn ($n) => str_contains($n['pesan'], 'melewati deadline')));
+        $this->assertTrue($notifikasi->contains(fn ($n) => str_contains($n['pesan'], 'ditolak — masih bisa dibatalkan')));
     }
 
     public function test_atasan_melihat_notifikasi_mandiri_menunggu_dan_perpanjangan_menunggu(): void

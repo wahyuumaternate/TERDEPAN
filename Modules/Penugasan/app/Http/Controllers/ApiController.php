@@ -247,6 +247,57 @@ class ApiController extends Controller
     }
 
     /**
+     * Laporan bulanan eviden kinerja per pegawai (dokumen & foto). Default ke pegawai &
+     * bulan/tahun berjalan kalau tidak dispesifikasikan. Melihat laporan pegawai LAIN
+     * dibatasi ke ADMIN/KABAN/SEKBAN atau atasan langsungnya — bukan bebas seperti
+     * TdFilePolicy::view() yang memang tidak memfilter per bidang (lihat docs/analysis/
+     * rekomendasi-arsitektur-eviden-kinerja.md §2.6, konsolidasi otorisasi belum menyentuh sini).
+     */
+    public function laporanEviden(Request $request)
+    {
+        $user = $request->user();
+        $pegawaiId = $request->integer('pegawai_id') ?: $user->id;
+
+        if ($pegawaiId !== $user->id) {
+            $target = User::with('profile')->findOrFail($pegawaiId);
+            $kodeJabatan = $user->profile?->jabatan?->kode;
+            $bolehLihat = in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])
+                || $user->id === $target->profile?->atasan_langsung_id;
+
+            if (! $bolehLihat) {
+                return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melihat laporan pegawai ini'], 403);
+            }
+        }
+
+        $pegawai = $pegawaiId === $user->id ? $user : $target;
+        $tahun = $request->integer('tahun') ?: (int) now()->format('Y');
+        $bulan = $request->integer('bulan') ?: (int) now()->format('n');
+
+        $service = app(\Modules\Penugasan\Services\EvidenKinerjaReportService::class);
+        $eviden = $request->input('tipe') === 'foto'
+            ? $service->fotoBulan($pegawai, $tahun, $bulan)
+            : $service->evidenBulan($pegawai, $tahun, $bulan);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'pegawai_id' => $pegawai->id,
+                'tahun' => $tahun,
+                'bulan' => $bulan,
+                'total' => $eviden->count(),
+                'eviden' => $eviden->map(fn ($file) => [
+                    'id' => $file->id,
+                    'nama' => $file->original_name,
+                    'extension' => $file->extension,
+                    'nama_tugas' => $file->penugasan->first()?->nama_tugas,
+                    'download_url' => route('terminaldata.filesData.download', $file->id),
+                    'preview_url' => route('terminaldata.filesData.serve', $file->id),
+                ])->values(),
+            ],
+        ]);
+    }
+
+    /**
      * Helper: Get color based on status
      *
      * @param  string  $status

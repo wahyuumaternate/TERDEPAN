@@ -13,6 +13,7 @@ Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     Route::prefix('penugasan/{id}')->group(function () {
         Route::post('/terima', [PenugasanController::class, 'terima'])->name('penugasan.terima');
         Route::post('/tolak', [PenugasanController::class, 'tolak'])->name('penugasan.tolak');
+        Route::post('/batalkan-penolakan', [PenugasanController::class, 'batalkanPenolakan'])->name('penugasan.batalkan-penolakan');
         Route::post('/approve-mandiri', [PenugasanController::class, 'approveMandiri'])->name('penugasan.approve-mandiri');
         Route::post('/reject-mandiri', [PenugasanController::class, 'rejectMandiri'])->name('penugasan.reject-mandiri');
         Route::post('/submit', [PenugasanController::class, 'submit'])->name('penugasan.submit');

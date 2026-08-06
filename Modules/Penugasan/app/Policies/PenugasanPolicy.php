@@ -129,6 +129,16 @@ class PenugasanPolicy
     }
 
     /**
+     * Determine if user can membatalkan penolakan tugas (masa tenggang, lihat
+     * Penugasan::masihBisaBatalkanPenolakan()) — mengembalikan status ke pending.
+     */
+    public function batalkanPenolakan(User $user, Penugasan $tugas): bool
+    {
+        return $user->id === $tugas->pegawai_id
+            && $tugas->masihBisaBatalkanPenolakan();
+    }
+
+    /**
      * Determine if user can submit task (menuju status Selesai)
      */
     public function submit(User $user, Penugasan $tugas): bool

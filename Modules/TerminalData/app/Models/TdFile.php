@@ -17,6 +17,13 @@ class TdFile extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * Satu sumber kebenaran untuk daftar ekstensi gambar — dipakai isImage() (per-instance)
+     * maupun query filter langsung (mis. laporan bulanan eviden foto), supaya tidak ada dua
+     * daftar hardcoded terpisah yang bisa saling berbeda seiring waktu.
+     */
+    public const EXTENSI_GAMBAR = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
     protected $table = 'td_files';
 
     protected $keyType = 'string';
@@ -143,6 +150,17 @@ class TdFile extends Model
     public function attachable()
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Penugasan yang mereferensikan file ini sebagai eviden kinerja (lewat pivot
+     * knj_penugasan_eviden — lihat Penugasan::eviden() untuk sisi sebaliknya).
+     */
+    public function penugasan()
+    {
+        return $this->belongsToMany(\Modules\Penugasan\Models\Penugasan::class, 'knj_penugasan_eviden', 'td_file_id', 'penugasan_id')
+            ->withPivot('created_by')
+            ->withTimestamps();
     }
 
     public function creator()
@@ -398,7 +416,7 @@ class TdFile extends Model
 
     public function isImage()
     {
-        return in_array($this->extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+        return in_array($this->extension, self::EXTENSI_GAMBAR);
     }
 
     public function isPdf()
@@ -463,75 +481,6 @@ class TdFile extends Model
         $newFile->save();
 
         return $newFile;
-    }
-
-    public function canAccess($user, $permission = 'view')
-    {
-        // Owner always has full access
-        if ($this->created_by === $user->id) {
-            return true;
-        }
-
-        // Check if public for view/download only
-        if ($this->is_public && in_array($permission, ['view', 'download'])) {
-            return true;
-        }
-
-        // Map permission to Spatie permission name
-        $permissionMap = [
-            'view' => 'td_file_view',
-            'download' => 'td_file_download',
-            'edit' => 'td_file_edit',
-            'delete' => 'td_file_delete',
-        ];
-
-        $basePermission = $permissionMap[$permission] ?? 'td_file_view';
-
-        // Check permissions hierarchy: all > bidang > sub_bidang > own
-        if ($user->hasPermissionTo($basePermission.'_all')) {
-            return true;
-        }
-
-        if (
-            $user->hasPermissionTo($basePermission.'_bidang') &&
-            $this->bidang_id === $user->profile?->bidang_id
-        ) {
-            return true;
-        }
-
-        if (
-            $user->hasPermissionTo($basePermission.'_sub_bidang') &&
-            $this->sub_bidang_id === $user->profile?->sub_bidang_id
-        ) {
-            return true;
-        }
-
-        if (
-            $user->hasPermissionTo($basePermission.'_own') &&
-            $this->created_by === $user->id
-        ) {
-            return true;
-        }
-
-        // Check folder access if file doesn't have explicit permissions
-        if ($this->folder && $this->folder->canAccess($user, $permission)) {
-            return true;
-        }
-
-        // Check direct shares for staff who don't have role-based permissions
-        $share = $this->sharedWith()
-            ->where('pegawai_id', $user->id)
-            ->first();
-
-        if ($share) {
-            // Share allows view/download by default
-            if (in_array($permission, ['view', 'download'])) {
-                return true;
-            }
-            // Check if share has edit rights (if we add a permission column to pivot later)
-        }
-
-        return false;
     }
 
     public function duplicate($newFolderId = null, $newName = null)

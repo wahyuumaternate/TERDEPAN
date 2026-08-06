@@ -12,6 +12,7 @@ use Modules\Penugasan\Models\HistoriRevisi;
 use Modules\Penugasan\Models\Penugasan;
 use Modules\Penugasan\Models\PerpanjanganWaktu;
 use Modules\Penugasan\Models\Progress;
+use Modules\Penugasan\Models\RiwayatPenolakan;
 
 /**
  * Logic inti alur Penugasan, dipakai bersama oleh Api\PenugasanController
@@ -237,6 +238,13 @@ class PenugasanActionService
         return $penugasan;
     }
 
+    /**
+     * Menolak tugas TIDAK langsung menghapus record — status jadi Ditolak dengan masa
+     * tenggang (Penugasan::MASA_TENGGANG_PENOLAKAN_JAM) sebelum job terjadwal
+     * (PurgeTugasDitolak) benar-benar menghapusnya (soft delete). Selama masa tenggang,
+     * penolakan bisa dibatalkan lewat batalkanPenolakan() — menghindari kasus "koordinator/
+     * pegawai salah klik tolak" yang sebelumnya tidak bisa diurungkan sama sekali.
+     */
     public function tolak(Penugasan $penugasan, User $actor, string $alasanPenolakan): void
     {
         Gate::forUser($actor)->authorize('tolak', $penugasan);
@@ -248,13 +256,55 @@ class PenugasanActionService
             ]);
         }
 
-        $penugasan->update(['alasan_reject' => $alasanPenolakan]);
+        $anggotaIds = $penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF
+            ? $penugasan->grupAnggota->pluck('id')->push($penugasan->id)->values()
+            : collect([$penugasan->id]);
 
-        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
-            $penugasan->grupAnggota->each->delete();
-        }
+        $ditolakPada = now();
+        $update = [
+            'status' => Penugasan::STATUS_DITOLAK,
+            'alasan_reject' => $alasanPenolakan,
+            'ditolak_pada' => $ditolakPada,
+        ];
 
-        $penugasan->delete();
+        $penugasan->update($update);
+        $this->cascadeKeGrup($penugasan, $update);
+
+        RiwayatPenolakan::create([
+            'grup_id' => $penugasan->grup_id,
+            'penugasan_ids' => $anggotaIds->all(),
+            'ditolak_oleh' => $actor->id,
+            'alasan_reject' => $alasanPenolakan,
+            'ditolak_pada' => $ditolakPada,
+        ]);
+    }
+
+    /**
+     * Membatalkan penolakan selama masih dalam masa tenggang — mengembalikan status ke
+     * Pending seperti semula. Lihat Penugasan::masihBisaBatalkanPenolakan().
+     */
+    public function batalkanPenolakan(Penugasan $penugasan, User $actor): Penugasan
+    {
+        Gate::forUser($actor)->authorize('batalkanPenolakan', $penugasan);
+        $this->tolakJikaBukanKoordinatorGrup($penugasan, 'Hanya koordinator grup yang bisa membatalkan penolakan tugas ini');
+
+        $update = [
+            'status' => Penugasan::STATUS_PENDING,
+            'alasan_reject' => null,
+            'ditolak_pada' => null,
+        ];
+
+        $penugasan->update($update);
+        $this->cascadeKeGrup($penugasan, $update);
+
+        RiwayatPenolakan::whereJsonContains('penugasan_ids', $penugasan->id)
+            ->whereNull('dibatalkan_pada')
+            ->whereNull('dieksekusi_pada')
+            ->latest('ditolak_pada')
+            ->first()
+            ?->update(['dibatalkan_pada' => now()]);
+
+        return $penugasan->fresh();
     }
 
     public function submit(Penugasan $penugasan, User $actor): Penugasan
@@ -268,7 +318,7 @@ class PenugasanActionService
             ]);
         }
 
-        if ($penugasan->attachedFiles()->count() === 0) {
+        if ($penugasan->eviden()->count() === 0) {
             throw ValidationException::withMessages([
                 'bukti' => 'Harap upload bukti pengerjaan terlebih dahulu',
             ]);

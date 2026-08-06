@@ -56,6 +56,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
         Route::get('/statistik', [ApiController::class, 'statistik'])->name('statistik');
         Route::get('/kalender', [ApiController::class, 'kalender'])->name('kalender');
         Route::get('/notifikasi', [ApiController::class, 'notifikasi'])->name('notifikasi');
+        Route::get('/laporan-eviden', [ApiController::class, 'laporanEviden'])->name('laporan-eviden');
         Route::get('/workload-tim', [ApiController::class, 'workloadTim'])->name('workload-tim');
         Route::get('/progress-anggota/{pegawai}', [ApiController::class, 'progressAnggota'])->name('progress-anggota');
         Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
@@ -71,6 +72,7 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
 
     Route::post('/{id}/terima', [PenugasanController::class, 'terima'])->name('terima');
     Route::post('/{id}/tolak', [PenugasanController::class, 'tolak'])->name('tolak');
+    Route::post('/{id}/batalkan-penolakan', [PenugasanController::class, 'batalkanPenolakan'])->name('batalkan-penolakan');
     Route::post('/{id}/submit', [PenugasanController::class, 'submit'])->name('submit');
     Route::post('/{id}/nilai', [PenugasanController::class, 'nilai'])->name('nilai');
     Route::post('/{id}/revisi', [PenugasanController::class, 'revisi'])->name('revisi');

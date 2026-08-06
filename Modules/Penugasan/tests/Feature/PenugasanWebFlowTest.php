@@ -9,7 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Modules\Penugasan\Models\Penugasan;
-use Modules\TerminalData\Models\TdFolder;
 use Tests\TestCase;
 
 class PenugasanWebFlowTest extends TestCase
@@ -163,18 +162,14 @@ class PenugasanWebFlowTest extends TestCase
             ->post(route('penugasan.terima', $penugasan->id))
             ->assertJson(['success' => true]);
 
-        // 3. Bawahan mengupload bukti pengerjaan ke folder bidangnya
-        $folder = TdFolder::factory()->forBidang($this->bidang->id)->create([
-            'created_by' => $this->atasan->id,
-        ]);
+        // 3. Bawahan mengupload bukti pengerjaan (folder Eviden Kinerja ditentukan otomatis)
         $file = UploadedFile::fake()->create('bukti.pdf', 100, 'application/pdf');
 
         $uploadResponse = $this->actingAs($this->bawahan)->post(route('penugasan.upload-bukti', $penugasan->id), [
-            'folder_id' => $folder->id,
             'file' => $file,
         ]);
         $uploadResponse->assertJson(['success' => true]);
-        $this->assertSame(1, $penugasan->fresh()->attachedFiles()->count());
+        $this->assertSame(1, $penugasan->fresh()->eviden()->count());
 
         // 4. Bawahan mencatat progress
         $this->actingAs($this->bawahan)

@@ -6,8 +6,8 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Modules\Penugasan\Database\Factories\PenugasanFactory;
@@ -57,6 +57,7 @@ class Penugasan extends Model
         'status',
         'status_approval',
         'alasan_reject',
+        'ditolak_pada',
         'validator_id',
         'hasil_validasi',
         'catatan_validasi',
@@ -71,6 +72,7 @@ class Penugasan extends Model
         'tanggal_diselesaikan' => 'datetime',
         'validated_at' => 'datetime',
         'diterima_at' => 'datetime',
+        'ditolak_pada' => 'datetime',
         'target_value' => 'decimal:2',
         'bobot_persen' => 'decimal:2',
         'progress_persen' => 'decimal:2',
@@ -130,6 +132,12 @@ class Penugasan extends Model
         self::STATUS_DITOLAK,
     ];
 
+    /**
+     * Masa tenggang (jam) sebelum tugas berstatus Ditolak benar-benar dihapus (soft delete)
+     * oleh job terjadwal — selama masa ini, penolakan masih bisa dibatalkan.
+     */
+    public const MASA_TENGGANG_PENOLAKAN_JAM = 24;
+
     // Prioritas constants
     public const PRIORITAS_RENDAH = 'rendah';
 
@@ -184,11 +192,16 @@ class Penugasan extends Model
     }
 
     /**
-     * Get all attached files from Terminal Data (polymorphic)
+     * Bukti pengerjaan (eviden kinerja) — lewat pivot knj_penugasan_eviden, BUKAN polymorphic
+     * attachable seperti sebelumnya, supaya satu baris TdFile bisa ditautkan ke banyak
+     * penugasan sekaligus (perlu untuk grup kolektif) tanpa menduplikasi baris TdFile.
      */
-    public function attachedFiles(): MorphMany
+    public function eviden(): BelongsToMany
     {
-        return $this->morphMany(\Modules\TerminalData\Models\TdFile::class, 'attachable');
+        return $this->belongsToMany(\Modules\TerminalData\Models\TdFile::class, 'knj_penugasan_eviden', 'penugasan_id', 'td_file_id')
+            ->using(PenugasanEviden::class)
+            ->withPivot('created_by')
+            ->withTimestamps();
     }
 
     /**
@@ -238,6 +251,20 @@ class Penugasan extends Model
     public function hitungNilaiAkhir(float $nilaiAwal, float $persentaseTerlambat): float
     {
         return round($nilaiAwal * (1 - $persentaseTerlambat / 100), 2);
+    }
+
+    /**
+     * Selama masa tenggang (MASA_TENGGANG_PENOLAKAN_JAM) setelah ditolak, tugas belum
+     * benar-benar dihapus dan penolakannya masih bisa dibatalkan (lihat PenugasanActionService::
+     * batalkanPenolakan()). Tidak berlaku untuk tugas mandiri — penolakannya (rejectMandiri)
+     * memang didesain permanen sampai pegawai ubah & ajukan ulang secara manual.
+     */
+    public function masihBisaBatalkanPenolakan(): bool
+    {
+        return $this->status === self::STATUS_DITOLAK
+            && ! $this->is_mandiri
+            && $this->ditolak_pada !== null
+            && $this->ditolak_pada->addHours(self::MASA_TENGGANG_PENOLAKAN_JAM)->isFuture();
     }
 
     // Scopes

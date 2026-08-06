@@ -398,4 +398,29 @@ class TdFileController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Cari file lintas folder — sebelumnya scope-scope ini (scopeSearch, scopeByType,
+     * scopeOwnedBy, scopeRecentlyUploaded) sudah ada di model tapi tidak ada endpoint
+     * yang memanggilnya, jadi satu-satunya cara pengguna menemukan file adalah
+     * membuka folder satu per satu secara manual.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', TdFile::class);
+
+        $files = TdFile::query()
+            ->with(['folder:id,name,path', 'creator:id,nama'])
+            ->when($request->filled('q'), fn ($q) => $q->search($request->string('q')))
+            ->when($request->filled('type'), fn ($q) => $q->byType($request->string('type')))
+            ->when($request->filled('creator_id'), fn ($q) => $q->ownedBy($request->integer('creator_id')))
+            ->when($request->filled('days'), fn ($q) => $q->recentlyUploaded($request->integer('days')))
+            ->latest()
+            ->paginate($request->integer('per_page', 20));
+
+        return response()->json([
+            'success' => true,
+            'data' => $files,
+        ]);
+    }
 }

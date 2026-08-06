@@ -113,6 +113,13 @@
                                     <small class="text-muted d-block mb-1"><i class="bi bi-info-circle me-1"></i>Alasan Ditolak</small>
                                     {{ $penugasan->alasan_reject }}
                                 </div>
+                                @if ($penugasan->masihBisaBatalkanPenolakan())
+                                    <div class="alert alert-warning mt-2 mb-0 py-2">
+                                        <i class="bi bi-hourglass-split me-1"></i>Tugas ini akan dihapus otomatis pada
+                                        <strong>{{ $penugasan->ditolak_pada->addHours(\Modules\Penugasan\Models\Penugasan::MASA_TENGGANG_PENOLAKAN_JAM)->format('d M Y, H:i') }}</strong>
+                                        kecuali penolakan dibatalkan.
+                                    </div>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -130,6 +137,11 @@
                                 @if ($izin['tolak'] && ! $bukanKoordinatorGrupKolektif)
                                     <button class="btn btn-outline-danger btn-sm" onclick="tolakTugas()">
                                         <i class="bi bi-x-circle me-1"></i>Tolak Tugas
+                                    </button>
+                                @endif
+                                @if ($izin['batalkanPenolakan'] && ! $bukanKoordinatorGrupKolektif)
+                                    <button class="btn btn-outline-success btn-sm" onclick="batalkanPenolakan()">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Batalkan Penolakan
                                     </button>
                                 @endif
                                 @if ($isPegawai && in_array($penugasan->status, ['proses', 'revisi', 'terlambat']) && ! $bukanKoordinatorGrupKolektif)
@@ -379,11 +391,11 @@
                     <div class="card shadow-sm border-0 mb-3">
                         <div class="card-header bg-white d-flex align-items-center justify-content-between">
                             <h6 class="card-title my-0 pt-2 pb-0"><i class="bi bi-paperclip me-2 text-primary"></i>Evidence &amp; Perpanjangan</h6>
-                            <span class="badge bg-secondary bg-opacity-50 text-body">{{ $penugasan->attachedFiles->count() }}</span>
+                            <span class="badge bg-secondary bg-opacity-50 text-body">{{ $penugasan->eviden->count() }}</span>
                         </div>
                         <div class="card-body pt-2">
                             <h6 class="small text-muted text-uppercase mb-2">Bukti Pengerjaan</h6>
-                            @forelse ($penugasan->attachedFiles as $file)
+                            @forelse ($penugasan->eviden as $file)
                                 <div class="d-flex align-items-center justify-content-between file-item px-2 py-2 rounded-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <i class="bi bi-file-earmark-text text-primary fs-5"></i>
@@ -905,23 +917,16 @@
                         postJson(`{{ url('/penugasan') }}/${penugasanId}/tolak`, {
                                 alasan_penolakan: result.value
                             })
-                            .then(data => {
-                                if (data.success) {
-                                    // Record dihapus oleh server saat ditolak — reload ke halaman yang sama
-                                    // akan 404, jadi arahkan kembali ke daftar Tugas Saya.
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Berhasil!',
-                                        text: data.message,
-                                        timer: 1500,
-                                        showConfirmButton: false
-                                    }).then(() => window.location.href = "{{ route('penugasan.tugas-saya') }}");
-                                } else {
-                                    showError(data.message);
-                                }
-                            });
+                            // Tugas tidak lagi langsung dihapus (ada masa tenggang & bisa dibatalkan),
+                            // jadi cukup reload halaman yang sama, tidak perlu redirect ke Tugas Saya.
+                            .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
                     }
                 });
+            }
+
+            function batalkanPenolakan() {
+                postJson(`{{ url('/penugasan') }}/${penugasanId}/batalkan-penolakan`)
+                    .then(data => data.success ? reloadWithMessage(data.message) : showError(data.message));
             }
 
             function hapusTugas() {
@@ -1153,7 +1158,7 @@
                     updatedAt: @json(optional($penugasan->updated_at)->toIso8601String()),
                     status: @json($penugasan->status),
                     progressPersen: @json((float) $penugasan->progress_persen),
-                    attachedFilesCount: {{ $penugasan->attachedFiles->count() }},
+                    attachedFilesCount: {{ $penugasan->eviden->count() }},
                     progressCount: {{ $penugasan->progress->count() }},
                     historyRevisiCount: {{ $penugasan->historyRevisi->count() }},
                     perpanjanganWaktuCount: {{ $penugasan->perpanjanganWaktu->count() }},

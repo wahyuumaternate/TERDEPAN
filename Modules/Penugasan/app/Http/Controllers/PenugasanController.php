@@ -13,11 +13,12 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\Penugasan\Models\Penugasan;
+use Modules\Penugasan\Models\PenugasanEviden;
 use Modules\Penugasan\Models\PerpanjanganWaktu;
 use Modules\Penugasan\Services\AtasanMandiriEligibility;
+use Modules\Penugasan\Services\EvidenFolderResolver;
 use Modules\Penugasan\Services\PenugasanActionService;
 use Modules\TerminalData\Models\TdFile;
-use Modules\TerminalData\Models\TdFolder;
 
 /**
  * PenugasanController (web)
@@ -32,7 +33,10 @@ class PenugasanController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly PenugasanActionService $actionService) {}
+    public function __construct(
+        private readonly PenugasanActionService $actionService,
+        private readonly EvidenFolderResolver $evidenFolderResolver,
+    ) {}
 
     /**
      * Daftar penugasan lintas-organisasi untuk keperluan manajemen (Kaban/Sekban/Kabid/Kasubag).
@@ -333,7 +337,7 @@ class PenugasanController extends Controller
             'pegawai.profile.bidang:id,nama',
             'pemberiTugas:id,nama',
             'validator:id,nama',
-            'attachedFiles',
+            'eviden',
             'progress' => fn ($q) => $q->orderByDesc('tanggal'),
             'historyRevisi' => fn ($q) => $q->with('direvisiOleh:id,nama')->orderByDesc('revisi_ke'),
             'perpanjanganWaktu' => fn ($q) => $q->orderByDesc('created_at'),
@@ -346,6 +350,7 @@ class PenugasanController extends Controller
         $izin = [
             'terima' => Gate::forUser($user)->allows('terima', $penugasan),
             'tolak' => Gate::forUser($user)->allows('tolak', $penugasan),
+            'batalkanPenolakan' => Gate::forUser($user)->allows('batalkanPenolakan', $penugasan),
             'submit' => Gate::forUser($user)->allows('submit', $penugasan),
             'update' => Gate::forUser($user)->allows('update', $penugasan),
             'delete' => Gate::forUser($user)->allows('delete', $penugasan),
@@ -373,14 +378,11 @@ class PenugasanController extends Controller
         $penugasan = Penugasan::findOrFail($id);
         $this->authorize('view', $penugasan);
 
-        // Dihitung lewat query relasi biasa (bukan withCount) — subquery withCount() pada relasi
-        // polimorfik attachedFiles (morphMany, kolom UUID) gagal di Postgres ("operator does not
-        // exist: uuid = character varying") karena binding tipe tidak otomatis ter-cast di subquery.
         return response()->json([
             'updated_at' => optional($penugasan->updated_at)->toIso8601String(),
             'status' => $penugasan->status,
             'progress_persen' => (float) $penugasan->progress_persen,
-            'attached_files_count' => $penugasan->attachedFiles()->count(),
+            'attached_files_count' => $penugasan->eviden()->count(),
             'progress_count' => $penugasan->progress()->count(),
             'history_revisi_count' => $penugasan->historyRevisi()->count(),
             'perpanjangan_waktu_count' => $penugasan->perpanjanganWaktu()->count(),
@@ -436,11 +438,26 @@ class PenugasanController extends Controller
             $penugasan = Penugasan::findOrFail($id);
             $this->actionService->tolak($penugasan, $request->user(), $validated['alasan_penolakan']);
 
-            return response()->json(['success' => true, 'message' => 'Penugasan berhasil ditolak']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Penugasan ditolak. Bisa dibatalkan dalam '.Penugasan::MASA_TENGGANG_PENOLAKAN_JAM.' jam ke depan sebelum dihapus otomatis.',
+            ]);
         } catch (AuthorizationException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
         } catch (ValidationException $e) {
             return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
+        }
+    }
+
+    public function batalkanPenolakan(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $this->actionService->batalkanPenolakan($penugasan, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Penolakan dibatalkan, tugas kembali berstatus Pending']);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
         }
     }
 
@@ -622,7 +639,7 @@ class PenugasanController extends Controller
     }
 
     /**
-     * Upload bukti pengerjaan (eviden) dan lampirkan ke penugasan (polymorphic attachedFiles).
+     * Upload bukti pengerjaan (eviden) dan lampirkan ke penugasan lewat pivot knj_penugasan_eviden.
      */
     public function uploadBukti(Request $request, string $id)
     {
@@ -637,7 +654,6 @@ class PenugasanController extends Controller
         }
 
         $validated = $request->validate([
-            'folder_id' => 'required|uuid|exists:td_folders,id',
             'file' => [
                 'required',
                 'file',
@@ -649,60 +665,57 @@ class PenugasanController extends Controller
             'file.max' => 'Ukuran file maksimal 100MB',
         ]);
 
-        try {
-            $folder = TdFolder::findOrFail($validated['folder_id']);
-            $this->authorize('upload', [TdFile::class, $folder]);
+        // Folder ditentukan otomatis (Eviden Kinerja > Pegawai > Tahun > Bulan), bukan dipilih
+        // manual — supaya konsisten & tidak terpecah saat pegawai rotasi bidang. Karena folder ini
+        // system-managed dan sudah scoped ke pegawai yang mengunggah, tidak perlu lagi lewat
+        // TdFilePolicy::upload() (yang mengecek kecocokan bidang folder — tidak relevan di sini).
+        $folder = $this->evidenFolderResolver->resolveForPegawai($request->user());
 
-            $uploadedFile = $request->file('file');
-            $originalName = $uploadedFile->getClientOriginalName();
-            $extension = $uploadedFile->getClientOriginalExtension();
-            $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)).'_'.time().'.'.$extension;
-            $storagePath = "terminal-data/{$folder->bidang_id}/{$folder->id}";
-            $path = $uploadedFile->storeAs($storagePath, $filename);
-            $hash = hash_file('sha256', $uploadedFile->getRealPath());
+        $uploadedFile = $request->file('file');
+        $originalName = $uploadedFile->getClientOriginalName();
+        $extension = $uploadedFile->getClientOriginalExtension();
+        $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)).'_'.time().'.'.$extension;
+        $storagePath = 'terminal-data/eviden-kinerja/'.$folder->id;
+        $path = $uploadedFile->storeAs($storagePath, $filename);
+        $hash = hash_file('sha256', $uploadedFile->getRealPath());
 
-            $atributFile = [
-                'folder_id' => $folder->id,
-                'bidang_id' => $folder->bidang_id,
-                'sub_bidang_id' => $folder->sub_bidang_id,
-                'name' => pathinfo($originalName, PATHINFO_FILENAME),
-                'original_name' => $originalName,
-                'storage_path' => $path,
-                'extension' => $extension,
-                'mime_type' => $uploadedFile->getMimeType(),
-                'size' => $uploadedFile->getSize(),
-                'hash' => $hash,
-                'version' => 1,
-                'is_latest_version' => true,
-                'created_by' => $request->user()->id,
-            ];
+        $atributFile = [
+            'folder_id' => $folder->id,
+            'bidang_id' => $folder->bidang_id,
+            'sub_bidang_id' => $folder->sub_bidang_id,
+            'name' => pathinfo($originalName, PATHINFO_FILENAME),
+            'original_name' => $originalName,
+            'storage_path' => $path,
+            'extension' => $extension,
+            'mime_type' => $uploadedFile->getMimeType(),
+            'size' => $uploadedFile->getSize(),
+            'hash' => $hash,
+            'version' => 1,
+            'is_latest_version' => true,
+            'created_by' => $request->user()->id,
+        ];
 
-            $file = $penugasan->attachedFiles()->create($atributFile);
+        $file = TdFile::create($atributFile);
+        $penugasan->eviden()->attach($file->id, ['created_by' => $request->user()->id]);
 
-            // Penilaian tim (mode_grup kolektif) dinilai satu kesatuan — bukti pengerjaan harus
-            // ikut disinkronkan ke record penugasan setiap anggota grup, bukan hanya ke record
-            // pengunggah, supaya semua anggota (dan atasan saat membuka detail siapa pun) melihat
-            // bukti yang sama. TdFile hanya bisa menempel ke satu attachable, jadi bukan reuse baris,
-            // melainkan baris TdFile baru per anggota yang menunjuk ke file fisik yang sama di disk.
-            if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
-                foreach ($penugasan->grupAnggota as $anggota) {
-                    $anggota->attachedFiles()->create($atributFile);
-                }
+        // Penilaian tim (mode_grup kolektif) dinilai satu kesatuan — bukti pengerjaan harus
+        // ikut disinkronkan ke penugasan setiap anggota grup, bukan hanya ke pengunggah, supaya
+        // semua anggota (dan atasan saat membuka detail siapa pun) melihat bukti yang sama. Karena
+        // lewat pivot, cukup tautkan baris TdFile yang SAMA ke anggota lain — tidak perlu lagi
+        // menduplikasi baris TdFile seperti pola attachable sebelumnya.
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
+            foreach ($penugasan->grupAnggota as $anggota) {
+                $anggota->eviden()->attach($file->id, ['created_by' => $request->user()->id]);
             }
-
-            $folder->updateStats();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Bukti pengerjaan berhasil diupload',
-                'data' => ['id' => $file->id, 'name' => $file->original_name],
-            ]);
-        } catch (AuthorizationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk upload file ke folder ini.',
-            ], 403);
         }
+
+        $folder->updateStats();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bukti pengerjaan berhasil diupload',
+            'data' => ['id' => $file->id, 'name' => $file->original_name],
+        ]);
     }
 
     /**
@@ -724,22 +737,18 @@ class PenugasanController extends Controller
             return response()->json(['success' => false, 'message' => 'Hanya koordinator grup yang bisa menghapus bukti pengerjaan untuk tugas ini'], 403);
         }
 
-        $file = $penugasan->attachedFiles()->find($fileId);
+        $file = $penugasan->eviden()->where('td_files.id', $fileId)->first();
 
         if (! $file) {
             return response()->json(['success' => false, 'message' => 'File tidak ditemukan'], 404);
         }
 
-        // Mode kolektif: satu upload menghasilkan beberapa baris TdFile (satu per anggota grup) yang
-        // menunjuk ke file fisik yang sama di disk (lihat uploadBukti()). Menghapus satu baris saja
-        // akan menghapus file fisik dan membuat baris anggota lain jadi orphan — jadi semua baris
-        // yang menunjuk storage_path yang sama ikut dihapus sekaligus. attachable_type disimpan
-        // sebagai alias morph map ("penugasan"), BUKAN nama class penuh — pakai getMorphClass()
-        // supaya query ini cocok dengan nilai yang sebenarnya tersimpan (lihat AppServiceProvider::boot()).
-        TdFile::where('attachable_type', $penugasan->getMorphClass())
-            ->where('storage_path', $file->storage_path)
-            ->get()
-            ->each->delete();
+        // Eviden diperlakukan sebagai satu kesatuan milik tugas (termasuk seluruh anggota grup
+        // kolektif yang ikut ditautkan lewat pivot saat upload) — hapus berarti melepas tautan
+        // dari SEMUA penugasan yang mereferensikannya sekaligus, baru file fisik & baris TdFile-nya.
+        // Tidak ada entity lain yang memakai pivot ini, jadi baris pivot pasti habis setelah ini.
+        PenugasanEviden::where('td_file_id', $file->id)->delete();
+        $file->delete();
 
         return response()->json(['success' => true, 'message' => 'Bukti pengerjaan berhasil dihapus']);
     }

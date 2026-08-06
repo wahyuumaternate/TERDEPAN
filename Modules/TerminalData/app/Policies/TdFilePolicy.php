@@ -6,6 +6,13 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Modules\TerminalData\Models\TdFile;
 
+/**
+ * Satu-satunya gate otorisasi untuk TdFile. Sebelumnya ada jalur kedua, TdFile::canAccess()
+ * (Spatie permission + TdShare), yang tidak dijamin sinkron dengan Policy ini — sudah dihapus
+ * setelah audit menemukan jalur itu tidak pernah dipanggil endpoint/blade mana pun, dan
+ * permission Spatie yang dicek di sana (mis. "td_file_view_all") tidak pernah di-seed/assign
+ * ke role mana pun (lihat docs/analysis/rekomendasi-arsitektur-eviden-kinerja.md §2.6).
+ */
 class TdFilePolicy
 {
     use HandlesAuthorization;

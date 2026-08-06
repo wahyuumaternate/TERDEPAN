@@ -59,6 +59,19 @@ class NotifikasiService
             );
         }
 
+        $ditolak = Penugasan::where('pegawai_id', $user->id)
+            ->where('is_mandiri', false)
+            ->where('status', Penugasan::STATUS_DITOLAK)
+            ->whereNotNull('ditolak_pada')
+            ->count();
+        if ($ditolak > 0) {
+            $notifikasi[] = $this->item(
+                'danger', 'bi-x-circle',
+                "{$ditolak} tugas Anda ditolak — masih bisa dibatalkan dalam ".Penugasan::MASA_TENGGANG_PENOLAKAN_JAM.' jam',
+                route('penugasan.tugas-saya', ['status' => Penugasan::STATUS_DITOLAK])
+            );
+        }
+
         $terlambat = Penugasan::where('pegawai_id', $user->id)
             ->where('status', Penugasan::STATUS_TERLAMBAT)
             ->count();
