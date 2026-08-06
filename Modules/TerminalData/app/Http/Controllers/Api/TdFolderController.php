@@ -14,6 +14,188 @@ use Modules\TerminalData\Http\Resources\TdFolderResource;
 use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Services\TdFolderService;
 
+/**
+ * @OA\Tag(
+ *     name="Folders",
+ *     description="API folder Terminal Data. Struktur folder bertingkat (parent_id), scoping akses per bidang lewat TdFolderPolicy."
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="List folder (root jika parent_id kosong, atau anak dari parent_id)",
+ *
+ *     @OA\Parameter(name="parent_id", in="query", @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki akses")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Buat folder baru. Untuk selain ADMIN/KABAN/SEKBAN, bidang_id otomatis mengikuti bidang user (atau bidang parent_id)",
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\JsonContent(
+ *             required={"name"},
+ *
+ *             @OA\Property(property="parent_id", type="string", format="uuid", nullable=true),
+ *             @OA\Property(property="name", type="string", example="Laporan Triwulan"),
+ *             @OA\Property(property="description", type="string", nullable=true),
+ *             @OA\Property(property="bidang_id", type="integer", nullable=true, description="Diabaikan untuk role selain ADMIN/KABAN/SEKBAN"),
+ *             @OA\Property(property="color", type="string", example="#4f46e5"),
+ *             @OA\Property(property="icon", type="string", example="folder"),
+ *             @OA\Property(property="is_public", type="boolean"),
+ *             @OA\Property(property="is_starred", type="boolean")
+ *         )
+ *     ),
+ *
+ *     @OA\Response(response=201, description="Created"),
+ *     @OA\Response(response=403, description="Hanya boleh membuat folder di bidang sendiri"),
+ *     @OA\Response(response=422, description="Validasi gagal")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Detail folder",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=404, description="Folder tidak ditemukan")
+ * )
+ *
+ * @OA\Put(
+ *     path="/folders/{folder}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Update nama/deskripsi/visibilitas folder",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\JsonContent(
+ *             required={"name"},
+ *
+ *             @OA\Property(property="name", type="string"),
+ *             @OA\Property(property="description", type="string", nullable=true),
+ *             @OA\Property(property="is_public", type="boolean")
+ *         )
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin"),
+ *     @OA\Response(response=422, description="Validasi gagal")
+ * )
+ *
+ * @OA\Delete(
+ *     path="/folders/{folder}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Pindahkan folder ke sampah (soft delete). Ditolak jika masih berisi subfolder/file",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=400, description="Folder masih memiliki subfolder atau file")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}/children",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="List subfolder langsung",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki akses"),
+ *     @OA\Response(response=404, description="Folder tidak ditemukan")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}/breadcrumb",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Breadcrumb folder (dari root sampai folder ini)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}/stats",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Statistik folder (jumlah file, subfolder, ukuran total)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders/{folder}/move",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Pindahkan folder ke parent lain (null berarti dipindahkan ke root)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\RequestBody(
+ *
+ *         @OA\JsonContent(@OA\Property(property="parent_id", type="string", format="uuid", nullable=true))
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=400, description="Gagal memindahkan folder")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders/{folder}/toggle-star",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Tandai/batalkan tanda favorit folder",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders/{folder}/restore",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Pulihkan folder dari sampah",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ *
+ * @OA\Delete(
+ *     path="/folders/{folder}/force-delete",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Hapus folder permanen (harus sudah di sampah)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ */
 class TdFolderController extends Controller
 {
     use AuthorizesRequests;

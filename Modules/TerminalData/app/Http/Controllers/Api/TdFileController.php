@@ -12,6 +12,160 @@ use Illuminate\Support\Str;
 use Modules\TerminalData\Models\TdFile;
 use Modules\TerminalData\Models\TdFolder;
 
+/**
+ * @OA\Tag(
+ *     name="Files",
+ *     description="API file Terminal Data. Maks. 100MB per file, tipe: dokumen (PDF/Word/Excel/PowerPoint) atau gambar (JPG/PNG/GIF/BMP/SVG/WEBP)."
+ * )
+ *
+ * @OA\Post(
+ *     path="/files/upload",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Upload file ke folder",
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\MediaType(
+ *             mediaType="multipart/form-data",
+ *
+ *             @OA\Schema(
+ *                 required={"folder_id","file"},
+ *
+ *                 @OA\Property(property="folder_id", type="string", format="uuid"),
+ *                 @OA\Property(property="file", type="string", format="binary")
+ *             )
+ *         )
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin upload ke folder ini"),
+ *     @OA\Response(response=422, description="Validasi gagal (tipe/ukuran file tidak sesuai)")
+ * )
+ *
+ * @OA\Get(
+ *     path="/files/search",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Cari file lintas folder (nama/deskripsi, tipe, pemilik, rentang hari terakhir)",
+ *
+ *     @OA\Parameter(name="q", in="query", @OA\Schema(type="string")),
+ *     @OA\Parameter(name="type", in="query", @OA\Schema(type="string")),
+ *     @OA\Parameter(name="creator_id", in="query", @OA\Schema(type="integer")),
+ *     @OA\Parameter(name="days", in="query", @OA\Schema(type="integer")),
+ *     @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=20)),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Get(
+ *     path="/files/{file}/download",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Download file (attachment)",
+ *
+ *     @OA\Parameter(name="file", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="Isi file"),
+ *     @OA\Response(response=404, description="File tidak ditemukan")
+ * )
+ *
+ * @OA\Get(
+ *     path="/files/{file}/serve",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Tampilkan file inline (preview di browser)",
+ *
+ *     @OA\Parameter(name="file", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="Isi file"),
+ *     @OA\Response(response=404, description="File tidak ditemukan")
+ * )
+ *
+ * @OA\Put(
+ *     path="/files/{file}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Ubah nama file",
+ *
+ *     @OA\Parameter(name="file", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\JsonContent(required={"name"}, @OA\Property(property="name", type="string"))
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin"),
+ *     @OA\Response(response=422, description="Validasi gagal")
+ * )
+ *
+ * @OA\Delete(
+ *     path="/files/{file}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Pindahkan file ke sampah (soft delete)",
+ *
+ *     @OA\Parameter(name="file", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ *
+ * @OA\Post(
+ *     path="/files/{file}/restore",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Pulihkan file dari sampah",
+ *
+ *     @OA\Parameter(name="file", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ *
+ * @OA\Delete(
+ *     path="/files/{file}/force-delete",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Hapus file permanen (harus sudah di sampah)",
+ *
+ *     @OA\Parameter(name="file", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ *
+ * @OA\Post(
+ *     path="/trash/empty",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Files"},
+ *     summary="Kosongkan sampah (hapus permanen banyak file/folder sekaligus)",
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\JsonContent(
+ *             required={"items"},
+ *
+ *             @OA\Property(
+ *                 property="items",
+ *                 type="array",
+ *
+ *                 @OA\Items(
+ *
+ *                     @OA\Property(property="id", type="string", format="uuid"),
+ *                     @OA\Property(property="type", type="string", enum={"file","folder"})
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
 class TdFileController extends Controller
 {
     use AuthorizesRequests;
