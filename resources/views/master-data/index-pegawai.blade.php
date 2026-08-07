@@ -106,9 +106,16 @@
                                     </div>
                                 </h5>
                             </div>
-                            <div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary shadow-sm px-3"
+                                    id="btnKirimEmailLogin" disabled>
+                                    <i class="bi bi-envelope-check me-1"></i> Kirim Email Login
+                                </button>
+                                <a href="{{ route('master.pegawai.import') }}" class="btn btn-outline-secondary shadow-sm px-3">
+                                    <i class="bi bi-upload me-1"></i> Import CSV
+                                </a>
                                 <a href="{{ route('master.pegawai.create') }}"
-                                    class="btn btn-primary btn-lg shadow-sm px-4 py-2">
+                                    class="btn btn-primary shadow-sm px-4 py-2">
                                     <i class="bi bi-plus-circle me-1"></i> Tambah Pegawai
                                 </a>
                             </div>
@@ -161,6 +168,9 @@
                             <table class="table table-hover align-middle" id="pegawaiTable">
                                 <thead class="table-light">
                                     <tr>
+                                        <th width="3%">
+                                            <input type="checkbox" class="form-check-input" id="checkAllPegawai">
+                                        </th>
                                         <th width="5%">#</th>
                                         <th width="10%">Foto</th>
                                         <th width="15%">Identitas</th>
@@ -174,9 +184,13 @@
                                 <tbody>
                                     @forelse ($data as $index => $pegawai)
                                         <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input check-pegawai"
+                                                    value="{{ $pegawai->id }}">
+                                            </td>
                                             <td>{{ $index + 1 }}</td>
                                             <td class="text-center">
-                                                @if ($pegawai->profile->foto_profile_path)
+                                                @if ($pegawai->profile?->foto_profile_path)
                                                     <img src="{{ asset("storage/" . $pegawai->profile->foto_profile_path) }}"
                                                         alt="{{ $pegawai->nama }}" class="rounded-circle d-flex align-items-center justify-content-center"
                                                         style="width: 40px; height: 40px; object-fit: cover;">
@@ -188,32 +202,38 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <div class="fw-bold">{{ $pegawai->profile->nomor_identitas }}</div>
-                                                <small class="text-muted">{{ $pegawai->profile->tipe_identitas }}</small>
+                                                @if ($pegawai->profile)
+                                                    <div class="fw-bold">{{ $pegawai->profile->nomor_identitas }}</div>
+                                                    <small class="text-muted">{{ $pegawai->profile->tipe_identitas }}</small>
+                                                @else
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger" title="Data profil belum lengkap">
+                                                        Profil belum lengkap
+                                                    </span>
+                                                @endif
                                             </td>
                                             <td>
                                                 <div class="fw-bold">
-                                                    {{ $pegawai->profile->gelar_depan }} {{ $pegawai->nama }}
-                                                    {{ $pegawai->profile->gelar_belakang }}
+                                                    {{ $pegawai->profile?->gelar_depan }} {{ $pegawai->nama }}
+                                                    {{ $pegawai->profile?->gelar_belakang }}
                                                 </div>
                                                 <small class="text-muted">{{ $pegawai->email }}</small>
                                             </td>
                                             <td>
                                                 <span class="badge bg-info bg-opacity-10 text-info">
-                                                    {{ $pegawai->profile->jabatan->nama ?? '-' }}
+                                                    {{ $pegawai->profile?->jabatan->nama ?? '-' }}
                                                 </span>
-                                                @if ($pegawai->profile->pangkat)
+                                                @if ($pegawai->profile?->pangkat)
                                                     <br><small class="text-muted">{{ $pegawai->profile->pangkat }}
                                                         {{ $pegawai->profile->golongan }}</small>
                                                 @endif
                                             </td>
                                             <td>
                                                 <span class="badge bg-secondary bg-opacity-10 text-secondary">
-                                                    {{ $pegawai->profile->bidang->nama ?? '-' }}
+                                                    {{ $pegawai->profile?->bidang->nama ?? '-' }}
                                                 </span>
                                             </td>
                                             <td>
-                                                @switch($pegawai->profile->status_aktif)
+                                                @switch($pegawai->profile?->status_aktif)
                                                     @case('Aktif')
                                                         <span class="badge bg-success">{{ $pegawai->profile->status_aktif }}</span>
                                                     @break
@@ -231,9 +251,9 @@
                                                     @break
 
                                                     @default
-                                                        <span class="badge bg-light text-dark">{{ $pegawai->profile->status_aktif }}</span>
+                                                        <span class="badge bg-light text-dark">{{ $pegawai->profile?->status_aktif ?? '-' }}</span>
                                                 @endswitch
-                                                <br><small class="text-muted">{{ $pegawai->profile->status_kepegawaian }}</small>
+                                                <br><small class="text-muted">{{ $pegawai->profile?->status_kepegawaian }}</small>
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
@@ -250,7 +270,7 @@
                                         </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-center py-5">
+                                                <td colspan="9" class="text-center py-5">
                                                     <div class="text-muted">
                                                         <i class="bi bi-people display-1 d-block mb-3"></i>
                                                         <h5>Belum ada data pegawai</h5>
@@ -400,7 +420,65 @@
                     const pegawaiId = $('#delete_pegawai_id').val();
                     deletePegawai(pegawaiId);
                 });
+
+                // Checkbox pilih semua + toggle tombol Kirim Email Login
+                $('#checkAllPegawai').on('change', function() {
+                    $('.check-pegawai').prop('checked', $(this).is(':checked'));
+                    toggleBtnKirimEmailLogin();
+                });
+
+                $(document).on('change', '.check-pegawai', function() {
+                    toggleBtnKirimEmailLogin();
+                });
+
+                $('#btnKirimEmailLogin').on('click', function() {
+                    const userIds = $('.check-pegawai:checked').map(function() {
+                        return $(this).val();
+                    }).get();
+
+                    if (userIds.length === 0) {
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Kirim Email Login?',
+                        text: `Email berisi link untuk mengatur password akan dikirim ke ${userIds.length} pegawai terpilih.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Kirim',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (!result.isConfirmed) {
+                            return;
+                        }
+
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = "{{ route('master.pegawai.kirim-email-login') }}";
+
+                        const csrf = document.createElement('input');
+                        csrf.type = 'hidden';
+                        csrf.name = '_token';
+                        csrf.value = "{{ csrf_token() }}";
+                        form.appendChild(csrf);
+
+                        userIds.forEach(id => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'user_ids[]';
+                            input.value = id;
+                            form.appendChild(input);
+                        });
+
+                        document.body.appendChild(form);
+                        form.submit();
+                    });
+                });
             });
+
+            function toggleBtnKirimEmailLogin() {
+                $('#btnKirimEmailLogin').prop('disabled', $('.check-pegawai:checked').length === 0);
+            }
 
             function filterTable() {
                 var bidangFilter = $('#filterBidang').val().toLowerCase();
@@ -408,9 +486,10 @@
                 var statusFilter = $('#filterStatus').val().toLowerCase();
 
                 $('#pegawaiTable tbody tr').each(function() {
-                    var bidang = $(this).find('td:eq(5)').text().toLowerCase();
-                    var jabatan = $(this).find('td:eq(4)').text().toLowerCase();
-                    var status = $(this).find('td:eq(6)').text().toLowerCase();
+                    // Index kolom +1 dari sebelumnya karena ada kolom checkbox baru di posisi 0.
+                    var bidang = $(this).find('td:eq(6)').text().toLowerCase();
+                    var jabatan = $(this).find('td:eq(5)').text().toLowerCase();
+                    var status = $(this).find('td:eq(7)').text().toLowerCase();
 
                     var showRow = true;
 

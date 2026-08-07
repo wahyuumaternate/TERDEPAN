@@ -5,7 +5,7 @@ use Modules\TerminalData\Http\Controllers\Api\TdFileController;
 use Modules\TerminalData\Http\Controllers\Api\TdFolderController;
 use Modules\TerminalData\Http\Controllers\TerminalDataController;
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'must_change_password'])->group(function () {
     Route::prefix('terminal-data')->name('terminaldata.')->group(function () {
         Route::get('/', TerminalDataController::class.'@index')->name('index');
         Route::get('/folders', [TerminalDataController::class, 'folderIndex'])->name('folders.index');

@@ -482,9 +482,9 @@
                     </div>
                 </div>
 
-                <div class="text-center text-sm">
+                {{-- <div class="text-center text-sm">
                     <p class="text-gray-500 mb-4">Scan kode QR dengan Aplikasi TERDEPAN di HP Anda</p>
-                </div>
+                </div> --}}
 
                 {{-- <!-- REGISTER LINK -->
                 <div class="mt-6 text-center text-sm">

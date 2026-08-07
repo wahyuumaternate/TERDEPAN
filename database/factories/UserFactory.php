@@ -28,6 +28,12 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            // Default test fixture = pegawai yang sudah pernah ganti password (kolom DB
+            // sesungguhnya default true, lihat migration add_must_change_password_to_users_table)
+            // — supaya test yang tidak spesifik menguji alur wajib-ganti-password tidak
+            // tiba-tiba ke-redirect ke halaman force-password. Test yang perlu kondisi
+            // sebaliknya pakai state mustChangePassword() di bawah.
+            'must_change_password' => false,
             'remember_token' => Str::random(10),
         ];
     }
@@ -39,6 +45,16 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user must still change their (default) password.
+     */
+    public function mustChangePassword(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'must_change_password' => true,
         ]);
     }
 }

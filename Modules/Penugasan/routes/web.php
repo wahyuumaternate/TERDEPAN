@@ -22,7 +22,7 @@ use Modules\Penugasan\Http\Controllers\TeamController;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(function () {
+Route::middleware(['auth', 'must_change_password'])->prefix('penugasan')->name('penugasan.')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 

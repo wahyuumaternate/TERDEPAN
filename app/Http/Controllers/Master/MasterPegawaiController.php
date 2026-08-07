@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PegawaiCsvImporter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 
 class MasterPegawaiController extends Controller
 {
@@ -101,13 +104,21 @@ class MasterPegawaiController extends Controller
 
             $profileData = array_intersect_key($data, array_flip(self::PROFILE_FIELDS));
 
-            $pegawai = User::create([
-                'nama' => $data['nama'],
-                'email' => $data['email'],
-                'password' => bcrypt($data['password']),
-            ]);
+            // User + profile dibungkus 1 transaction — tanpa ini, kalau profile()->create()
+            // gagal (mis. constraint tidak terduga), baris users sudah kepalang tersimpan dan
+            // jadi pegawai "yatim" tanpa profile yang bikin halaman lain error null pointer.
+            $pegawai = DB::transaction(function () use ($data, $profileData) {
+                $pegawai = User::create([
+                    'nama' => $data['nama'],
+                    'email' => $data['email'],
+                    'password' => bcrypt($data['password']),
+                    'must_change_password' => true,
+                ]);
 
-            $pegawai->profile()->create($profileData);
+                $pegawai->profile()->create($profileData);
+
+                return $pegawai;
+            });
 
             Log::info('Pegawai created with ID: '.$pegawai->id);
 
@@ -289,6 +300,91 @@ class MasterPegawaiController extends Controller
             }
 
             return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Form upload CSV (docs/flow/02-alur-autentikasi.md §Kelola Data Pegawai poin 3).
+     */
+    public function import()
+    {
+        $this->authorize('create', User::class);
+
+        return view('master-data.import-pegawai');
+    }
+
+    public function importStore(Request $request, PegawaiCsvImporter $importer)
+    {
+        try {
+            $this->authorize('create', User::class);
+
+            $request->validate([
+                'file_csv' => 'required|mimes:csv,txt|max:5120',
+            ]);
+
+            $hasil = $importer->importFromFile($request->file('file_csv')->getRealPath());
+
+            $jumlahBerhasil = count($hasil['berhasil']);
+            $pesan = "{$jumlahBerhasil} pegawai berhasil diimpor.";
+            if (! empty($hasil['dilewati'])) {
+                $pesan .= ' '.count($hasil['dilewati']).' baris dilewati.';
+            }
+
+            return redirect()->route('master.pegawai.index')
+                ->with('success', $pesan)
+                ->with('import_dilewati', $hasil['dilewati']);
+        } catch (AuthorizationException $e) {
+            abort(403, 'Unauthorized');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Import Pegawai CSV Error: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'Gagal mengimpor file: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Kirim email berisi link untuk mengatur password (docs/flow/02-alur-autentikasi.md
+     * §Login Awal - Kirim email login) ke satu atau banyak pegawai terpilih — reuse
+     * mekanisme reset password bawaan Breeze (Password::sendResetLink), bukan sistem
+     * token terpisah.
+     */
+    public function kirimEmailLogin(Request $request)
+    {
+        try {
+            $this->authorize('create', User::class);
+
+            $data = $request->validate([
+                'user_ids' => 'required|array|min:1',
+                'user_ids.*' => 'exists:users,id',
+            ]);
+
+            $pegawaiList = User::whereIn('id', $data['user_ids'])->get();
+
+            $berhasil = 0;
+            $gagal = [];
+
+            foreach ($pegawaiList as $pegawai) {
+                $status = Password::sendResetLink(['email' => $pegawai->email]);
+
+                if ($status === Password::RESET_LINK_SENT) {
+                    $berhasil++;
+                } else {
+                    $gagal[] = $pegawai->nama;
+                }
+            }
+
+            $pesan = "Email login berhasil dikirim ke {$berhasil} pegawai.";
+            if (! empty($gagal)) {
+                $pesan .= ' Gagal untuk: '.implode(', ', $gagal).'.';
+            }
+
+            return redirect()->route('master.pegawai.index')->with('success', $pesan);
+        } catch (AuthorizationException $e) {
+            abort(403, 'Unauthorized');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors());
         }
     }
 }

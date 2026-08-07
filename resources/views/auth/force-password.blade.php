@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atur Kata Sandi - SISTEM TERDEPAN BAPPEDA MALUT</title>
+    <title>Ganti Kata Sandi - SISTEM TERDEPAN BAPPEDA MALUT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -40,7 +40,6 @@
             padding: 0;
         }
 
-        /* Shared styles */
         .custom-input {
             border-radius: 12px;
             transition: all 0.2s ease;
@@ -83,7 +82,6 @@
             box-shadow: 0 2px 8px rgba(21, 72, 227, 0.3);
         }
 
-        /* Mobile styles */
         .mobile-container {
             min-height: 100vh;
             background-image: url('{{ asset('img/texture-login.png') }}');
@@ -117,7 +115,6 @@
             max-width: 400px;
         }
 
-        /* Desktop styles */
         .desktop-container {
             height: 100vh;
             display: flex;
@@ -171,7 +168,7 @@
 
 <body class="bg-gray-100">
     @php
-        $eyeOpen =
+        $eyeOpenSvg =
             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />';
     @endphp
 
@@ -179,31 +176,38 @@
     <div class="md:hidden">
         <div class="mobile-container">
             <div class="mobile-card bg-white p-6 sm:p-8">
-                <!-- HEADER -->
                 <div class="text-center mb-6">
-                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Atur Kata Sandi Baru</h1>
-                    <p class="text-gray-500 text-sm">Buat kata sandi baru untuk akun Anda</p>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Ganti Kata Sandi</h1>
+                    <p class="text-gray-500 text-sm">
+                        Akun Anda masih menggunakan kata sandi default. Buat kata sandi baru sebelum melanjutkan.
+                    </p>
                 </div>
 
-                @if ($errors->any())
+                @if ($errors->updatePassword->any())
                     <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
                         <ul class="list-disc list-inside">
-                            @foreach ($errors->all() as $error)
+                            @foreach ($errors->updatePassword->all() as $error)
                                 <li>{{ $error }}</li>
                             @endforeach
                         </ul>
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('password.store') }}" class="space-y-4" id="resetForm-mobile">
+                <form method="POST" action="{{ route('password.update') }}" class="space-y-4">
                     @csrf
-                    <input type="hidden" name="token" value="{{ $request->route('token') }}">
+                    @method('put')
 
-                    <div>
-                        <label for="email-mobile" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input id="email-mobile" type="email" name="email" value="{{ old('email', $request->email) }}"
-                            required autofocus autocomplete="username"
-                            class="custom-input w-full px-4 py-3 focus:outline-none" />
+                    <div class="relative">
+                        <label for="current_password-mobile" class="block text-sm font-medium text-gray-700 mb-1">Kata
+                            Sandi Saat Ini</label>
+                        <input id="current_password-mobile" type="password" name="current_password" required
+                            autocomplete="current-password" autofocus
+                            class="custom-input w-full px-4 py-3 pr-12 focus:outline-none" />
+                        <button type="button" class="eye-icon" style="top: 38px;"
+                            onclick="togglePw('current_password-mobile', this)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">{!! $eyeOpenSvg !!}</svg>
+                        </button>
                     </div>
 
                     <div class="relative">
@@ -214,20 +218,20 @@
                             class="custom-input w-full px-4 py-3 pr-12 focus:outline-none" />
                         <button type="button" class="eye-icon" style="top: 38px;" onclick="togglePw('password-mobile', this)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">{!! $eyeOpen !!}</svg>
+                                stroke="currentColor">{!! $eyeOpenSvg !!}</svg>
                         </button>
                     </div>
 
                     <div class="relative">
                         <label for="password_confirmation-mobile" class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi
-                            Kata Sandi</label>
+                            Kata Sandi Baru</label>
                         <input id="password_confirmation-mobile" type="password" name="password_confirmation" required
                             autocomplete="new-password" placeholder="Ulangi kata sandi baru"
                             class="custom-input w-full px-4 py-3 pr-12 focus:outline-none" />
                         <button type="button" class="eye-icon" style="top: 38px;"
                             onclick="togglePw('password_confirmation-mobile', this)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">{!! $eyeOpen !!}</svg>
+                                stroke="currentColor">{!! $eyeOpenSvg !!}</svg>
                         </button>
                     </div>
 
@@ -237,18 +241,16 @@
                     </button>
                 </form>
 
-                <div class="mt-6 text-center">
-                    <a href="{{ route('login') }}" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                        Kembali ke halaman login
-                    </a>
-                </div>
+                <form method="POST" action="{{ route('logout') }}" class="mt-6 text-center">
+                    @csrf
+                    <button type="submit" class="text-gray-500 hover:text-gray-700 text-sm underline">Keluar</button>
+                </form>
             </div>
         </div>
     </div>
 
     <!-- DESKTOP VIEW -->
     <div class="hidden md:flex desktop-container">
-        <!-- LEFT SIDE -->
         <div class="w-2/5 desktop-left flex items-center justify-center overflow-hidden">
             <div class="content-wrapper text-center text-white px-8 py-12 max-w-lg">
                 <div class="mb-10">
@@ -264,33 +266,40 @@
             </div>
         </div>
 
-        <!-- RIGHT SIDE -->
         <div class="w-3/5 bg-white flex items-center justify-center">
             <div class="w-full max-w-md px-10 py-10">
                 <div class="text-center mb-8 mt-6">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Atur Kata Sandi Baru</h1>
-                    <p class="text-gray-600">Buat kata sandi baru untuk akun Anda</p>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Ganti Kata Sandi</h1>
+                    <p class="text-gray-600">
+                        Akun Anda masih menggunakan kata sandi default. Buat kata sandi baru sebelum melanjutkan.
+                    </p>
                 </div>
 
-                @if ($errors->any())
+                @if ($errors->updatePassword->any())
                     <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
                         <ul class="list-disc list-inside">
-                            @foreach ($errors->all() as $error)
+                            @foreach ($errors->updatePassword->all() as $error)
                                 <li>{{ $error }}</li>
                             @endforeach
                         </ul>
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('password.store') }}" class="space-y-5" id="resetForm-desktop">
+                <form method="POST" action="{{ route('password.update') }}" class="space-y-5">
                     @csrf
-                    <input type="hidden" name="token" value="{{ $request->route('token') }}">
+                    @method('put')
 
-                    <div>
-                        <label for="email-desktop" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input id="email-desktop" type="email" name="email" value="{{ old('email', $request->email) }}"
-                            required autofocus autocomplete="username"
-                            class="custom-input w-full px-4 py-2.5 focus:outline-none" />
+                    <div class="relative">
+                        <label for="current_password-desktop" class="block text-sm font-medium text-gray-700 mb-1">Kata
+                            Sandi Saat Ini</label>
+                        <input id="current_password-desktop" type="password" name="current_password" required
+                            autocomplete="current-password" autofocus
+                            class="custom-input w-full px-4 py-2.5 pr-12 focus:outline-none" />
+                        <button type="button" class="eye-icon" style="top: 38px;"
+                            onclick="togglePw('current_password-desktop', this)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">{!! $eyeOpenSvg !!}</svg>
+                        </button>
                     </div>
 
                     <div class="relative">
@@ -302,20 +311,20 @@
                         <button type="button" class="eye-icon" style="top: 38px;"
                             onclick="togglePw('password-desktop', this)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">{!! $eyeOpen !!}</svg>
+                                stroke="currentColor">{!! $eyeOpenSvg !!}</svg>
                         </button>
                     </div>
 
                     <div class="relative">
                         <label for="password_confirmation-desktop"
-                            class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Kata Sandi</label>
+                            class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Kata Sandi Baru</label>
                         <input id="password_confirmation-desktop" type="password" name="password_confirmation" required
                             autocomplete="new-password" placeholder="Ulangi kata sandi baru"
                             class="custom-input w-full px-4 py-2.5 pr-12 focus:outline-none" />
                         <button type="button" class="eye-icon" style="top: 38px;"
                             onclick="togglePw('password_confirmation-desktop', this)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">{!! $eyeOpen !!}</svg>
+                                stroke="currentColor">{!! $eyeOpenSvg !!}</svg>
                         </button>
                     </div>
 
@@ -325,11 +334,10 @@
                     </button>
                 </form>
 
-                <div class="mt-6 text-center">
-                    <a href="{{ route('login') }}" class="text-primary-600 hover:text-primary-700 font-medium">
-                        Kembali ke halaman login
-                    </a>
-                </div>
+                <form method="POST" action="{{ route('logout') }}" class="mt-6 text-center">
+                    @csrf
+                    <button type="submit" class="text-gray-500 hover:text-gray-700 text-sm underline">Keluar</button>
+                </form>
 
                 <div class="mt-12 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
                     © {{ date('Y') }} Terminal Data dan Evidensi Perencanaan Pembangunan. All rights reserved.

@@ -9,17 +9,23 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'must_change_password'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     // Alias lama, dipertahankan supaya link/bookmark yang ada tidak putus.
     Route::get('/e-kinerja', [DashboardController::class, 'index'])->name('e-kinerja.index');
     Route::get('/notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
 });
 
-Route::middleware('auth')->prefix('master')->name('master.')->group(function () {
+Route::middleware(['auth', 'must_change_password'])->prefix('master')->name('master.')->group(function () {
     // ============================
     // MASTER PEGAWAI ROUTES - /master/pegawai
     // ============================
+    // Rute statis (import, kirim-email-login) didaftarkan sebelum resource() supaya tidak
+    // tertimpa wildcard GET pegawai/{pegawai} dari resource.show().
+    Route::get('pegawai/import', [MasterPegawaiController::class, 'import'])->name('pegawai.import');
+    Route::post('pegawai/import', [MasterPegawaiController::class, 'importStore'])->name('pegawai.import.store');
+    Route::post('pegawai/kirim-email-login', [MasterPegawaiController::class, 'kirimEmailLogin'])->name('pegawai.kirim-email-login');
+
     Route::resource('pegawai', MasterPegawaiController::class)->names([
         'index' => 'pegawai.index',
         'create' => 'pegawai.create',
@@ -70,7 +76,7 @@ Route::middleware('auth')->prefix('master')->name('master.')->group(function () 
     ]);
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'must_change_password'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

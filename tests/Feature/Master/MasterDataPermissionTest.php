@@ -564,6 +564,7 @@ class MasterDataPermissionTest extends TestCase
             'nama' => 'User '.$kodeJabatan,
             'email' => strtolower($kodeJabatan).rand(1, 9999).'@test.com',
             'password' => bcrypt('password'),
+            'must_change_password' => false,
         ]);
 
         $user->profile()->create([

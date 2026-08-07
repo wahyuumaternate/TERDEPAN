@@ -167,12 +167,6 @@
                     <p class="text-gray-500 text-sm">Masukkan email Anda untuk menerima link reset password</p>
                 </div>
 
-                <!-- DESCRIPTION -->
-                <div class="mb-6 text-sm text-gray-600">
-                    Lupa kata sandi? Tidak masalah. Cukup berikan alamat email Anda dan kami akan mengirimkan link reset
-                    password yang memungkinkan Anda memilih yang baru.
-                </div>
-
                 <!-- SESSION STATUS -->
                 @if (session('status'))
                     <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
@@ -226,7 +220,7 @@
         <div class="w-2/5 desktop-left flex items-center justify-center overflow-hidden">
             <div class="content-wrapper text-center text-white px-8 py-12 max-w-lg">
                 <div class="mb-10">
-                    <img src="{{ asset('img/logo-white.png') }}" alt="Logo TERDEPAN" class="w-24 h-24 mx-auto mb-4">
+                    <img src="{{ asset('assets/img/putih.webp') }}" alt="Logo TERDEPAN" class="w-32 h-32 mx-auto mb-4">
                     <h1 class="text-4xl font-bold mb-2">TERDEPAN</h1>
                     <p class="text-xl opacity-90">Terminal Data dan Evidensi Perencanaan Pembangunan</p>
                 </div>
@@ -245,12 +239,6 @@
                 <div class="text-center mb-8 mt-6">
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">Lupa Kata Sandi</h1>
                     <p class="text-gray-600">Masukkan email Anda untuk menerima link reset password</p>
-                </div>
-
-                <!-- DESCRIPTION -->
-                <div class="mb-8 text-gray-600">
-                    Lupa kata sandi? Tidak masalah. Cukup berikan alamat email Anda dan kami akan mengirimkan link reset
-                    password yang memungkinkan Anda memilih yang baru.
                 </div>
 
                 <!-- SESSION STATUS -->
