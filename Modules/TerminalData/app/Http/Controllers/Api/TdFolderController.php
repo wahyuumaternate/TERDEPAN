@@ -471,12 +471,9 @@ class TdFolderController extends Controller
     /**
      * Toggle star status
      */
-    public function toggleStar(TdFolder $folder): JsonResponse
+    public function toggleStar(Request $request, TdFolder $folder): JsonResponse
     {
-        // Authorize view (user must be able to see the folder to star it)
-        $this->authorize('view', $folder);
-
-        $folder->update(['is_starred' => ! $folder->is_starred]);
+        $folder = $this->folderService->toggleStar($folder, $request->user());
 
         return response()->json([
             'success' => true,
@@ -534,6 +531,36 @@ class TdFolderController extends Controller
                 'message' => 'Gagal memulihkan folder: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Detail folder + breadcrumb + riwayat aktivitas terakhir — dipakai panel info
+     * (Detail + Aktivitas) di UI.
+     */
+    public function detail($folderId): JsonResponse
+    {
+        $folder = TdFolder::with(['bidang', 'subBidang', 'parent', 'creator', 'updater'])->findOrFail($folderId);
+
+        $this->authorize('view', $folder);
+
+        $activities = $folder->activities()
+            ->with('user:id,nama')
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn ($activity) => [
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'user_nama' => $activity->user?->nama,
+                'created_at' => $activity->created_at->format('Y-m-d H:i:s'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => new TdFolderResource($folder),
+            'breadcrumb' => TdFolderResource::collection($folder->getBreadcrumb()),
+            'activities' => $activities,
+        ]);
     }
 
     /**

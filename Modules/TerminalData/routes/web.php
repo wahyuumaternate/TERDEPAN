@@ -18,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/api/folders/{folder}', [TdFolderController::class, 'show'])->name('foldersData.show');
         Route::put('/api/folders/{folder}', [TdFolderController::class, 'update'])->name('foldersData.update');
         Route::get('/api/folders/{folder}/children', [TdFolderController::class, 'children'])->name('foldersData.children');
+        Route::get('/api/folders/{folder}/detail', [TdFolderController::class, 'detail'])->name('foldersData.detail');
         Route::delete('/api/folders/{folder}', [TdFolderController::class, 'destroy'])->name('foldersData.destroy');
         Route::post('/api/folders/{folder}/restore', [TdFolderController::class, 'restore'])->name('foldersData.restore');
         Route::delete('/api/folders/{folder}/force-delete', [TdFolderController::class, 'forceDelete'])->name('foldersData.forceDelete');
@@ -27,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/api/files/search', [TdFileController::class, 'search'])->name('filesData.search');
         Route::get('/api/files/{file}/download', [TdFileController::class, 'download'])->name('filesData.download');
         Route::get('/api/files/{file}/serve', [TdFileController::class, 'serve'])->name('filesData.serve');
+        Route::get('/api/files/{file}/detail', [TdFileController::class, 'detail'])->name('filesData.detail');
         Route::put('/api/files/{file}', [TdFileController::class, 'update'])->name('filesData.update');
         Route::delete('/api/files/{file}', [TdFileController::class, 'destroy'])->name('filesData.destroy');
         Route::post('/api/files/{file}/restore', [TdFileController::class, 'restore'])->name('filesData.restore');

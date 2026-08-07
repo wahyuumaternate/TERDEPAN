@@ -9,6 +9,8 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\TerminalData\Classes\Services\TdActivityService;
+use Modules\TerminalData\Http\Resources\TdFileResource;
 use Modules\TerminalData\Models\TdFile;
 use Modules\TerminalData\Models\TdFolder;
 
@@ -170,8 +172,9 @@ class TdFileController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected TdActivityService $activityService
+    ) {
         $this->middleware('auth:sanctum');
     }
 
@@ -244,6 +247,8 @@ class TdFileController extends Controller
             // Update folder stats
             $folder->updateStats();
 
+            $this->activityService->log($file, 'uploaded', $user, "mengunggah \"{$file->original_name}\"");
+
             return response()->json([
                 'success' => true,
                 'message' => 'File berhasil diupload',
@@ -283,6 +288,8 @@ class TdFileController extends Controller
                 abort(404, 'File tidak ditemukan');
             }
 
+            $this->activityService->log($file, 'downloaded', request()->user(), "mengunduh \"{$file->original_name}\"");
+
             // Use original_name for download to preserve extension and full name
             return Storage::download($file->storage_path, $file->original_name);
         } catch (\Exception $e) {
@@ -306,8 +313,14 @@ class TdFileController extends Controller
             $this->authorize('update', $file);
 
             // Update file name
+            $oldName = $file->name;
             $file->name = $request->name;
             $file->save();
+
+            $this->activityService->log($file, 'renamed', $request->user(), "mengganti nama \"{$oldName}\" menjadi \"{$file->name}\"", [
+                'old_name' => $oldName,
+                'new_name' => $file->name,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -397,6 +410,8 @@ class TdFileController extends Controller
             // Authorize delete
             $this->authorize('delete', $file);
 
+            $this->activityService->log($file, 'trashed', request()->user(), "memindahkan \"{$file->original_name}\" ke sampah");
+
             // Soft delete (move to trash)
             $file->delete();
 
@@ -434,6 +449,8 @@ class TdFileController extends Controller
             // Authorize restore (using delete permission as proxy)
             $this->authorize('restore', $file);
 
+            $this->activityService->log($file, 'restored', request()->user(), "memulihkan \"{$file->original_name}\" dari sampah");
+
             // Restore file
             $file->restore();
 
@@ -469,6 +486,8 @@ class TdFileController extends Controller
 
             // Authorize force delete (using delete permission as proxy)
             $this->authorize('forceDelete', $file);
+
+            $this->activityService->log($file, 'force_deleted', request()->user(), "menghapus permanen \"{$file->original_name}\"");
 
             // Delete physical file from storage
             if (Storage::exists($file->storage_path)) {
@@ -575,6 +594,34 @@ class TdFileController extends Controller
         return response()->json([
             'success' => true,
             'data' => $files,
+        ]);
+    }
+
+    /**
+     * Detail file + riwayat aktivitas terakhir — dipakai panel info (Detail + Aktivitas) di UI.
+     */
+    public function detail($fileId): JsonResponse
+    {
+        $file = TdFile::with(['bidang', 'subBidang', 'folder:id,name,path', 'creator', 'updater'])->findOrFail($fileId);
+
+        $this->authorize('view', $file);
+
+        $activities = $file->activities()
+            ->with('user:id,nama')
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn ($activity) => [
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'user_nama' => $activity->user?->nama,
+                'created_at' => $activity->created_at->format('Y-m-d H:i:s'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => new TdFileResource($file),
+            'activities' => $activities,
         ]);
     }
 }

@@ -47,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
             'penugasan' => Penugasan::class,
             'penugasan_progress' => Progress::class,
             'penugasan_histori_revisi' => HistoriRevisi::class,
+            'td_folder' => TdFolder::class,
+            'td_file' => TdFile::class,
         ]);
 
         // Register policies

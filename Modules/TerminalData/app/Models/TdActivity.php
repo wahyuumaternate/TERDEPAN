@@ -2,21 +2,41 @@
 
 namespace Modules\TerminalData\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-// use Modules\TerminalData\Database\Factories\TdActivityFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class TdActivity extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
-    protected $fillable = [];
+    protected $table = 'td_activities';
 
-    // protected static function newFactory(): TdActivityFactory
-    // {
-    //     // return TdActivityFactory::new();
-    // }
+    protected $fillable = [
+        'trackable_type',
+        'trackable_id',
+        'action',
+        'user_id',
+        'description',
+        'metadata',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'metadata' => 'array',
+        ];
+    }
+
+    public function trackable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

@@ -5,6 +5,7 @@ namespace Modules\TerminalData\Services;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Gate;
+use Modules\TerminalData\Classes\Services\TdActivityService;
 use Modules\TerminalData\Events\FolderAccessed;
 use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Repositories\TdFolderRepository;
@@ -12,7 +13,8 @@ use Modules\TerminalData\Repositories\TdFolderRepository;
 class TdFolderService
 {
     public function __construct(
-        protected TdFolderRepository $repository
+        protected TdFolderRepository $repository,
+        protected TdActivityService $activityService
     ) {}
 
     /**
@@ -111,6 +113,8 @@ class TdFolderService
         // Fire event
         event(new FolderAccessed($user, 'create_folder', $folder));
 
+        $this->activityService->log($folder, 'created', $user, "membuat folder \"{$folder->name}\"");
+
         return $folder;
     }
 
@@ -126,6 +130,7 @@ class TdFolderService
 
         // Set updater
         $data['updated_by'] = $user->id;
+        $oldName = $folder->name;
 
         // Update folder
         $this->repository->update($folder, $data);
@@ -135,6 +140,11 @@ class TdFolderService
 
         // Fire event
         event(new FolderAccessed($user, 'update_folder', $folder));
+
+        $this->activityService->log($folder, 'renamed', $user, "mengubah folder \"{$oldName}\" menjadi \"{$folder->name}\"", [
+            'old_name' => $oldName,
+            'new_name' => $folder->name,
+        ]);
 
         return $folder;
     }
@@ -151,6 +161,8 @@ class TdFolderService
 
         // Fire event before deletion
         event(new FolderAccessed($user, 'delete_folder', $folder));
+
+        $this->activityService->log($folder, 'trashed', $user, "memindahkan folder \"{$folder->name}\" ke sampah");
 
         // Delete folder
         return $this->repository->delete($folder);
@@ -172,12 +184,18 @@ class TdFolderService
         }
 
         // Update parent_id
+        $oldParentId = $folder->parent_id;
         $folder->parent_id = $newParent ? $newParent->id : null;
         $folder->updated_by = $user->id;
         $folder->save();
 
         // Fire event
         event(new FolderAccessed($user, 'move_folder', $folder));
+
+        $this->activityService->log($folder, 'moved', $user, "memindahkan folder \"{$folder->name}\"".($newParent ? " ke \"{$newParent->name}\"" : ' ke root'), [
+            'old_parent_id' => $oldParentId,
+            'new_parent_id' => $folder->parent_id,
+        ]);
 
         return $folder;
     }
@@ -228,6 +246,10 @@ class TdFolderService
 
         // Fire event
         event(new FolderAccessed($user, 'toggle_star', $folder));
+
+        $this->activityService->log($folder, $folder->is_starred ? 'starred' : 'unstarred', $user, $folder->is_starred
+            ? "menandai folder \"{$folder->name}\" sebagai favorit"
+            : "membatalkan tanda favorit folder \"{$folder->name}\"");
 
         return $folder;
     }
