@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
 /**
@@ -10,9 +12,14 @@ use Illuminate\Notifications\Messages\MailMessage;
  * versi Bahasa Indonesia — dipakai baik untuk alur "Lupa Password" mandiri maupun "Kirim
  * Email Login" oleh admin (docs/flow/02-alur-autentikasi.md), keduanya lewat mekanisme
  * Password::sendResetLink() yang sama. Diaktifkan lewat User::sendPasswordResetNotification().
+ *
+ * ShouldQueue: pengiriman lewat antrean (queue) agar "Kirim Email Login" massal ke banyak
+ * pegawai sekaligus tidak memblokir request admin menunggu SMTP satu per satu.
  */
-class ResetPasswordNotification extends ResetPassword
+class ResetPasswordNotification extends ResetPassword implements ShouldQueue
 {
+    use Queueable;
+
     public function toMail($notifiable): MailMessage
     {
         $url = $this->resetUrl($notifiable);
