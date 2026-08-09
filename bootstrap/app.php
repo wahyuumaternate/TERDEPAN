@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'must_change_password' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
+            'api_docs_admin' => \App\Http\Middleware\EnsureIsApiDocsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

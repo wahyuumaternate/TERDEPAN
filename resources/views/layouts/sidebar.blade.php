@@ -218,6 +218,11 @@
                                  <i class="bi bi-circle"></i><span>Konfigurasi</span>
                              </a>
                          </li>
+                         <li>
+                             <a href="{{ route('l5-swagger.default.api') }}" target="_blank" rel="noopener">
+                                 <i class="bi bi-circle"></i><span>Dokumentasi API</span>
+                             </a>
+                         </li>
                      </ul>
                  </li><!-- End Sistem Nav -->
              @endif

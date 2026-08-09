@@ -67,16 +67,23 @@ return [
              * Middleware allows to prevent unexpected access to API documentation
              */
             'middleware' => [
-                'api' => [],
-                'asset' => [],
-                'docs' => [],
+                'api' => ['api_docs_admin'],
+                'asset' => ['api_docs_admin'],
+                'docs' => ['api_docs_admin'],
                 'oauth2_callback' => [],
             ],
 
             /*
              * Route Group options
+             *
+             * "web" wajib disertakan supaya rute ini melewati StartSession/auth session
+             * middleware bawaan Laravel — tanpa ini, session tidak aktif, sehingga
+             * middleware 'api_docs_admin' (App\Http\Middleware\EnsureIsApiDocsAdmin)
+             * selalu melihat user sebagai belum login dan meng-404-kan siapa pun.
              */
-            'group_options' => [],
+            'group_options' => [
+                'middleware' => ['web'],
+            ],
         ],
 
         'paths' => [
