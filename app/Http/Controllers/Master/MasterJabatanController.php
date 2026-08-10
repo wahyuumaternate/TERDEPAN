@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterJabatan;
-use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class MasterJabatanController extends Controller
 {
@@ -18,6 +18,7 @@ class MasterJabatanController extends Controller
             $this->authorize('viewAny', MasterJabatan::class);
 
             $data = MasterJabatan::orderBy('level', 'ASC')->with(['pegawai'])->get();
+
             return view('master-data.index-jabatan', compact('data'));
         } catch (AuthorizationException $e) {
             abort(403, 'Unauthorized');
@@ -46,13 +47,13 @@ class MasterJabatanController extends Controller
             ]);
 
             // Set default values if not provided
-            if (!isset($data['is_struktural'])) {
+            if (! isset($data['is_struktural'])) {
                 $data['is_struktural'] = false;
             }
-            if (!isset($data['bebas_nilai_kinerja'])) {
+            if (! isset($data['bebas_nilai_kinerja'])) {
                 $data['bebas_nilai_kinerja'] = false;
             }
-            if (!isset($data['is_active'])) {
+            if (! isset($data['is_active'])) {
                 $data['is_active'] = true;
             }
 
@@ -62,7 +63,7 @@ class MasterJabatanController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Jabatan berhasil ditambah',
-                    'data' => $jabatan
+                    'data' => $jabatan,
                 ]);
             }
 
@@ -76,11 +77,13 @@ class MasterJabatanController extends Controller
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
             }
+
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -89,6 +92,7 @@ class MasterJabatanController extends Controller
     {
         try {
             $jabatan = MasterJabatan::with(['pegawai'])->findOrFail($id);
+
             return view('master-data.show-edit-jabatan', compact('jabatan'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Jabatan tidak ditemukan');
@@ -100,8 +104,9 @@ class MasterJabatanController extends Controller
     public function edit($id)
     {
         try {
-            $jabatan = MasterJabatan::findOrFail($id);
-            return view('master-data.edit-jabatan', compact('jabatan'));
+            $jabatan = MasterJabatan::with(['pegawai'])->findOrFail($id);
+
+            return view('master-data.show-edit-jabatan', compact('jabatan'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Jabatan tidak ditemukan');
         } catch (\Exception $e) {
@@ -117,7 +122,7 @@ class MasterJabatanController extends Controller
             $this->authorize('update', $jabatan);
 
             $data = $request->validate([
-                'kode' => 'required|unique:master_jabatan,kode,' . $id . '|max:10',
+                'kode' => 'required|unique:master_jabatan,kode,'.$id.'|max:10',
                 'nama' => 'required|string|max:100',
                 'level' => 'required|integer|min:1|max:6',
                 'is_struktural' => 'boolean',
@@ -131,7 +136,7 @@ class MasterJabatanController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Jabatan berhasil diperbarui',
-                    'data' => $jabatan
+                    'data' => $jabatan,
                 ]);
             }
 
@@ -145,16 +150,19 @@ class MasterJabatanController extends Controller
             if ($request->ajax()) {
                 return response()->json(['error' => 'Jabatan tidak ditemukan'], 404);
             }
+
             return redirect()->back()->with('error', 'Jabatan tidak ditemukan');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
             }
+
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -172,6 +180,7 @@ class MasterJabatanController extends Controller
                 if ($request->ajax()) {
                     return response()->json(['error' => $message], 422);
                 }
+
                 return redirect()->back()->with('error', $message);
             }
 
@@ -180,7 +189,7 @@ class MasterJabatanController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Jabatan berhasil dihapus'
+                    'message' => 'Jabatan berhasil dihapus',
                 ]);
             }
 
@@ -194,11 +203,13 @@ class MasterJabatanController extends Controller
             if ($request->ajax()) {
                 return response()->json(['error' => 'Jabatan tidak ditemukan'], 404);
             }
+
             return redirect()->back()->with('error', 'Jabatan tidak ditemukan');
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }

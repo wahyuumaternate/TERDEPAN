@@ -2,9 +2,9 @@
 
 namespace Modules\PerjanjianKinerja\Policies;
 
-use App\Models\MasterPegawai;
-use Modules\PerjanjianKinerja\Models\PkPeriode;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\PerjanjianKinerja\Models\PkPeriode;
 
 class PkPeriodePolicy
 {
@@ -13,16 +13,17 @@ class PkPeriodePolicy
     /**
      * Determine if user can manage periode
      */
-    public function viewAny(MasterPegawai $user)
+    public function viewAny(User $user)
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
     }
 
     /**
      * Determine if user can view periode
      */
-    public function view(MasterPegawai $user, PkPeriode $periode)
+    public function view(User $user, PkPeriode $periode)
     {
         return $this->viewAny($user);
     }
@@ -30,7 +31,7 @@ class PkPeriodePolicy
     /**
      * Determine if user can create periode
      */
-    public function create(MasterPegawai $user)
+    public function create(User $user)
     {
         return $this->viewAny($user);
     }
@@ -38,7 +39,7 @@ class PkPeriodePolicy
     /**
      * Determine if user can update periode
      */
-    public function update(MasterPegawai $user, PkPeriode $periode)
+    public function update(User $user, PkPeriode $periode)
     {
         // Cannot update active periode
         if ($periode->is_active) {
@@ -51,7 +52,7 @@ class PkPeriodePolicy
     /**
      * Determine if user can delete periode
      */
-    public function delete(MasterPegawai $user, PkPeriode $periode)
+    public function delete(User $user, PkPeriode $periode)
     {
         // Cannot delete active periode
         if ($periode->is_active) {
@@ -69,7 +70,7 @@ class PkPeriodePolicy
     /**
      * Determine if user can activate periode
      */
-    public function activate(MasterPegawai $user, PkPeriode $periode)
+    public function activate(User $user, PkPeriode $periode)
     {
         return $this->viewAny($user);
     }
@@ -77,7 +78,7 @@ class PkPeriodePolicy
     /**
      * Determine if user can deactivate periode
      */
-    public function deactivate(MasterPegawai $user, PkPeriode $periode)
+    public function deactivate(User $user, PkPeriode $periode)
     {
         return $this->viewAny($user);
     }

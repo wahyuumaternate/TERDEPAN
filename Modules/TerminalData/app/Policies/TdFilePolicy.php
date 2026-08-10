@@ -2,10 +2,17 @@
 
 namespace Modules\TerminalData\Policies;
 
-use App\Models\MasterPegawai;
-use Modules\TerminalData\Models\TdFile;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\TerminalData\Models\TdFile;
 
+/**
+ * Satu-satunya gate otorisasi untuk TdFile. Sebelumnya ada jalur kedua, TdFile::canAccess()
+ * (Spatie permission + TdShare), yang tidak dijamin sinkron dengan Policy ini — sudah dihapus
+ * setelah audit menemukan jalur itu tidak pernah dipanggil endpoint/blade mana pun, dan
+ * permission Spatie yang dicek di sana (mis. "td_file_view_all") tidak pernah di-seed/assign
+ * ke role mana pun (lihat docs/analysis/rekomendasi-arsitektur-eviden-kinerja.md §2.6).
+ */
 class TdFilePolicy
 {
     use HandlesAuthorization;
@@ -14,18 +21,18 @@ class TdFilePolicy
      * Determine if user can view any files
      * Semua pegawai bisa lihat file
      */
-    public function viewAny(MasterPegawai $user): bool
+    public function viewAny(User $user): bool
     {
-        return $user->jabatan !== null;
+        return $user->profile?->jabatan !== null;
     }
 
     /**
      * Determine if user can view specific file
      * Semua pegawai bisa lihat file
      */
-    public function view(MasterPegawai $user, TdFile $file): bool
+    public function view(User $user, TdFile $file): bool
     {
-        return $user->jabatan !== null;
+        return $user->profile?->jabatan !== null;
     }
 
     /**
@@ -33,19 +40,19 @@ class TdFilePolicy
      * ADMIN, KABAN, SEKBAN - bisa upload di semua lokasi
      * Pegawai bidang - bisa upload di folder bidangnya
      */
-    public function upload(MasterPegawai $user, $folder = null): bool
+    public function upload(User $user, $folder = null): bool
     {
         // Basic check - user harus punya jabatan
-        if (!$user->jabatan) {
+        if (! $user->profile?->jabatan) {
             return false;
         }
 
         // Jika tidak ada folder context, return true (general check)
-        if (!$folder) {
+        if (! $folder) {
             return true;
         }
 
-        $kodeJabatan = $user->jabatan->kode;
+        $kodeJabatan = $user->profile->jabatan->kode;
 
         // ADMIN, KABAN, SEKBAN - bisa upload di semua lokasi
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -55,7 +62,7 @@ class TdFilePolicy
         // Pegawai bidang (KABID, KASUBAG, PELAKSANA, JAFUNG, GATEK)
         // Hanya bisa upload di folder bidangnya
         if (in_array($kodeJabatan, ['KABID', 'KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])) {
-            return $folder->bidang_id === $user->bidang_id;
+            return $folder->bidang_id === $user->profile?->bidang_id;
         }
 
         return false;
@@ -65,18 +72,19 @@ class TdFilePolicy
      * Determine if user can download file
      * Semua pegawai bisa download file
      */
-    public function download(MasterPegawai $user, TdFile $file): bool
+    public function download(User $user, TdFile $file): bool
     {
-        return $user->jabatan !== null;
+        return $user->profile?->jabatan !== null;
     }
+
     /**
      * Determine if user can update file
      * ADMIN, KABAN, SEKBAN - Full Access
      * Pemilik file - bisa update file sendiri
      */
-    public function update(MasterPegawai $user, TdFile $file): bool
+    public function update(User $user, TdFile $file): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -92,9 +100,9 @@ class TdFilePolicy
      * ADMIN, KABAN, SEKBAN - Full Access
      * Pemilik file - bisa delete file sendiri
      */
-    public function delete(MasterPegawai $user, TdFile $file): bool
+    public function delete(User $user, TdFile $file): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -110,9 +118,9 @@ class TdFilePolicy
      * ADMIN, KABAN, SEKBAN - Full Access
      * Pemilik file - bisa move file sendiri
      */
-    public function move(MasterPegawai $user, TdFile $file): bool
+    public function move(User $user, TdFile $file): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -128,9 +136,9 @@ class TdFilePolicy
      * ADMIN, KABAN, SEKBAN bisa lihat semua sampah
      * User lain hanya bisa lihat sampah mereka sendiri
      */
-    public function viewTrashed(MasterPegawai $user): bool
+    public function viewTrashed(User $user): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - bisa lihat semua sampah
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
@@ -141,9 +149,9 @@ class TdFilePolicy
      * ADMIN, KABAN, SEKBAN - Full Access
      * Pemilik file - bisa restore file sendiri
      */
-    public function restore(MasterPegawai $user, TdFile $file): bool
+    public function restore(User $user, TdFile $file): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -159,9 +167,9 @@ class TdFilePolicy
      * ADMIN, KABAN, SEKBAN - Full Access
      * Pemilik file - bisa force delete file sendiri
      */
-    public function forceDelete(MasterPegawai $user, TdFile $file): bool
+    public function forceDelete(User $user, TdFile $file): bool
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // ADMIN, KABAN, SEKBAN - Full Access
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {

@@ -116,8 +116,8 @@
                                     @foreach ($bidang->pegawai->take(5) as $pegawai)
                                         <div class="list-group-item border-0 px-0">
                                             <div class="d-flex align-items-center">
-                                                @if ($pegawai->foto_profile_path)
-                                                    <img src="{{ asset($pegawai->foto_profile_path) }}"
+                                                @if ($pegawai->foto_profile_url)
+                                                    <img src="{{ $pegawai->foto_profile_url }}"
                                                         alt="{{ $pegawai->nama }}" class="rounded-circle me-2"
                                                         style="width: 32px; height: 32px; object-fit: cover;">
                                                 @else

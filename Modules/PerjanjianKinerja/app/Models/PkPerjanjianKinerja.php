@@ -2,11 +2,10 @@
 
 namespace Modules\PerjanjianKinerja\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\MasterJabatan;
-use App\Models\MasterPegawai;
 
 class PkPerjanjianKinerja extends Model
 {
@@ -47,12 +46,12 @@ class PkPerjanjianKinerja extends Model
 
     public function pegawai()
     {
-        return $this->belongsTo(MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(User::class, 'pegawai_id');
     }
 
     public function atasan()
     {
-        return $this->belongsTo(MasterPegawai::class, 'atasan_id');
+        return $this->belongsTo(User::class, 'atasan_id');
     }
 
     public function periode()
@@ -62,7 +61,7 @@ class PkPerjanjianKinerja extends Model
 
     public function validator()
     {
-        return $this->belongsTo(MasterPegawai::class, 'divalidasi_oleh');
+        return $this->belongsTo(User::class, 'divalidasi_oleh');
     }
 
     public function template()
@@ -92,7 +91,7 @@ class PkPerjanjianKinerja extends Model
 
     public function isEditable()
     {
-        return !$this->is_locked && in_array($this->status_dokumen, ['Draft', 'Generated']);
+        return ! $this->is_locked && in_array($this->status_dokumen, ['Draft', 'Generated']);
     }
 
     public function calculateTotalAnggaran()
@@ -107,6 +106,7 @@ class PkPerjanjianKinerja extends Model
         }
         $this->total_anggaran = $total;
         $this->save();
+
         return $total;
     }
 
@@ -118,6 +118,7 @@ class PkPerjanjianKinerja extends Model
             ->first();
 
         $sequence = $lastNumber ? intval(explode('/', $lastNumber->nomor_perjanjian)[3]) + 1 : 1;
+
         return sprintf('PK/%s/%s/%04d', $bidangCode, $tahun, $sequence);
     }
 }

@@ -2,19 +2,19 @@
 
 namespace Modules\PerjanjianKinerja\Database\Seeders;
 
+use App\Models\MasterJabatan;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Modules\PerjanjianKinerja\Models\PkIndikator;
+use Modules\PerjanjianKinerja\Models\PkKegiatan;
+use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
+use Modules\PerjanjianKinerja\Models\PkProgram;
+use Modules\PerjanjianKinerja\Models\PkSasaran;
+use Modules\PerjanjianKinerja\Models\PkSubKegiatan;
 use Modules\PerjanjianKinerja\Models\PkTemplate;
 use Modules\PerjanjianKinerja\Models\PkTemplateSection;
-use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
-use Modules\PerjanjianKinerja\Models\PkSasaran;
-use Modules\PerjanjianKinerja\Models\PkIndikator;
-use Modules\PerjanjianKinerja\Models\PkProgram;
-use Modules\PerjanjianKinerja\Models\PkKegiatan;
-use Modules\PerjanjianKinerja\Models\PkSubKegiatan;
-use App\Models\MasterJabatan;
-use App\Models\MasterPegawai;
-use Carbon\Carbon;
 
 class PerjanjianKinerjaSeeder extends Seeder
 {
@@ -24,7 +24,7 @@ class PerjanjianKinerjaSeeder extends Seeder
     public function run()
     {
         // Check prerequisites first
-        if (!$this->checkPrerequisites()) {
+        if (! $this->checkPrerequisites()) {
             return;
         }
 
@@ -59,8 +59,8 @@ class PerjanjianKinerjaSeeder extends Seeder
             $this->command->info('✅ Seeding completed successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->command->error('❌ Seeding failed: ' . $e->getMessage());
-            $this->command->error('Line: ' . $e->getLine());
+            $this->command->error('❌ Seeding failed: '.$e->getMessage());
+            $this->command->error('Line: '.$e->getLine());
             throw $e;
         }
     }
@@ -76,22 +76,23 @@ class PerjanjianKinerjaSeeder extends Seeder
         $jabatanCount = MasterJabatan::where('is_active', true)->count();
         if ($jabatanCount === 0) {
             $this->command->error('❌ No active jabatan found! Please seed master_jabatan first.');
+
             return false;
         }
         $this->command->info("   ✓ Found {$jabatanCount} active jabatan");
 
         // Check master_pegawai
-        $pegawaiCount = MasterPegawai::where('status_aktif', 'Aktif')->count();
+        $pegawaiCount = User::whereRelation('profile', 'status_aktif', 'Aktif')->count();
         if ($pegawaiCount === 0) {
             $this->command->warn('⚠️  No active pegawai found! Will seed templates only.');
         } else {
             $this->command->info("   ✓ Found {$pegawaiCount} active pegawai");
         }
 
-        $pegawaiWithAtasan = MasterPegawai::whereNotNull('atasan_langsung_id')
-            ->where('status_aktif', 'Aktif')
-            ->count();
-        
+        $pegawaiWithAtasan = User::whereHas('profile', function ($q) {
+            $q->whereNotNull('atasan_langsung_id')->where('status_aktif', 'Aktif');
+        })->count();
+
         if ($pegawaiWithAtasan === 0) {
             $this->command->warn('⚠️  No pegawai with atasan found! Only templates will be created.');
         } else {
@@ -132,12 +133,13 @@ class PerjanjianKinerjaSeeder extends Seeder
 
             if ($exists) {
                 $this->command->warn("   ⚠️  Template for {$jabatan->nama} (tahun {$tahun}) already exists, skipping...");
+
                 continue;
             }
 
             PkTemplate::create([
-                'kode_template' => 'TPK-' . $jabatan->kode . '-' . $tahun,
-                'nama_template' => 'Template Perjanjian Kinerja ' . $jabatan->nama . ' ' . $tahun,
+                'kode_template' => 'TPK-'.$jabatan->kode.'-'.$tahun,
+                'nama_template' => 'Template Perjanjian Kinerja '.$jabatan->nama.' '.$tahun,
                 'jabatan_id' => $jabatan->id,
                 'tahun' => $tahun,
                 'kop_surat_html' => $this->getKopSuratHTML(),
@@ -155,6 +157,7 @@ class PerjanjianKinerjaSeeder extends Seeder
         }
 
         $this->command->info("   ✓ Created {$count} templates");
+
         return $count;
     }
 
@@ -172,6 +175,7 @@ class PerjanjianKinerjaSeeder extends Seeder
             // Check if sections already exist
             if ($template->sections()->count() > 0) {
                 $this->command->warn("   ⚠️  Sections for template {$template->kode_template} already exist, skipping...");
+
                 continue;
             }
 
@@ -251,6 +255,7 @@ class PerjanjianKinerjaSeeder extends Seeder
         }
 
         $this->command->info("   ✓ Created {$sectionsCount} template sections");
+
         return $sectionsCount;
     }
 
@@ -262,13 +267,16 @@ class PerjanjianKinerjaSeeder extends Seeder
         $this->command->info('📋 Seeding Perjanjian Kinerja...');
 
         // Get pegawai with atasan
-        $pegawais = MasterPegawai::whereNotNull('atasan_langsung_id')
-            ->where('status_aktif', 'Aktif')
+        $pegawais = User::whereHas('profile', function ($q) {
+            $q->whereNotNull('atasan_langsung_id')->where('status_aktif', 'Aktif');
+        })
+            ->with('profile')
             ->limit(10)
             ->get();
 
         if ($pegawais->isEmpty()) {
             $this->command->warn('   ⚠️  No pegawai with atasan found, skipping PK creation');
+
             return 0;
         }
 
@@ -283,23 +291,25 @@ class PerjanjianKinerjaSeeder extends Seeder
 
             if ($exists) {
                 $this->command->warn("   ⚠️  PK for {$pegawai->nama} already exists, skipping...");
+
                 continue;
             }
 
             // Get template for this pegawai's jabatan
-            $template = PkTemplate::where('jabatan_id', $pegawai->jabatan_id)
+            $template = PkTemplate::where('jabatan_id', $pegawai->profile->jabatan_id)
                 ->where('tahun', $tahun)
                 ->first();
 
-            if (!$template) {
+            if (! $template) {
                 // Fallback to any active template
                 $template = PkTemplate::where('is_active', true)
                     ->where('tahun', $tahun)
                     ->first();
             }
 
-            if (!$template) {
+            if (! $template) {
                 $this->command->warn("   ⚠️  No template found for pegawai {$pegawai->nama}, skipping...");
+
                 continue;
             }
 
@@ -308,7 +318,7 @@ class PerjanjianKinerjaSeeder extends Seeder
             PkPerjanjianKinerja::create([
                 'nomor_perjanjian' => $nomor,
                 'pegawai_id' => $pegawai->id,
-                'atasan_id' => $pegawai->atasan_langsung_id,
+                'atasan_id' => $pegawai->profile?->atasan_langsung_id,
                 'template_id' => $template->id,
                 'tahun' => $tahun,
                 'periode_mulai' => Carbon::create($tahun, 1, 1),
@@ -317,7 +327,7 @@ class PerjanjianKinerjaSeeder extends Seeder
                 'tanggal_ttd' => null,
                 'total_anggaran' => 0,
                 'status_dokumen' => 'Draft',
-                'catatan' => 'Perjanjian Kinerja Tahun ' . $tahun,
+                'catatan' => 'Perjanjian Kinerja Tahun '.$tahun,
                 'is_locked' => false,
             ]);
 
@@ -325,6 +335,7 @@ class PerjanjianKinerjaSeeder extends Seeder
         }
 
         $this->command->info("   ✓ Created {$count} perjanjian kinerja");
+
         return $count;
     }
 
@@ -356,7 +367,7 @@ class PerjanjianKinerjaSeeder extends Seeder
                         'indikator_sasaran' => $this->getSampleIndikator($i, $j),
                         'satuan' => $j == 1 ? 'Dokumen' : 'Persen',
                         'target_value' => $j == 1 ? 10 : 95,
-                        'keterangan' => 'Target Tahun ' . date('Y'),
+                        'keterangan' => 'Target Tahun '.date('Y'),
                     ]);
                     $indikatorCount++;
                 }
@@ -390,8 +401,8 @@ class PerjanjianKinerjaSeeder extends Seeder
                 $anggaran = rand(100000000, 500000000);
 
                 // Generate unique kode program dengan global counter
-                $kodeProgram = sprintf('1.%02d.%02d.%02d', 
-                    $indikator->id, 
+                $kodeProgram = sprintf('1.%02d.%02d.%02d',
+                    $indikator->id,
                     $globalProgramCounter,
                     $p
                 );
@@ -476,6 +487,7 @@ class PerjanjianKinerjaSeeder extends Seeder
             'Meningkatkan kualitas monitoring dan evaluasi pembangunan daerah',
             'Meningkatkan kapasitas SDM dalam bidang perencanaan pembangunan',
         ];
+
         return $sasaran[$index - 1] ?? $sasaran[0];
     }
 
@@ -495,6 +507,7 @@ class PerjanjianKinerjaSeeder extends Seeder
                 'Persentase pegawai yang mengikuti pelatihan',
             ],
         ];
+
         return $indikator[$sasaranIndex][$indikatorIndex - 1] ?? 'Indikator Sasaran';
     }
 
@@ -504,7 +517,8 @@ class PerjanjianKinerjaSeeder extends Seeder
             'Program Perencanaan Pembangunan Daerah',
             'Program Monitoring dan Evaluasi Pembangunan',
         ];
-        return $program[$index - 1] ?? 'Program ' . $index;
+
+        return $program[$index - 1] ?? 'Program '.$index;
     }
 
     private function getSampleKegiatan($programIndex, $kegiatanIndex)
@@ -519,12 +533,13 @@ class PerjanjianKinerjaSeeder extends Seeder
                 'Penyusunan Laporan Evaluasi RKPD',
             ],
         ];
-        return $kegiatan[$programIndex][$kegiatanIndex - 1] ?? 'Kegiatan ' . $programIndex . '.' . $kegiatanIndex;
+
+        return $kegiatan[$programIndex][$kegiatanIndex - 1] ?? 'Kegiatan '.$programIndex.'.'.$kegiatanIndex;
     }
 
     private function getSampleSubKegiatan($programIndex, $kegiatanIndex, $subIndex)
     {
-        return 'Sub Kegiatan ' . $programIndex . '.' . $kegiatanIndex . '.' . $subIndex . ' - Pelaksanaan dan Pelaporan';
+        return 'Sub Kegiatan '.$programIndex.'.'.$kegiatanIndex.'.'.$subIndex.' - Pelaksanaan dan Pelaporan';
     }
 
     // ========================================

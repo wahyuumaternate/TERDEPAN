@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('knj_nilai_tahunan', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            
+
             // Period & Employee
-            $table->foreignId('pegawai_id')->constrained('master_pegawai');
+            $table->foreignId('pegawai_id')->constrained('users');
             $table->year('tahun');
-            
+
             // Calculated from monthly scores
             $table->decimal('rata_rata_bulanan', 5, 2)->default(0)
                 ->comment('Average of 12 months');
@@ -28,27 +28,27 @@ return new class extends Migration
                 'Baik',
                 'Cukup',
                 'Kurang',
-                'Sangat_Kurang'
+                'Sangat_Kurang',
             ])->nullable();
-            
+
             // Summary & Recommendation
             $table->text('ringkasan_kinerja')->nullable()
                 ->comment('Ringkasan kinerja setahun');
             $table->text('rekomendasi')->nullable()
                 ->comment('Rekomendasi untuk tahun depan');
-            
+
             // Finalization
             $table->boolean('is_finalized')->default(false);
-            $table->foreignId('approved_by')->nullable()->constrained('master_pegawai');
+            $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('finalized_at')->nullable();
-            
+
             // Monthly breakdown (for reference)
             $table->json('breakdown_bulanan')->nullable()
                 ->comment('Array of 12 monthly scores');
-            
+
             $table->timestamps();
-            
+
             // Constraints
             $table->unique(['pegawai_id', 'tahun'], 'unique_yearly_score');
             $table->index('kategori_nilai');

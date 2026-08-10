@@ -32,8 +32,8 @@ return new class extends Migration
             $table->softDeletes();
 
             // Foreign keys
-            $table->foreign('pegawai_id')->references('id')->on('master_pegawai')->onDelete('restrict');
-            $table->foreign('atasan_id')->references('id')->on('master_pegawai')->onDelete('restrict');
+            $table->foreign('pegawai_id')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('atasan_id')->references('id')->on('users')->onDelete('restrict');
             $table->foreign('template_id')->references('id')->on('pk_template')->onDelete('restrict');
 
             // Indexes

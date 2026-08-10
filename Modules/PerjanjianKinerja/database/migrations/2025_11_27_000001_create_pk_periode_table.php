@@ -20,9 +20,9 @@ return new class extends Migration
             $table->date('tanggal_selesai');
             $table->enum('status', ['Aktif', 'Selesai', 'Ditutup'])->default('Ditutup');
             $table->boolean('is_active')->default(false);
-            $table->foreignId('dibuka_oleh')->nullable()->constrained('master_pegawai')->onDelete('set null');
+            $table->foreignId('dibuka_oleh')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('dibuka_pada')->nullable();
-            $table->foreignId('ditutup_oleh')->nullable()->constrained('master_pegawai')->onDelete('set null');
+            $table->foreignId('ditutup_oleh')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('ditutup_pada')->nullable();
             $table->timestamps();
             $table->softDeletes();

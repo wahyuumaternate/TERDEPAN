@@ -3,7 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\ResetPasswordNotification as ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -59,13 +59,18 @@ class PasswordResetTest extends TestCase
             $response = $this->post('/reset-password', [
                 'token' => $notification->token,
                 'email' => $user->email,
-                'password' => 'password',
-                'password_confirmation' => 'password',
+                'password' => 'password-baru-123',
+                'password_confirmation' => 'password-baru-123',
             ]);
 
+            // docs/flow/02-alur-autentikasi.md §Lupa Password langkah 5: "Berhasil login ke
+            // dashboard" — beda dari Breeze bawaan yang redirect ke halaman login.
             $response
                 ->assertSessionHasNoErrors()
-                ->assertRedirect(route('login'));
+                ->assertRedirect(route('dashboard'));
+
+            $this->assertAuthenticatedAs($user->fresh());
+            $this->assertFalse($user->fresh()->must_change_password);
 
             return true;
         });

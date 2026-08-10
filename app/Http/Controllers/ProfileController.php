@@ -3,23 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use App\Models\MasterPegawai;
+use App\Models\User;
+use App\Services\ProfilePhotoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly ProfilePhotoService $photoService) {}
+
     /**
      * Display the user's profile form.
      */
     public function edit(Request $request): View
     {
-        $pegawai = MasterPegawai::with(['jabatan', 'bidang', 'atasanLangsung', 'ttdDigital'])
+        $pegawai = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])
             ->findOrFail($request->user()->id);
 
         return view('profile.edit', [
@@ -32,9 +34,9 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $pegawai = MasterPegawai::findOrFail($request->user()->id);
+        $pegawai = User::findOrFail($request->user()->id);
+        $profile = $pegawai->profile;
 
-        // Update profile information
         $data = $request->validated();
 
         // Remove foto_profile from data as it's handled separately
@@ -42,19 +44,22 @@ class ProfileController extends Controller
 
         // Handle foto profile upload
         if ($request->hasFile('foto_profile')) {
-            // Delete old photo if exists
-            if ($pegawai->foto_profile_path && Storage::disk('public')->exists($pegawai->foto_profile_path)) {
-                Storage::disk('public')->delete($pegawai->foto_profile_path);
-            }
+            $this->photoService->delete($profile?->foto_profile_path, $profile?->disk);
 
-            // Store new photo
-            $file = $request->file('foto_profile');
-            $filename = 'profile_' . $pegawai->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('uploads/pegawai/foto', $filename, 'public');
-            $data['foto_profile_path'] = $path;
+            $stored = $this->photoService->store($request->file('foto_profile'), $pegawai->id);
+            $data['foto_profile_path'] = $stored['path'];
+            $data['disk'] = $stored['disk'];
         }
 
-        $pegawai->update($data);
+        // 'nama' & 'email' are identity fields on the users table
+        $pegawai->update([
+            'nama' => $data['nama'],
+            'email' => $data['email'],
+        ]);
+        unset($data['nama'], $data['email']);
+
+        // Sisanya adalah data profil kepegawaian
+        $profile?->update($data);
 
         // Update password if provided
         if ($request->filled('password')) {

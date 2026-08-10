@@ -13,16 +13,19 @@ class TdFolderSeeder extends Seeder
         // Skip jika data sudah ada
         if (DB::table('td_folders')->count() > 0) {
             $this->command->info('Folder hierarchy sudah ada, skip seeding...');
+
             return;
         }
 
-        // Get only Bappeda and Sekretariat bidang
+        // Buat folder untuk semua bidang aktif (kode BAPPEDA sengaja tidak aktif — itu
+        // level instansi/parent, bukan bidang kerja, jadi tidak butuh folder sendiri).
         $bidangList = DB::table('master_bidang')
-            ->whereIn('kode', ['SEKRETARIAT', 'IPW'])
+            ->where('is_active', true)
             ->get();
 
         if ($bidangList->isEmpty()) {
             $this->command->warn('Bidang tidak ditemukan!');
+
             return;
         }
 
@@ -39,7 +42,7 @@ class TdFolderSeeder extends Seeder
         foreach ($bidangList as $bidang) {
             // Level 1: Folder Bidang
             $bidangFolderId = (string) \Illuminate\Support\Str::uuid();
-            $bidangPath = '/' . $this->slugify($bidang->nama);
+            $bidangPath = '/'.$this->slugify($bidang->nama);
 
             DB::table('td_folders')->insert([
                 'id' => $bidangFolderId,
@@ -60,7 +63,7 @@ class TdFolderSeeder extends Seeder
             // Level 2: Folder Jenis untuk setiap bidang
             foreach ($jenisFolder as $jenis) {
                 $jenisFolderId = (string) \Illuminate\Support\Str::uuid();
-                $jenisPath = $bidangPath . '/' . $this->slugify($jenis);
+                $jenisPath = $bidangPath.'/'.$this->slugify($jenis);
 
                 DB::table('td_folders')->insert([
                     'id' => $jenisFolderId,
@@ -81,19 +84,21 @@ class TdFolderSeeder extends Seeder
                 // Level 3: Khusus untuk "Eviden Kinerja", buat subfolder per pegawai
                 if ($jenis === 'Eviden Kinerja') {
                     // Get pegawai dari bidang ini
-                    $pegawaiList = DB::table('master_pegawai')
-                        ->where('bidang_id', $bidang->id)
+                    $pegawaiList = DB::table('users')
+                        ->join('user_profiles', 'user_profiles.user_id', '=', 'users.id')
+                        ->where('user_profiles.bidang_id', $bidang->id)
+                        ->select('users.id', 'users.nama', 'user_profiles.tipe_identitas', 'user_profiles.nomor_identitas')
                         ->get();
 
                     foreach ($pegawaiList as $pegawai) {
                         $pegawaiFolderId = (string) \Illuminate\Support\Str::uuid();
-                        $pegawaiPath = $jenisPath . '/' . $this->slugify($pegawai->nama);
+                        $pegawaiPath = $jenisPath.'/'.$this->slugify($pegawai->nama);
 
                         DB::table('td_folders')->insert([
                             'id' => $pegawaiFolderId,
                             'parent_id' => $jenisFolderId,
                             'bidang_id' => $bidang->id,
-                            'name' => $pegawai->nama . ' (' . $pegawai->tipe_identitas . ': ' . $pegawai->nomor_identitas . ')',
+                            'name' => $pegawai->nama.' ('.$pegawai->tipe_identitas.': '.$pegawai->nomor_identitas.')',
                             'path' => $pegawaiPath,
                             'level' => 2,
                             'is_system' => true,

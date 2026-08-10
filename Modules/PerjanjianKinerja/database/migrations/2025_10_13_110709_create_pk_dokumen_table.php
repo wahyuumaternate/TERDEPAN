@@ -30,7 +30,7 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreign('perjanjian_kinerja_id')->references('id')->on('pk_perjanjian_kinerja')->onDelete('cascade');
-            $table->foreign('generated_by')->references('id')->on('master_pegawai')->onDelete('restrict');
+            $table->foreign('generated_by')->references('id')->on('users')->onDelete('restrict');
 
             // Note: Uncomment this if doc_dokumen table exists
             // $table->foreign('dokumen_id')->references('id')->on('doc_dokumen')->onDelete('set null');

@@ -3,16 +3,15 @@
 namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Modules\Penugasan\Models\TugasPokok;
-use Modules\Penugasan\Models\TugasHarian;
-use Modules\Penugasan\Models\TugasTambahan;
+use Modules\Penugasan\Models\Penugasan;
 
 /**
  * DashboardController
- * 
+ *
  * Mengelola halaman dashboard modul penugasan
  * Menampilkan statistik, progress, dan tugas mendesak
  */
@@ -20,80 +19,80 @@ class DashboardController extends Controller
 {
     /**
      * Menampilkan halaman dashboard penugasan
-     * 
-     * @param  \Illuminate\Http\Request  $request
+     *
      * @return \Illuminate\View\View
      */
     public function index(Request $request)
     {
-        $user = $request->user();
+        $data = $this->getDashboardData($request->user());
 
+        // Check if view exists, if not use default dashboard view
+        if (view()->exists('dashboard')) {
+            return view('dashboard', $data);
+        }
+
+        return view('penugasan::dashboard', $data);
+    }
+
+    /**
+     * Mengumpulkan statistik, tugas pending, dan progress mingguan untuk dashboard.
+     *
+     * @return array{stats: array, tugasBaruPending: \Illuminate\Support\Collection, progressMingguan: \Illuminate\Support\Collection}
+     */
+    public function getDashboardData(User $user): array
+    {
         // Cache statistik untuk 5 menit
         $stats = Cache::remember("dashboard_stats_{$user->id}", 300, function () use ($user) {
+            $statusAktif = [Penugasan::STATUS_PROSES, Penugasan::STATUS_REVISI, Penugasan::STATUS_TERLAMBAT];
+
             return [
                 'tugas_pokok' => [
-                    'total' => TugasPokok::where('pegawai_id', $user->id)->count(),
-                    'aktif' => TugasPokok::where('pegawai_id', $user->id)
-                        ->where('status', 'dikerjakan')
+                    'total' => Penugasan::pokok()->where('pegawai_id', $user->id)->count(),
+                    'aktif' => Penugasan::pokok()->where('pegawai_id', $user->id)
+                        ->whereIn('status', $statusAktif)
                         ->count(),
-                    'selesai' => TugasPokok::where('pegawai_id', $user->id)
-                        ->where('status', 'selesai')
+                    'selesai' => Penugasan::pokok()->where('pegawai_id', $user->id)
+                        ->where('status', Penugasan::STATUS_SELESAI)
                         ->count(),
                 ],
                 'tugas_harian' => [
-                    'total' => TugasHarian::where('pegawai_id', $user->id)->count(),
-                    'pending' => TugasHarian::where('pegawai_id', $user->id)
-                        ->where('status', 'pending')
+                    'total' => Penugasan::where('pegawai_id', $user->id)->count(),
+                    'pending' => Penugasan::where('pegawai_id', $user->id)
+                        ->where('status', Penugasan::STATUS_PENDING)
                         ->count(),
-                    'dikerjakan' => TugasHarian::where('pegawai_id', $user->id)
-                        ->where('status', 'dikerjakan')
+                    // Kunci 'dikerjakan' dipertahankan demi kompatibilitas dashboard.blade.php,
+                    // isinya kini status proses (label lama warisan alur sebelum rencana 07).
+                    'dikerjakan' => Penugasan::where('pegawai_id', $user->id)
+                        ->where('status', Penugasan::STATUS_PROSES)
                         ->count(),
-                    'validasi' => TugasHarian::where('pegawai_id', $user->id)
-                        ->where('status', 'validasi')
+                    'validasi' => Penugasan::where('pegawai_id', $user->id)
+                        ->where('status', Penugasan::STATUS_SELESAI)
+                        ->whereNull('realisasi_persen')
                         ->count(),
-                    'selesai' => TugasHarian::where('pegawai_id', $user->id)
-                        ->where('status', 'selesai')
+                    'selesai' => Penugasan::where('pegawai_id', $user->id)
+                        ->where('status', Penugasan::STATUS_SELESAI)
+                        ->whereNotNull('realisasi_persen')
                         ->count(),
                 ],
                 'tugas_tambahan' => [
-                    'total' => TugasTambahan::where('pegawai_id', $user->id)->count(),
-                    'aktif' => TugasTambahan::where('pegawai_id', $user->id)
-                        ->whereIn('status', ['dikerjakan', 'validasi'])
+                    'total' => Penugasan::tambahan()->where('pegawai_id', $user->id)->count(),
+                    'aktif' => Penugasan::tambahan()->where('pegawai_id', $user->id)
+                        ->whereIn('status', $statusAktif)
                         ->count(),
-                    'selesai' => TugasTambahan::where('pegawai_id', $user->id)
-                        ->where('status', 'selesai')
+                    'selesai' => Penugasan::tambahan()->where('pegawai_id', $user->id)
+                        ->where('status', Penugasan::STATUS_SELESAI)
                         ->count(),
                 ],
-                'nilai_rata_rata' => TugasHarian::where('pegawai_id', $user->id)
+                'nilai_rata_rata' => Penugasan::where('pegawai_id', $user->id)
                     ->whereNotNull('nilai_akhir')
                     ->avg('nilai_akhir'),
             ];
         });
 
-        // Tugas baru/pending (diberikan oleh atasan atau status pending)
-        // Tugas Harian dengan status pending atau baru (created_at < 7 hari)
-        $tugasBaruHarian = TugasHarian::where('pegawai_id', $user->id)
-            ->where('status', 'pending')
-            ->where('is_mandiri', false) // Hanya tugas yang diberikan atasan
-            ->with(['pemberiTugas:id,nama', 'tugasPokok:id,nama_tugas'])
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($tugas) {
-                return [
-                    'id' => $tugas->id,
-                    'nama_tugas' => $tugas->nama_tugas,
-                    'jenis' => 'harian',
-                    'status' => $tugas->status,
-                    'tanggal_selesai' => $tugas->tanggal_selesai,
-                    'pemberi_tugas' => $tugas->pemberiTugas->nama ?? '-',
-                    'created_at' => $tugas->created_at,
-                ];
-            });
-
-        // Tugas Tambahan dengan status pending atau baru
-        $tugasBaruTambahan = TugasTambahan::where('pegawai_id', $user->id)
-            ->where('status', 'pending')
+        // Tugas baru/pending yang diberikan oleh atasan (bukan mandiri)
+        $tugasBaruPending = Penugasan::where('pegawai_id', $user->id)
+            ->where('status', Penugasan::STATUS_PENDING)
+            ->where('is_mandiri', false)
             ->with(['pemberiTugas:id,nama'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -102,7 +101,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $tugas->id,
                     'nama_tugas' => $tugas->nama_tugas,
-                    'jenis' => 'tambahan',
+                    'jenis' => $tugas->jenis,
                     'status' => $tugas->status,
                     'tanggal_selesai' => $tugas->tanggal_selesai,
                     'pemberi_tugas' => $tugas->pemberiTugas->nama ?? '-',
@@ -110,17 +109,11 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Gabungkan dan urutkan berdasarkan created_at
-        $tugasBaruPending = $tugasBaruHarian->concat($tugasBaruTambahan)
-            ->sortByDesc('created_at')
-            ->take(10)
-            ->values();
-
         // Progress mingguan (4 minggu terakhir)
         $progressMingguan = DB::table('knj_progress')
             ->select([
                 DB::raw('DATE_TRUNC(\'week\', tanggal) as minggu'),
-                DB::raw('AVG(progress_persen) as avg_progress')
+                DB::raw('AVG(progress_persen) as avg_progress'),
             ])
             ->where('pegawai_id', $user->id)
             ->where('tanggal', '>=', now()->subWeeks(4))
@@ -128,19 +121,6 @@ class DashboardController extends Controller
             ->orderBy('minggu')
             ->get();
 
-        // Check if view exists, if not use default dashboard view
-        if (view()->exists('dashboard')) {
-            return view('dashboard', compact(
-                'stats',
-                'tugasBaruPending',
-                'progressMingguan'
-            ));
-        }
-        
-        return view('penugasan::dashboard', compact(
-            'stats',
-            'tugasBaruPending',
-            'progressMingguan'
-        ));
+        return compact('stats', 'tugasBaruPending', 'progressMingguan');
     }
 }

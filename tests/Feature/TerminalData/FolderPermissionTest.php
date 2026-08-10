@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\TerminalData;
 
-use Tests\TestCase;
-use App\Models\MasterPegawai;
-use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
-use Modules\TerminalData\Models\TdFolder;
+use App\Models\MasterJabatan;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\TerminalData\Models\TdFolder;
+use Tests\TestCase;
 
 class FolderPermissionTest extends TestCase
 {
@@ -40,14 +40,17 @@ class FolderPermissionTest extends TestCase
         $bidang2 = MasterBidang::skip(1)->first();
 
         // Create pegawai for created_by constraint
-        $pegawai = MasterPegawai::create([
-            'nomor_identitas' => '199001012020011001',
-            'tipe_identitas' => 'NIP',
+        $pegawai = User::create([
             'nama' => 'Test User',
-            'jenis_kelamin' => 'L',
-            'status_kepegawaian' => 'PNS',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
+        ]);
+        $pegawai->profile()->create([
+            'nomor_identitas' => '199001012020011001',
+            'tipe_identitas' => 'NIP',
+            'jenis_kelamin' => 'L',
+            'status_kepegawaian' => 'PNS',
+            'status_aktif' => 'Aktif',
             'jabatan_id' => 1,
             'bidang_id' => 1,
         ]);
@@ -73,8 +76,9 @@ class FolderPermissionTest extends TestCase
 
     /**
      * Test view all folders permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanViewAccessProvider
      */
     public function test_view_folders_access_by_jabatan($jabatanKode, $bidangId, $expectedMinCount, $expectAll)
@@ -110,8 +114,9 @@ class FolderPermissionTest extends TestCase
 
     /**
      * Test create folder permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanCreateAccessProvider
      */
     public function test_create_folder_permission_by_jabatan($jabatanKode, $canCreate)
@@ -119,7 +124,7 @@ class FolderPermissionTest extends TestCase
         $user = $this->createUserWithJabatan($jabatanKode);
 
         $folderData = [
-            'name' => 'Test Folder ' . $jabatanKode,
+            'name' => 'Test Folder '.$jabatanKode,
             'bidang_id' => MasterBidang::first()->id,
         ];
 
@@ -128,7 +133,7 @@ class FolderPermissionTest extends TestCase
 
         if ($canCreate) {
             $response->assertStatus(201);
-            $this->assertDatabaseHas('td_folders', ['name' => 'Test Folder ' . $jabatanKode]);
+            $this->assertDatabaseHas('td_folders', ['name' => 'Test Folder '.$jabatanKode]);
         } else {
             $response->assertStatus(403);
         }
@@ -136,8 +141,9 @@ class FolderPermissionTest extends TestCase
 
     /**
      * Test update folder permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanUpdateDeleteProvider
      */
     public function test_update_folder_permission_by_jabatan($jabatanKode, $folderBidangId, $userBidangId, $canUpdate)
@@ -162,12 +168,12 @@ class FolderPermissionTest extends TestCase
         // Buat folder untuk di-update
         $folder = TdFolder::factory()->create([
             'bidang_id' => $folderBidangId,
-            'created_by' => $owner->id
+            'created_by' => $owner->id,
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->putJson(route('terminaldata.foldersData.update', $folder->id), [
-                'name' => 'Updated Folder Name'
+                'name' => 'Updated Folder Name',
             ]);
 
         if ($canUpdate) {
@@ -179,7 +185,7 @@ class FolderPermissionTest extends TestCase
 
     /**
      * Test delete folder with files (should fail)
-     * 
+     *
      * @test
      */
     public function test_cannot_delete_folder_with_files()
@@ -201,13 +207,13 @@ class FolderPermissionTest extends TestCase
         $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
-                'message' => 'Tidak dapat menghapus folder yang masih memiliki file'
+                'message' => 'Tidak dapat menghapus folder yang masih memiliki file',
             ]);
     }
 
     /**
      * Test delete folder with subfolders (should fail)
-     * 
+     *
      * @test
      */
     public function test_cannot_delete_folder_with_subfolders()
@@ -224,13 +230,13 @@ class FolderPermissionTest extends TestCase
         $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
-                'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder'
+                'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder',
             ]);
     }
 
     /**
      * Test delete empty folder (should success for admin)
-     * 
+     *
      * @test
      */
     public function test_can_delete_empty_folder()
@@ -245,7 +251,7 @@ class FolderPermissionTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Folder berhasil dipindahkan ke sampah'
+                'message' => 'Folder berhasil dipindahkan ke sampah',
             ]);
 
         $this->assertSoftDeleted('td_folders', ['id' => $emptyFolder->id]);
@@ -253,8 +259,9 @@ class FolderPermissionTest extends TestCase
 
     /**
      * Test delete folder permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanDeleteProvider
      */
     public function test_delete_folder_permission_by_jabatan($jabatanKode, $canDeleteOthers)
@@ -287,8 +294,9 @@ class FolderPermissionTest extends TestCase
     /**
      * Test rename folder permission by jabatan
      * Policy rename() berbeda dengan update()
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanRenameProvider
      */
     public function test_rename_folder_permission_by_jabatan($jabatanKode, $folderBidangId, $userBidangId, $canRename)
@@ -311,7 +319,7 @@ class FolderPermissionTest extends TestCase
 
         $folder = TdFolder::factory()->create([
             'bidang_id' => $folderBidangId,
-            'created_by' => $owner->id
+            'created_by' => $owner->id,
         ]);
 
         // Test policy rename langsung
@@ -320,13 +328,13 @@ class FolderPermissionTest extends TestCase
         $this->assertEquals(
             $canRename,
             $result,
-            "{$jabatanKode} " . ($canRename ? 'harus bisa' : 'tidak bisa') . " rename folder"
+            "{$jabatanKode} ".($canRename ? 'harus bisa' : 'tidak bisa').' rename folder'
         );
     }
 
     /**
      * Test restore folder permission
-     * 
+     *
      * @test
      */
     public function test_restore_folder_permission()
@@ -353,7 +361,7 @@ class FolderPermissionTest extends TestCase
 
     /**
      * Test viewTrashed permission
-     * 
+     *
      * @test
      */
     public function test_view_trashed_permission()
@@ -466,21 +474,27 @@ class FolderPermissionTest extends TestCase
 
     // ==================== HELPER METHODS ====================
 
-    protected function createUserWithJabatan(string $kodeJabatan, ?int $bidangId = null): MasterPegawai
+    protected function createUserWithJabatan(string $kodeJabatan, ?int $bidangId = null): User
     {
         $jabatan = MasterJabatan::where('kode', $kodeJabatan)->firstOrFail();
-        $nip = '1990' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT) . '001';
+        $nip = '1990'.str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT).'001';
 
-        return MasterPegawai::create([
+        $user = User::create([
+            'nama' => 'User '.$kodeJabatan,
+            'email' => strtolower($kodeJabatan).rand(1, 9999).'@test.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $user->profile()->create([
             'nomor_identitas' => $nip,
             'tipe_identitas' => 'NIP',
-            'nama' => 'User ' . $kodeJabatan,
             'jenis_kelamin' => 'L',
             'status_kepegawaian' => 'PNS',
-            'email' => strtolower($kodeJabatan) . rand(1, 9999) . '@test.com',
-            'password' => bcrypt('password'),
+            'status_aktif' => 'Aktif',
             'jabatan_id' => $jabatan->id,
             'bidang_id' => $bidangId ?? MasterBidang::first()->id,
         ]);
+
+        return $user->fresh('profile');
     }
 }

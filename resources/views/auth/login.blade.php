@@ -253,10 +253,10 @@
                 <form method="POST" action="{{ route('login') }}" id="loginForm-mobile" class="space-y-4">
                     @csrf
 
-                    <!-- NIP/NIK -->
+                    <!-- Email -->
                     <div>
-                        <input id="nomor_identitas-mobile" type="text" name="nomor_identitas" required
-                            placeholder="Isikan username atau NIK"
+                        <input id="email-mobile" type="email" name="email" required
+                            placeholder="Isikan alamat email Anda"
                             class="custom-input w-full px-4 py-3 focus:outline-none" />
                     </div>
 
@@ -413,15 +413,14 @@
                             class="space-y-5">
                             @csrf
 
-                            <!-- NIP/NIK -->
+                            <!-- Email -->
                             <div>
-                                <label for="nomor_identitas-desktop"
+                                <label for="email-desktop"
                                     class="block text-sm font-medium text-gray-700 mb-1">
-                                    NIP / ID
-                                    <span class="text-muted">(Gatek)</span>
+                                    Email
                                 </label>
-                                <input id="nomor_identitas-desktop" type="text" name="nomor_identitas" required
-                                    placeholder="Isikan NIP atau NIK Anda"
+                                <input id="email-desktop" type="email" name="email" required
+                                    placeholder="Isikan alamat email Anda"
                                     class="custom-input w-full px-4 py-2.5 focus:outline-none" />
                             </div>
 
@@ -483,9 +482,9 @@
                     </div>
                 </div>
 
-                <div class="text-center text-sm">
+                {{-- <div class="text-center text-sm">
                     <p class="text-gray-500 mb-4">Scan kode QR dengan Aplikasi TERDEPAN di HP Anda</p>
-                </div>
+                </div> --}}
 
                 {{-- <!-- REGISTER LINK -->
                 <div class="mt-6 text-center text-sm">
@@ -561,7 +560,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             @if (app()->environment('local'))
                 const defaultCredentials = {
-                    nomor_identitas: '197001011990011001',
+                    email: 'admin@gmail.com',
                     password: 'password'
                 };
 
@@ -569,8 +568,8 @@
                 const autoLoginButtonMobile = document.getElementById('autoLoginButton-mobile');
                 if (autoLoginButtonMobile) {
                     autoLoginButtonMobile.addEventListener('click', function() {
-                        document.getElementById('nomor_identitas-mobile').value = defaultCredentials
-                            .nomor_identitas;
+                        document.getElementById('email-mobile').value = defaultCredentials
+                            .email;
                         document.getElementById('password-mobile').value = defaultCredentials.password;
                         document.getElementById('remember_me-mobile').checked = true;
 
@@ -584,8 +583,8 @@
                 const autoLoginButtonDesktop = document.getElementById('autoLoginButton-desktop');
                 if (autoLoginButtonDesktop) {
                     autoLoginButtonDesktop.addEventListener('click', function() {
-                        document.getElementById('nomor_identitas-desktop').value = defaultCredentials
-                            .nomor_identitas;
+                        document.getElementById('email-desktop').value = defaultCredentials
+                            .email;
                         document.getElementById('password-desktop').value = defaultCredentials.password;
                         document.getElementById('remember_me-desktop').checked = true;
 

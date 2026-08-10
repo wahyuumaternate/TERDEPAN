@@ -1,161 +1,96 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Penugasan\Http\Controllers\Api\PushSubscriptionController;
+use Modules\Penugasan\Http\Controllers\ApiController;
 use Modules\Penugasan\Http\Controllers\DashboardController;
 use Modules\Penugasan\Http\Controllers\PenugasanController;
-use Modules\Penugasan\Http\Controllers\TugasPokokController;
-use Modules\Penugasan\Http\Controllers\TugasHarianController;
-use Modules\Penugasan\Http\Controllers\TugasTambahanController;
 use Modules\Penugasan\Http\Controllers\TeamController;
-use Modules\Penugasan\Http\Controllers\ApiController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes - Modul Penugasan
 |--------------------------------------------------------------------------
-| Route structure mengikuti hierarki database dan best practice RESTful:
-| - Dashboard (landing page)
-| - Tugas Pokok (main tasks from PK)
-| - Tugas Harian (daily tasks - child of Tugas Pokok)
-| - Tugas Tambahan (additional tasks - standalone)
-| - Team Management (for supervisors)
-| - API endpoints (for AJAX)
+| Struktur mengikuti docs/plan/08-rencana_implementasi_tampilan_web_penugasan.md:
+| "Tugas Saya" dan "Tugas yang Saya Berikan" digabung jadi satu halaman
+| (penugasan.tugas-saya) dengan query param ?tab=saya|diberikan (§4.1).
+| Route lama form-berikan-tugas/daftar-validasi dipertahankan sebagai
+| redirect supaya bookmark/link lama (termasuk dashboard.blade.php) tidak 404.
+|--------------------------------------------------------------------------
+| PENTING: rute statis (tim/*, api/*, daftar, tugas-saya, create) harus
+| didaftarkan SEBELUM rute wildcard `/{id}` di bawah, supaya tidak ter-shadow
+| oleh wildcard tersebut.
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(function () {
+Route::middleware(['auth', 'must_change_password'])->prefix('penugasan')->name('penugasan.')->group(function () {
 
-    // ============================================
-    // DASHBOARD
-    // ============================================
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     // ============================================
-    // TUGAS POKOK (Tugas utama dari Perjanjian Kinerja)
+    // PENUGASAN (gabungan Tugas Pokok + Tugas Tambahan + Tugas Harian)
     // ============================================
-    Route::prefix('tugas-pokok')->name('tugas-pokok.')->group(function () {
-        // List & view
-        Route::get('/', [TugasPokokController::class, 'index'])->name('index');
-        Route::get('/saya', [TugasPokokController::class, 'tugasSaya'])->name('tugas-saya');
-        Route::get('/{tugasPokok}', [TugasPokokController::class, 'show'])->name('show');
-
-        // Actions
-        Route::post('/sinkron', [TugasPokokController::class, 'sinkronData'])->name('sinkron');
-        // Route::post('/{tugasPokok}/terima', [TugasPokokController::class, 'terima'])->name('terima');
-        Route::post('/{tugasPokok}/update-status', [TugasPokokController::class, 'updateStatus'])->name('update-status');
-
-        // Nested: Tugas Harian di bawah Tugas Pokok
-        Route::prefix('{tugasPokok}/tugas-harian')->name('tugas-harian.')->group(function () {
-            Route::get('/', [TugasHarianController::class, 'indexByTugasPokok'])->name('index');
-            Route::post('/', [TugasHarianController::class, 'store'])->name('store');
-        });
-    });
+    Route::get('/daftar', [PenugasanController::class, 'index'])->name('index');
+    Route::get('/tugas-saya', [PenugasanController::class, 'tugasSaya'])->name('tugas-saya');
+    Route::get('/tugas-saya/data', [PenugasanController::class, 'tugasSayaData'])->name('tugas-saya.data');
+    Route::get('/create', [PenugasanController::class, 'create'])->name('create');
+    Route::post('/', [PenugasanController::class, 'store'])->name('store');
+    Route::post('/grup', [PenugasanController::class, 'storeGrup'])->name('store-grup');
 
     // ============================================
-    // TUGAS HARIAN (Daily Tasks)
-    // ============================================
-    Route::prefix('tugas-harian')->name('tugas-harian.')->group(function () {
-        // List & view
-        Route::get('/', [TugasHarianController::class, 'index'])->name('index');
-        Route::get('/saya', [TugasHarianController::class, 'tugasSaya'])->name('tugas-saya');
-        Route::get('/buat', [TugasHarianController::class, 'create'])->name('create');
-        Route::get('/{tugasHarian}', [TugasHarianController::class, 'show'])->name('show');
-        Route::get('/{tugasHarian}/edit', [TugasHarianController::class, 'edit'])->name('edit');
-
-        // CRUD operations
-        Route::post('/', [TugasHarianController::class, 'store'])->name('store');
-        Route::put('/{tugasHarian}', [TugasHarianController::class, 'update'])->name('update');
-        Route::delete('/{tugasHarian}', [TugasHarianController::class, 'destroy'])->name('destroy');
-
-        // Task actions
-        Route::post('/{tugasHarian}/terima', [TugasHarianController::class, 'terima'])->name('terima');
-        Route::post('/{tugasHarian}/tolak', [TugasHarianController::class, 'tolak'])->name('tolak');
-        Route::post('/{tugasHarian}/mulai', [TugasHarianController::class, 'mulai'])->name('mulai');
-        Route::post('/{tugasHarian}/submit', [TugasHarianController::class, 'submit'])->name('submit');
-        Route::get('/{tugasHarian}/upload-bukti', [TugasHarianController::class, 'formUploadBukti'])->name('form-upload-bukti');
-        Route::post('/{tugasHarian}/upload-bukti', [TugasHarianController::class, 'uploadBukti'])->name('upload-bukti');
-        Route::post('/{tugasHarian}/update-progress', [TugasHarianController::class, 'updateProgress'])->name('update-progress');
-
-        // History
-        Route::get('/{tugasHarian}/history', [TugasHarianController::class, 'history'])->name('history');
-    });
-
-    // ============================================
-    // TUGAS TAMBAHAN (Additional Tasks)
-    // ============================================
-    Route::prefix('tugas-tambahan')->name('tugas-tambahan.')->group(function () {
-        // List & view
-        Route::get('/', [TugasTambahanController::class, 'index'])->name('index');
-        Route::get('/saya', [TugasTambahanController::class, 'tugasSaya'])->name('tugas-saya');
-        Route::get('/create', [TugasTambahanController::class, 'create'])->name('create');
-        Route::get('/{tugasTambahan}', [TugasTambahanController::class, 'show'])->name('show');
-        Route::get('/{tugasTambahan}/edit', [TugasTambahanController::class, 'edit'])->name('edit');
-
-        // CRUD operations
-        Route::post('/', [TugasTambahanController::class, 'store'])->name('store');
-        Route::put('/{tugasTambahan}', [TugasTambahanController::class, 'update'])->name('update');
-        Route::delete('/{tugasTambahan}', [TugasTambahanController::class, 'destroy'])->name('destroy');
-
-        // Task actions
-        Route::post('/{tugasTambahan}/terima', [TugasTambahanController::class, 'terima'])->name('terima');
-        Route::post('/{tugasTambahan}/tolak', [TugasTambahanController::class, 'tolak'])->name('tolak');
-        Route::post('/{tugasTambahan}/mulai', [TugasTambahanController::class, 'mulai'])->name('mulai');
-        Route::post('/{tugasTambahan}/submit', [TugasTambahanController::class, 'submit'])->name('submit');
-        Route::post('/{tugasTambahan}/upload-bukti', [TugasTambahanController::class, 'uploadBukti'])->name('upload-bukti');
-        Route::post('/{tugasTambahan}/update-progress', [TugasTambahanController::class, 'updateProgress'])->name('update-progress');
-    });
-
-    // ============================================
-    // TEAM MANAGEMENT (Untuk Atasan)
+    // TEAM (sisa endpoint yang masih dipakai halaman detail tugas + redirect kompatibilitas lama)
     // ============================================
     Route::prefix('tim')->name('tim.')->group(function () {
-        // Overview tim dan anggota
-        Route::get('/', [TeamController::class, 'index'])->name('index');
-        Route::get('/overview', [TeamController::class, 'overview'])->name('overview');
-        Route::get('/anggota/{pegawai}', [TeamController::class, 'detailAnggota'])->name('detail-anggota');
-
-        // Berikan tugas
-        Route::get('/berikan-tugas', [TeamController::class, 'formBerikanTugas'])->name('form-berikan-tugas');
-        Route::post('/berikan-tugas', [TeamController::class, 'berikanTugas'])->name('berikan-tugas');
-
-        // Validasi tugas
-        Route::get('/validasi', [TeamController::class, 'daftarValidasi'])->name('daftar-validasi');
-        Route::post('/validasi/{tugas}', [TeamController::class, 'validasiTugas'])->name('validasi-tugas');
         Route::post('/preview-penilaian', [TeamController::class, 'previewPenilaian'])->name('preview-penilaian');
 
-        // Monitoring
-        Route::get('/monitoring', [TeamController::class, 'monitoring'])->name('monitoring');
-        Route::post('/catatan-monitoring', [TeamController::class, 'catatanMonitoring'])->name('catatan-monitoring');
+        // Redirect kompatibilitas — halaman lama digabung ke tab "diberikan" (dok. 08 §4.1)
+        Route::get('/berikan-tugas', fn () => redirect()->route('penugasan.tugas-saya', ['tab' => 'diberikan']))
+            ->name('form-berikan-tugas');
+        Route::get('/validasi', fn () => redirect()->route('penugasan.tugas-saya', ['tab' => 'diberikan']))
+            ->name('daftar-validasi');
     });
 
     // ============================================
-    // API ENDPOINTS (untuk AJAX calls)
+    // API ENDPOINTS (untuk AJAX calls) — lihat dok. 08 §8, sebagian orphan
     // ============================================
     Route::prefix('api')->name('api.')->group(function () {
-        // Dashboard stats
         Route::get('/statistik', [ApiController::class, 'statistik'])->name('statistik');
         Route::get('/kalender', [ApiController::class, 'kalender'])->name('kalender');
         Route::get('/notifikasi', [ApiController::class, 'notifikasi'])->name('notifikasi');
-
-        // Team workload
+        Route::get('/laporan-eviden', [ApiController::class, 'laporanEviden'])->name('laporan-eviden');
         Route::get('/workload-tim', [ApiController::class, 'workloadTim'])->name('workload-tim');
         Route::get('/progress-anggota/{pegawai}', [ApiController::class, 'progressAnggota'])->name('progress-anggota');
-
-        // Tugas Pokok by Pegawai
         Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
-    });    // ============================================
-    // SHARED ROUTES (Used by multiple views)
-    // ============================================
-    Route::post('/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
-    Route::post('/berikan-tugas', [PenugasanController::class, 'berikanTugas'])->name('berikan-tugas');
-    Route::post('/buat-tugas', [PenugasanController::class, 'buatTugas'])->name('buat-tugas');
-    Route::post('/validasi-tugas/{tugas}', [PenugasanController::class, 'validasiTugas'])->name('validasi-tugas');
-    Route::post('/preview-penilaian', [PenugasanController::class, 'previewPenilaian'])->name('preview-penilaian');
+
+        // Web push subscription — dipanggil dari toggle "Aktifkan Notifikasi Browser" di header,
+        // pakai sesi web yang sama (bukan token Sanctum) karena bukan API eksternal.
+        Route::post('/push-subscription', [PushSubscriptionController::class, 'store'])->name('push-subscription.store');
+        Route::delete('/push-subscription', [PushSubscriptionController::class, 'destroy'])->name('push-subscription.destroy');
+    });
 
     // ============================================
-    // LEGACY ROUTES (Backward Compatibility)
-    // TODO: Remove after migration complete
+    // PENUGASAN — rute wildcard /{id} (harus PALING BAWAH, lihat catatan di atas)
     // ============================================
-    Route::get('/daftar-pegawai', [PenugasanController::class, 'index'])->name('index');
-    Route::get('/pegawai/{id}', [PenugasanController::class, 'show'])->name('show');
+    Route::get('/{id}', [PenugasanController::class, 'show'])->name('show');
+    Route::get('/{id}/meta', [PenugasanController::class, 'meta'])->name('meta');
+    Route::put('/{id}', [PenugasanController::class, 'update'])->name('update');
+    Route::delete('/{id}', [PenugasanController::class, 'destroy'])->name('destroy');
+
+    Route::post('/{id}/terima', [PenugasanController::class, 'terima'])->name('terima');
+    Route::post('/{id}/tolak', [PenugasanController::class, 'tolak'])->name('tolak');
+    Route::post('/{id}/batalkan-penolakan', [PenugasanController::class, 'batalkanPenolakan'])->name('batalkan-penolakan');
+    Route::post('/{id}/submit', [PenugasanController::class, 'submit'])->name('submit');
+    Route::post('/{id}/nilai', [PenugasanController::class, 'nilai'])->name('nilai');
+    Route::post('/{id}/revisi', [PenugasanController::class, 'revisi'])->name('revisi');
+    Route::post('/{id}/approve-mandiri', [PenugasanController::class, 'approveMandiri'])->name('approve-mandiri');
+    Route::post('/{id}/reject-mandiri', [PenugasanController::class, 'rejectMandiri'])->name('reject-mandiri');
+
+    Route::post('/{id}/perpanjangan-waktu', [PenugasanController::class, 'ajukanPerpanjangan'])->name('perpanjangan-waktu.ajukan');
+    Route::post('/{id}/perpanjangan-waktu/{perpanjanganId}/setujui', [PenugasanController::class, 'setujuiPerpanjangan'])->name('perpanjangan-waktu.setujui');
+    Route::post('/{id}/perpanjangan-waktu/{perpanjanganId}/tolak', [PenugasanController::class, 'tolakPerpanjangan'])->name('perpanjangan-waktu.tolak');
+
+    Route::get('/{id}/upload-bukti', [PenugasanController::class, 'formUploadBukti'])->name('form-upload-bukti');
+    Route::post('/{id}/upload-bukti', [PenugasanController::class, 'uploadBukti'])->name('upload-bukti');
+    Route::delete('/{id}/upload-bukti/{fileId}', [PenugasanController::class, 'hapusBukti'])->name('hapus-bukti');
+    Route::post('/{id}/update-progress', [PenugasanController::class, 'updateProgress'])->name('update-progress');
 });
