@@ -71,10 +71,18 @@
                             No Telpon; Jenis Kelamin; Tanggal Lahir; Alamat; Status Kepeg;
                             Status Aktif; Pangkat; Golongan; Tanggal Masuk; Atasan Langsung
                         </code>
+                        <p class="small text-muted mt-3 mb-1">
+                            Kolom tambahan opsional (boleh dikosongkan/dihilangkan), mengikuti data DUK:
+                        </p>
+                        <code class="d-block small text-wrap">
+                            Tempat Lahir; Agama; TMT CPNS; TMT PNS; TMT Golongan; Eselon;
+                            Pendidikan Terakhir; Jenjang Pendidikan
+                        </code>
                         <p class="small text-muted mt-3 mb-0">
-                            Password pegawai hasil import otomatis <code>password</code> dan wajib diganti
-                            saat login pertama kali. Baris dengan Jabatan/Bidang yang tidak dikenali,
-                            email/nomor identitas yang sudah terdaftar, akan dilewati.
+                            Format tanggal <code>DD-MM-YYYY</code>. Password pegawai hasil import otomatis
+                            <code>password</code> dan wajib diganti saat login pertama kali. Baris dengan
+                            Jabatan/Bidang yang tidak dikenali, email/nomor identitas yang sudah terdaftar,
+                            akan dilewati.
                         </p>
                     </div>
                 </div>

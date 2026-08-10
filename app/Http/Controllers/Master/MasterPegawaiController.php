@@ -21,6 +21,8 @@ class MasterPegawaiController extends Controller
         'jenis_kelamin', 'status_kepegawaian', 'status_aktif', 'no_telepon', 'pangkat',
         'golongan', 'gelar_depan', 'gelar_belakang', 'tanggal_lahir', 'alamat',
         'tanggal_masuk', 'tanggal_keluar', 'atasan_langsung_id', 'foto_profile_path',
+        'tempat_lahir', 'agama', 'tmt_cpns', 'tmt_pns', 'tmt_golongan', 'eselon',
+        'pendidikan_terakhir', 'jenjang_pendidikan',
     ];
 
     public function index()
@@ -70,6 +72,14 @@ class MasterPegawaiController extends Controller
                 'tanggal_masuk' => 'nullable|date',
                 'tanggal_keluar' => 'nullable|date',
                 'atasan_langsung_id' => 'nullable|exists:users,id',
+                'tempat_lahir' => 'nullable|string|max:100',
+                'agama' => 'nullable|string|max:20',
+                'tmt_cpns' => 'nullable|date',
+                'tmt_pns' => 'nullable|date',
+                'tmt_golongan' => 'nullable|date',
+                'eselon' => 'nullable|string|max:20',
+                'pendidikan_terakhir' => 'nullable|string|max:100',
+                'jenjang_pendidikan' => 'nullable|string|max:50',
                 'password' => 'required|min:6|confirmed',
                 'foto_profile' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             ]);
@@ -190,6 +200,14 @@ class MasterPegawaiController extends Controller
                 'tanggal_masuk' => 'nullable|date',
                 'tanggal_keluar' => 'nullable|date',
                 'atasan_langsung_id' => 'nullable|exists:users,id',
+                'tempat_lahir' => 'nullable|string|max:100',
+                'agama' => 'nullable|string|max:20',
+                'tmt_cpns' => 'nullable|date',
+                'tmt_pns' => 'nullable|date',
+                'tmt_golongan' => 'nullable|date',
+                'eselon' => 'nullable|string|max:20',
+                'pendidikan_terakhir' => 'nullable|string|max:100',
+                'jenjang_pendidikan' => 'nullable|string|max:50',
                 'password' => 'nullable|min:6|confirmed',
                 'foto_profile' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             ]);

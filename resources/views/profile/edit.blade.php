@@ -21,9 +21,9 @@
                             <i class="bi bi-arrow-left me-1"></i> Kembali
                         </button>
                         <div>
-                            <h5 class="mb-0 fw-bold">{{ $pegawai->profile->gelar_depan }} {{ $pegawai->nama }}
-                                {{ $pegawai->profile->gelar_belakang }}</h5>
-                            <small class="text-muted">{{ $pegawai->profile->nomor_identitas }} • {{ $pegawai->email }}</small>
+                            <h5 class="mb-0 fw-bold">{{ $pegawai->profile?->gelar_depan }} {{ $pegawai->nama }}
+                                {{ $pegawai->profile?->gelar_belakang }}</h5>
+                            <small class="text-muted">{{ $pegawai->profile?->nomor_identitas }} • {{ $pegawai->email }}</small>
                         </div>
                     </div>
                     <div class="btn-group">
@@ -56,12 +56,12 @@
                         </div>
                         <div class="card-body text-center">
                             <div class="profile-photo-container mb-3 mt-2">
-                                @if ($pegawai->profile->foto_profile_path)
-                                    <img src="{{ asset('storage/' . $pegawai->profile->foto_profile_path) }}"
+                                @if ($pegawai->profile?->foto_profile_path)
+                                    <img src="{{ asset('storage/' . $pegawai->profile?->foto_profile_path) }}"
                                         alt="{{ $pegawai->nama }}" class="rounded-circle shadow" id="profilePhoto"
                                         style="width: 120px; height: 120px; object-fit: cover;">
                                 @else
-                                    @if ($pegawai->profile->jenis_kelamin == 'L')
+                                    @if ($pegawai->profile?->jenis_kelamin == 'L')
                                         <img src="{{ asset('assets/img/avatar-laki-laki.webp') }}"
                                             alt="{{ $pegawai->nama }}" class="rounded-circle shadow" id="profilePhoto"
                                             style="width: 120px; height: 120px; object-fit: cover;">
@@ -80,16 +80,16 @@
                             </div>
 
                             <div class="profile-info">
-                                <h5 class="fw-bold mb-1">{{ $pegawai->profile->gelar_depan }} {{ $pegawai->nama }}
-                                    {{ $pegawai->profile->gelar_belakang }}</h5>
-                                <p class="text-muted mb-2">{{ $pegawai->profile->jabatan->nama ?? '-' }}</p>
-                                <p class="text-muted small mb-3">{{ $pegawai->profile->bidang->nama ?? '-' }}</p>
+                                <h5 class="fw-bold mb-1">{{ $pegawai->profile?->gelar_depan }} {{ $pegawai->nama }}
+                                    {{ $pegawai->profile?->gelar_belakang }}</h5>
+                                <p class="text-muted mb-2">{{ $pegawai->profile?->jabatan->nama ?? '-' }}</p>
+                                <p class="text-muted small mb-3">{{ $pegawai->profile?->bidang->nama ?? '-' }}</p>
 
                                 <div class="row text-start">
                                     <div class="col-12 mb-2">
                                         <small class="text-muted">Status Kepegawaian</small>
                                         <div class="fw-bold">
-                                            @switch($pegawai->profile->status_kepegawaian)
+                                            @switch($pegawai->profile?->status_kepegawaian)
                                                 @case('PNS')
                                                     <span class="badge bg-success">PNS</span>
                                                 @break
@@ -107,7 +107,7 @@
                                     <div class="col-12 mb-2">
                                         <small class="text-muted">Status Aktif</small>
                                         <div class="fw-bold">
-                                            @switch($pegawai->profile->status_aktif)
+                                            @switch($pegawai->profile?->status_aktif)
                                                 @case('Aktif')
                                                     <span class="badge bg-success">Aktif</span>
                                                 @break
@@ -126,10 +126,10 @@
                                             @endswitch
                                         </div>
                                     </div>
-                                    @if ($pegawai->profile->last_login_at)
+                                    @if ($pegawai->profile?->last_login_at)
                                         <div class="col-12">
                                             <small class="text-muted">Login Terakhir</small>
-                                            <div class="fw-bold small">{{ $pegawai->profile->last_login_at->format('d M Y H:i') }}
+                                            <div class="fw-bold small">{{ $pegawai->profile?->last_login_at->format('d M Y H:i') }}
                                             </div>
                                         </div>
                                     @endif
@@ -193,35 +193,35 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Nomor Identitas</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->nomor_identitas }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->nomor_identitas }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="nomor_identitas"
-                                            value="{{ $pegawai->profile->nomor_identitas }}" required>
+                                            value="{{ $pegawai->profile?->nomor_identitas }}" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Tipe Identitas</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->tipe_identitas }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->tipe_identitas }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <select class="form-select" name="tipe_identitas" required>
                                             <option value="NIP"
-                                                {{ $pegawai->profile->tipe_identitas == 'NIP' ? 'selected' : '' }}>NIP</option>
+                                                {{ $pegawai->profile?->tipe_identitas == 'NIP' ? 'selected' : '' }}>NIP</option>
                                             <option value="NIK"
-                                                {{ $pegawai->profile->tipe_identitas == 'NIK' ? 'selected' : '' }}>NIK</option>
+                                                {{ $pegawai->profile?->tipe_identitas == 'NIK' ? 'selected' : '' }}>NIK</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Gelar Depan</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->gelar_depan ?: '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->gelar_depan ?: '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="gelar_depan"
-                                            value="{{ $pegawai->profile->gelar_depan }}" placeholder="Dr., Ir., dll">
+                                            value="{{ $pegawai->profile?->gelar_depan }}" placeholder="Dr., Ir., dll">
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
@@ -237,11 +237,11 @@
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Gelar Belakang</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->gelar_belakang ?: '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->gelar_belakang ?: '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="gelar_belakang"
-                                            value="{{ $pegawai->profile->gelar_belakang }}" placeholder="S.T., M.T., dll">
+                                            value="{{ $pegawai->profile?->gelar_belakang }}" placeholder="S.T., M.T., dll">
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
@@ -257,24 +257,24 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">No. Telepon</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->no_telepon ?: '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->no_telepon ?: '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="no_telepon"
-                                            value="{{ $pegawai->profile->no_telepon }}" placeholder="08xxxxxxxxxx">
+                                            value="{{ $pegawai->profile?->no_telepon }}" placeholder="08xxxxxxxxxx">
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Jenis Kelamin</label>
                                     <div class="view-mode">
                                         <div class="form-control-plaintext">
-                                            {{ $pegawai->profile->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan' }}</div>
+                                            {{ $pegawai->profile?->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <select class="form-select" name="jenis_kelamin" required>
-                                            <option value="L" {{ $pegawai->profile->jenis_kelamin == 'L' ? 'selected' : '' }}>
+                                            <option value="L" {{ $pegawai->profile?->jenis_kelamin == 'L' ? 'selected' : '' }}>
                                                 Laki-laki</option>
-                                            <option value="P" {{ $pegawai->profile->jenis_kelamin == 'P' ? 'selected' : '' }}>
+                                            <option value="P" {{ $pegawai->profile?->jenis_kelamin == 'P' ? 'selected' : '' }}>
                                                 Perempuan</option>
                                         </select>
                                     </div>
@@ -283,21 +283,21 @@
                                     <label class="form-label">Tanggal Lahir</label>
                                     <div class="view-mode">
                                         <div class="form-control-plaintext">
-                                            {{ $pegawai->profile->tanggal_lahir ? date('d M Y', strtotime($pegawai->profile->tanggal_lahir)) : '-' }}
+                                            {{ $pegawai->profile?->tanggal_lahir ? date('d M Y', strtotime($pegawai->profile?->tanggal_lahir)) : '-' }}
                                         </div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="date" class="form-control" name="tanggal_lahir"
-                                            value="{{ $pegawai->profile->tanggal_lahir }}">
+                                            value="{{ $pegawai->profile?->tanggal_lahir }}">
                                     </div>
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Alamat</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->alamat ?: '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->alamat ?: '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
-                                        <textarea class="form-control" name="alamat" rows="3" placeholder="Alamat lengkap">{{ $pegawai->profile->alamat }}</textarea>
+                                        <textarea class="form-control" name="alamat" rows="3" placeholder="Alamat lengkap">{{ $pegawai->profile?->alamat }}</textarea>
                                     </div>
                                 </div>
                             </div>
@@ -316,43 +316,43 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Jabatan</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->jabatan->nama ?? '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->jabatan->nama ?? '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control"
-                                            value="{{ $pegawai->profile->jabatan->nama ?? '-' }}" disabled>
+                                            value="{{ $pegawai->profile?->jabatan->nama ?? '-' }}" disabled>
                                         <small class="text-muted">Hubungi administrator untuk mengubah jabatan</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Bidang</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->bidang->nama ?? '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->bidang->nama ?? '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control"
-                                            value="{{ $pegawai->profile->bidang->nama ?? '-' }}" disabled>
+                                            value="{{ $pegawai->profile?->bidang->nama ?? '-' }}" disabled>
                                         <small class="text-muted">Hubungi administrator untuk mengubah bidang</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Status Kepegawaian</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->status_kepegawaian }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->status_kepegawaian }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control"
-                                            value="{{ $pegawai->profile->status_kepegawaian }}" disabled>
+                                            value="{{ $pegawai->profile?->status_kepegawaian }}" disabled>
                                         <small class="text-muted">Hubungi administrator untuk mengubah status</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Status Aktif</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->status_aktif }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->status_aktif }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
-                                        <input type="text" class="form-control" value="{{ $pegawai->profile->status_aktif }}"
+                                        <input type="text" class="form-control" value="{{ $pegawai->profile?->status_aktif }}"
                                             disabled>
                                         <small class="text-muted">Hubungi administrator untuk mengubah status</small>
                                     </div>
@@ -360,33 +360,33 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Pangkat</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->pangkat ?: '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->pangkat ?: '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="pangkat"
-                                            value="{{ $pegawai->profile->pangkat }}" placeholder="Penata, Pembina, dll">
+                                            value="{{ $pegawai->profile?->pangkat }}" placeholder="Penata, Pembina, dll">
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Golongan</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->golongan ?: '-' }}</div>
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->golongan ?: '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="golongan"
-                                            value="{{ $pegawai->profile->golongan }}" placeholder="III/a, III/b, IV/a, dll">
+                                            value="{{ $pegawai->profile?->golongan }}" placeholder="III/a, III/b, IV/a, dll">
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Tanggal Masuk</label>
                                     <div class="view-mode">
                                         <div class="form-control-plaintext">
-                                            {{ $pegawai->profile->tanggal_masuk ? date('d M Y', strtotime($pegawai->profile->tanggal_masuk)) : '-' }}
+                                            {{ $pegawai->profile?->tanggal_masuk ? date('d M Y', strtotime($pegawai->profile?->tanggal_masuk)) : '-' }}
                                         </div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control"
-                                            value="{{ $pegawai->profile->tanggal_masuk ? date('d M Y', strtotime($pegawai->profile->tanggal_masuk)) : '-' }}"
+                                            value="{{ $pegawai->profile?->tanggal_masuk ? date('d M Y', strtotime($pegawai->profile?->tanggal_masuk)) : '-' }}"
                                             disabled>
                                         <small class="text-muted">Hubungi administrator untuk mengubah</small>
                                     </div>
@@ -394,12 +394,12 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Atasan Langsung</label>
                                     <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile->atasanLangsung->nama ?? '-' }}
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->atasanLangsung->nama ?? '-' }}
                                         </div>
                                     </div>
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control"
-                                            value="{{ $pegawai->profile->atasanLangsung->nama ?? '-' }}" disabled>
+                                            value="{{ $pegawai->profile?->atasanLangsung->nama ?? '-' }}" disabled>
                                         <small class="text-muted">Hubungi administrator untuk mengubah atasan</small>
                                     </div>
                                 </div>
@@ -523,10 +523,10 @@
                 $('#current_password, #password, #password_confirmation').val('');
 
                 // Reset photo preview
-                @if ($pegawai->profile->foto_profile_path)
-                    $('#profilePhoto').attr('src', '{{ asset($pegawai->profile->foto_profile_path) }}');
+                @if ($pegawai->profile?->foto_profile_path)
+                    $('#profilePhoto').attr('src', '{{ asset($pegawai->profile?->foto_profile_path) }}');
                 @else
-                    @if ($pegawai->profile->jenis_kelamin == 'L')
+                    @if ($pegawai->profile?->jenis_kelamin == 'L')
                         $('#profilePhoto').attr('src', '{{ asset('assets/img/avatar-laki-laki.webp') }}');
                     @else
                         $('#profilePhoto').attr('src', '{{ asset('assets/img/avatar-perempuan.webp') }}');

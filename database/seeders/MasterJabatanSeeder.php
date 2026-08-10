@@ -2,14 +2,18 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\MasterJabatan;
+use Illuminate\Database\Seeder;
 
 class MasterJabatanSeeder extends Seeder
 {
+    /**
+     * Idempotent (firstOrCreate per kode) — aman dijalankan ulang di production tanpa
+     * error unique constraint, mis. saat db:seed ikut dipanggil ulang di pipeline deploy.
+     */
     public function run()
     {
-        MasterJabatan::insert([
+        $daftarJabatan = [
             [
                 'kode' => 'ADMIN',
                 'nama' => 'Admin Utama',
@@ -74,6 +78,10 @@ class MasterJabatanSeeder extends Seeder
                 'bebas_nilai_kinerja' => true,
                 'is_active' => true,
             ],
-        ]);
+        ];
+
+        foreach ($daftarJabatan as $jabatan) {
+            MasterJabatan::firstOrCreate(['kode' => $jabatan['kode']], $jabatan);
+        }
     }
 }

@@ -260,6 +260,26 @@
                                             value="{{ $pegawai->profile?->tanggal_lahir }}">
                                     </div>
                                 </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tempat Lahir</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->tempat_lahir ?: '-' }}</div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="text" class="form-control" name="tempat_lahir"
+                                            value="{{ $pegawai->profile?->tempat_lahir }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Agama</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->agama ?: '-' }}</div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="text" class="form-control" name="agama"
+                                            value="{{ $pegawai->profile?->agama }}">
+                                    </div>
+                                </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Alamat</label>
                                     <div class="view-mode">
@@ -372,6 +392,74 @@
                                     <div class="edit-mode d-none">
                                         <input type="text" class="form-control" name="golongan"
                                             value="{{ $pegawai->profile?->golongan }}" placeholder="III/a, III/b, IV/a, dll">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">TMT Golongan</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">
+                                            {{ $pegawai->profile?->tmt_golongan ? date('d M Y', strtotime($pegawai->profile?->tmt_golongan)) : '-' }}
+                                        </div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="date" class="form-control" name="tmt_golongan"
+                                            value="{{ $pegawai->profile?->tmt_golongan }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Eselon</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->eselon ?: '-' }}</div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="text" class="form-control" name="eselon"
+                                            value="{{ $pegawai->profile?->eselon }}" placeholder="II/b, III/a, dll">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">TMT CPNS</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">
+                                            {{ $pegawai->profile?->tmt_cpns ? date('d M Y', strtotime($pegawai->profile?->tmt_cpns)) : '-' }}
+                                        </div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="date" class="form-control" name="tmt_cpns"
+                                            value="{{ $pegawai->profile?->tmt_cpns }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">TMT PNS</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">
+                                            {{ $pegawai->profile?->tmt_pns ? date('d M Y', strtotime($pegawai->profile?->tmt_pns)) : '-' }}
+                                        </div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="date" class="form-control" name="tmt_pns"
+                                            value="{{ $pegawai->profile?->tmt_pns }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Pendidikan Terakhir</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->pendidikan_terakhir ?: '-' }}</div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="text" class="form-control" name="pendidikan_terakhir"
+                                            value="{{ $pegawai->profile?->pendidikan_terakhir }}"
+                                            placeholder="S-2 MAGISTER SAINS">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Jenjang Pendidikan</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->jenjang_pendidikan ?: '-' }}</div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <input type="text" class="form-control" name="jenjang_pendidikan"
+                                            value="{{ $pegawai->profile?->jenjang_pendidikan }}"
+                                            placeholder="D.IV/S1, Pasca Sarja (S.2), dll">
                                     </div>
                                 </div>
                                 <div class="col-md-6 mb-3">

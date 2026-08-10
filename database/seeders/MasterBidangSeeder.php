@@ -2,15 +2,19 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\MasterBidang;
 use App\Models\MasterSubBidang;
+use Illuminate\Database\Seeder;
 
 class MasterBidangSeeder extends Seeder
 {
+    /**
+     * Idempotent (firstOrCreate per kode) — aman dijalankan ulang di production tanpa
+     * error unique constraint, mis. saat db:seed ikut dipanggil ulang di pipeline deploy.
+     */
     public function run()
     {
-        MasterBidang::insert([
+        $daftarBidang = [
             [
                 'kode' => 'BAPPEDA',
                 'nama' => 'Bappeda',
@@ -47,21 +51,22 @@ class MasterBidangSeeder extends Seeder
                 'warna' => '#BA68C8',
                 'is_active' => true,
             ],
-        ]);
+        ];
 
-        MasterSubBidang::insert([
-            [
-                'bidang_id' => 2,
-                'nama' => 'Sub Bagian Umum dan Kepegawaian',
-            ],
-            [
-                'bidang_id' => 2,
-                'nama' => 'Sub Bagian Perencanaan dan Program',
-            ],
-            [
-                'bidang_id' => 2,
-                'nama' => 'Sub Bagian Keuangan',
-            ],
-        ]);
+        foreach ($daftarBidang as $bidang) {
+            MasterBidang::firstOrCreate(['kode' => $bidang['kode']], $bidang);
+        }
+
+        $sekretariat = MasterBidang::where('kode', 'SEKRETARIAT')->first();
+
+        $daftarSubBidang = [
+            'Sub Bagian Umum dan Kepegawaian',
+            'Sub Bagian Perencanaan dan Program',
+            'Sub Bagian Keuangan',
+        ];
+
+        foreach ($daftarSubBidang as $nama) {
+            MasterSubBidang::firstOrCreate(['bidang_id' => $sekretariat->id, 'nama' => $nama]);
+        }
     }
 }

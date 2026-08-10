@@ -62,6 +62,28 @@ class PegawaiImportCsvTest extends TestCase
         $this->assertSame($siti->id, $budi->profile->atasan_langsung_id);
     }
 
+    public function test_import_csv_dengan_kolom_duk_opsional(): void
+    {
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung;Tempat Lahir;Agama;TMT CPNS;TMT PNS;TMT Golongan;Eselon;Pendidikan Terakhir;Jenjang Pendidikan';
+        $baris = 'Iksan;iksan@test.local;Pelaksana;Sekretariat;197906102005011017;Dr;SE, M.Si;;L;10-06-1979;;PNS;Aktif;;;01-01-2005;;PULAU MAKIAN;ISLAM;01-01-2005;01-11-2006;01-04-2020;II/b;S-3 DOKTOR;Pasca Sarja (S.3)';
+        $csv = implode("\n", [$header, $baris]);
+
+        $this->actingAs($this->admin)
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $iksan = User::where('email', 'iksan@test.local')->with('profile')->first();
+
+        $this->assertNotNull($iksan);
+        $this->assertSame('PULAU MAKIAN', $iksan->profile->tempat_lahir);
+        $this->assertSame('ISLAM', $iksan->profile->agama);
+        $this->assertSame('II/b', $iksan->profile->eselon);
+        $this->assertSame('S-3 DOKTOR', $iksan->profile->pendidikan_terakhir);
+        $this->assertSame('Pasca Sarja (S.3)', $iksan->profile->jenjang_pendidikan);
+        $this->assertSame('2005-01-01', $iksan->profile->tmt_cpns->toDateString());
+        $this->assertSame('2006-11-01', $iksan->profile->tmt_pns->toDateString());
+        $this->assertSame('2020-04-01', $iksan->profile->tmt_golongan->toDateString());
+    }
+
     public function test_baris_dengan_jabatan_tidak_dikenali_dilewati(): void
     {
         $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';

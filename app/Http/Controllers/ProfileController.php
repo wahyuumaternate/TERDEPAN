@@ -43,7 +43,7 @@ class ProfileController extends Controller
         // Handle foto profile upload
         if ($request->hasFile('foto_profile')) {
             // Delete old photo if exists
-            if ($profile->foto_profile_path && Storage::disk('public')->exists($profile->foto_profile_path)) {
+            if ($profile?->foto_profile_path && Storage::disk('public')->exists($profile->foto_profile_path)) {
                 Storage::disk('public')->delete($profile->foto_profile_path);
             }
 
@@ -62,7 +62,7 @@ class ProfileController extends Controller
         unset($data['nama'], $data['email']);
 
         // Sisanya adalah data profil kepegawaian
-        $profile->update($data);
+        $profile?->update($data);
 
         // Update password if provided
         if ($request->filled('password')) {

@@ -19,6 +19,9 @@ class UserProfile extends Model
             'tanggal_lahir' => 'date',
             'tanggal_masuk' => 'date',
             'tanggal_keluar' => 'date',
+            'tmt_cpns' => 'date',
+            'tmt_pns' => 'date',
+            'tmt_golongan' => 'date',
             'last_login_at' => 'datetime',
         ];
     }

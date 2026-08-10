@@ -203,6 +203,23 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tempat Lahir</label>
+                                    <input type="text"
+                                        class="form-control @error('tempat_lahir') is-invalid @enderror"
+                                        name="tempat_lahir" value="{{ old('tempat_lahir') }}">
+                                    @error('tempat_lahir')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Agama</label>
+                                    <input type="text" class="form-control @error('agama') is-invalid @enderror"
+                                        name="agama" value="{{ old('agama') }}">
+                                    @error('agama')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Alamat</label>
                                     <textarea class="form-control @error('alamat') is-invalid @enderror" name="alamat" rows="3"
@@ -304,6 +321,59 @@
                                         name="golongan" value="{{ old('golongan') }}"
                                         placeholder="III/a, III/b, IV/a, dll">
                                     @error('golongan')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">TMT Golongan</label>
+                                    <input type="date"
+                                        class="form-control @error('tmt_golongan') is-invalid @enderror"
+                                        name="tmt_golongan" value="{{ old('tmt_golongan') }}">
+                                    @error('tmt_golongan')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Eselon</label>
+                                    <input type="text" class="form-control @error('eselon') is-invalid @enderror"
+                                        name="eselon" value="{{ old('eselon') }}" placeholder="II/b, III/a, dll">
+                                    @error('eselon')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">TMT CPNS</label>
+                                    <input type="date" class="form-control @error('tmt_cpns') is-invalid @enderror"
+                                        name="tmt_cpns" value="{{ old('tmt_cpns') }}">
+                                    @error('tmt_cpns')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">TMT PNS</label>
+                                    <input type="date" class="form-control @error('tmt_pns') is-invalid @enderror"
+                                        name="tmt_pns" value="{{ old('tmt_pns') }}">
+                                    @error('tmt_pns')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Pendidikan Terakhir</label>
+                                    <input type="text"
+                                        class="form-control @error('pendidikan_terakhir') is-invalid @enderror"
+                                        name="pendidikan_terakhir" value="{{ old('pendidikan_terakhir') }}"
+                                        placeholder="S-2 MAGISTER SAINS">
+                                    @error('pendidikan_terakhir')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Jenjang Pendidikan</label>
+                                    <input type="text"
+                                        class="form-control @error('jenjang_pendidikan') is-invalid @enderror"
+                                        name="jenjang_pendidikan" value="{{ old('jenjang_pendidikan') }}"
+                                        placeholder="D.IV/S1, Pasca Sarja (S.2), dll">
+                                    @error('jenjang_pendidikan')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

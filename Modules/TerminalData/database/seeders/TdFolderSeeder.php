@@ -17,9 +17,10 @@ class TdFolderSeeder extends Seeder
             return;
         }
 
-        // Get only Bappeda and Sekretariat bidang
+        // Buat folder untuk semua bidang aktif (kode BAPPEDA sengaja tidak aktif — itu
+        // level instansi/parent, bukan bidang kerja, jadi tidak butuh folder sendiri).
         $bidangList = DB::table('master_bidang')
-            ->whereIn('kode', ['SEKRETARIAT', 'IPW'])
+            ->where('is_active', true)
             ->get();
 
         if ($bidangList->isEmpty()) {

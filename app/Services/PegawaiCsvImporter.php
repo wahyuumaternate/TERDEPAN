@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Hash;
  * "Gelar Belakang", "No Telpon", "Jenis Kelamin", "Tanggal Lahir", Alamat,
  * "Status Kepeg", "Status Aktif", Pangkat, Golongan, "Tanggal Masuk", "Atasan Langsung".
  *
+ * Kolom opsional tambahan (mengikuti data DUK/Daftar Urut Kepangkatan, lihat
+ * docs/DUK..BEZZETING BAPPEDA PER. MARET 2026 (1).csv): "Tempat Lahir", Agama,
+ * "TMT CPNS", "TMT PNS", "TMT Golongan", Eselon, "Pendidikan Terakhir", "Jenjang Pendidikan".
+ * Semua boleh kosong — CSV lama tanpa kolom-kolom ini tetap berfungsi normal.
+ *
  * Password pegawai hasil import selalu default 'password' + must_change_password=true,
  * mengikuti alur "Login Awal - Mandiri" di dokumen.
  */
@@ -112,6 +117,14 @@ class PegawaiCsvImporter
                     'pangkat' => trim($row['Pangkat'] ?? ''),
                     'golongan' => trim($row['Golongan'] ?? ''),
                     'tanggal_masuk' => $this->parseTanggal($row['Tanggal Masuk'] ?? '') ?? now()->toDateString(),
+                    'tempat_lahir' => trim($row['Tempat Lahir'] ?? ''),
+                    'agama' => trim($row['Agama'] ?? ''),
+                    'tmt_cpns' => $this->parseTanggal($row['TMT CPNS'] ?? ''),
+                    'tmt_pns' => $this->parseTanggal($row['TMT PNS'] ?? ''),
+                    'tmt_golongan' => $this->parseTanggal($row['TMT Golongan'] ?? ''),
+                    'eselon' => trim($row['Eselon'] ?? ''),
+                    'pendidikan_terakhir' => trim($row['Pendidikan Terakhir'] ?? ''),
+                    'jenjang_pendidikan' => trim($row['Jenjang Pendidikan'] ?? ''),
                 ]);
 
                 $berhasil[] = $pegawai;
