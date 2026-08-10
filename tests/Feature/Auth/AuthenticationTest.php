@@ -51,4 +51,81 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect('/');
     }
+
+    public function test_session_bertahan_7_hari_jika_ingat_saya_aktif(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'remember' => true,
+        ]);
+
+        $this->assertAuthenticated();
+
+        $cookie = $response->headers->getCookies()[array_search(
+            config('session.cookie'),
+            array_map(fn ($c) => $c->getName(), $response->headers->getCookies())
+        )];
+
+        $sisaDetik = $cookie->getExpiresTime() - time();
+
+        // Toleransi beberapa detik dari waktu eksekusi test, harus mendekati 7 hari
+        // (604800 detik), jauh lebih besar dari default lama (120 menit).
+        $this->assertGreaterThan(60 * 60 * 24 * 6, $sisaDetik);
+        $this->assertLessThanOrEqual(60 * 60 * 24 * 7, $sisaDetik);
+    }
+
+    public function test_session_hanya_bertahan_1_hari_jika_ingat_saya_tidak_aktif(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+
+        $cookie = $response->headers->getCookies()[array_search(
+            config('session.cookie'),
+            array_map(fn ($c) => $c->getName(), $response->headers->getCookies())
+        )];
+
+        $sisaDetik = $cookie->getExpiresTime() - time();
+
+        $this->assertGreaterThan(60 * 60 * 23, $sisaDetik);
+        $this->assertLessThanOrEqual(60 * 60 * 24, $sisaDetik);
+    }
+
+    public function test_session_tetap_7_hari_di_request_berikutnya_setelah_login(): void
+    {
+        // Bukan cuma di response login — cookie remember yang sudah dikirim balik oleh
+        // browser di request-request SETELAHNYA juga harus tetap membuat sesi diperbarui
+        // dengan masa berlaku 7 hari, bukan kembali ke default.
+        $user = User::factory()->create();
+
+        $loginResponse = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'remember' => true,
+        ]);
+
+        $recallerCookie = collect($loginResponse->headers->getCookies())
+            ->first(fn ($c) => str_starts_with($c->getName(), 'remember_web_'));
+
+        $this->assertNotNull($recallerCookie);
+
+        $response = $this->withCookie($recallerCookie->getName(), $recallerCookie->getValue())
+            ->get('/');
+
+        $cookie = collect($response->headers->getCookies())
+            ->first(fn ($c) => $c->getName() === config('session.cookie'));
+
+        $sisaDetik = $cookie->getExpiresTime() - time();
+
+        $this->assertGreaterThan(60 * 60 * 24 * 6, $sisaDetik);
+        $this->assertLessThanOrEqual(60 * 60 * 24 * 7, $sisaDetik);
+    }
 }

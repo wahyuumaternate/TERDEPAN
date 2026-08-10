@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'must_change_password' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
             'api_docs_admin' => \App\Http\Middleware\EnsureIsApiDocsAdmin::class,
         ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\ApplyRememberMeSessionLifetime::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (AuthenticationException $e, Request $request) {
