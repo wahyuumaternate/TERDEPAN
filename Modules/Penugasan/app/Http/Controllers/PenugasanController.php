@@ -4,921 +4,785 @@ namespace Modules\Penugasan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterBidang;
-use App\Models\MasterJabatan;
-use App\Models\MasterPegawai;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use Modules\Penugasan\Models\TugasHarian;
-use Modules\Penugasan\Models\TugasTambahan;
-use Modules\Penugasan\Helpers\PenilaianHelper;
-use Modules\Penugasan\Models\TugasPokok;
+use Modules\Penugasan\Models\Penugasan;
+use Modules\Penugasan\Models\PenugasanEviden;
+use Modules\Penugasan\Models\PerpanjanganWaktu;
+use Modules\Penugasan\Services\AtasanMandiriEligibility;
+use Modules\Penugasan\Services\EvidenFolderResolver;
+use Modules\Penugasan\Services\PenugasanActionService;
+use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Services\FileManagerService;
 
+/**
+ * PenugasanController (web)
+ *
+ * Mengikuti docs/plan/08-rencana_implementasi_tampilan_web_penugasan.md:
+ * "Tugas Saya" dan "Tugas yang Saya Berikan" digabung dalam tugasSaya() lewat
+ * query param ?tab=. Seluruh logic aksi (terima/tolak/nilai/dst) didelegasikan
+ * ke PenugasanActionService yang sama dipakai Api\PenugasanController, supaya
+ * web tidak lagi drift dari aturan bisnis di API (dok. 08 §4.2).
+ */
 class PenugasanController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(
+        private readonly PenugasanActionService $actionService,
+        private readonly EvidenFolderResolver $evidenFolderResolver,
+        private readonly FileManagerService $fileManager,
+    ) {}
+
     /**
-     * Display a listing of the resource.
+     * Daftar penugasan lintas-organisasi untuk keperluan manajemen (Kaban/Sekban/Kabid/Kasubag).
+     * Berbeda dari tugasSaya() yang berbasis "milik saya" — halaman ini scope-nya luas.
      */
     public function index(Request $request)
     {
-        // Default filter tahun sekarang berdasarkan tanggal_mulai
-        $tahun = $request->get('tahun', date('Y'));
+        $user = $request->user();
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
-        // Query untuk mendapatkan daftar pegawai dengan statistik tugas pokok
-        $pegawaiQuery = MasterPegawai::where('status_aktif', 'Aktif')
-            ->with(['jabatan', 'bidang'])
-            // Kecualikan admin utama (ID 1) dan user yang sedang login
-            ->where('id', '!=', 1) // Asumsikan ID 1 adalah admin utama
-            ->where('id', '!=', Auth::id()) // Kecualikan user yang sedang login
-            ->withCount([
-                // Count tugas pokok
-                'tugasPokok as tugas_pokok_count' => function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun);
-                },
-                // Count tugas harian
-                'tugasHarian as tugas_harian_count' => function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun);
-                },
-                // Count tugas tambahan
-                'tugasTambahan as tugas_tambahan_count' => function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun);
-                },
-                // Status tugas pokok: pending, dikerjakan, selesai
-                'tugasPokok as pending_tugas' => function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun)
-                        ->where('status', 'pending');
-                },
-                'tugasPokok as dikerjakan_tugas' => function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun)
-                        ->where('status', 'dikerjakan');
-                },
-                'tugasPokok as selesai_tugas' => function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun)
-                        ->where('status', 'selesai');
-                }
-            ]);
-
-        // Filter by jabatan
-        if ($request->filled('jabatan_id')) {
-            $pegawaiQuery->where('jabatan_id', $request->jabatan_id);
+        if (! in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID', 'KASUBAG'])) {
+            abort(403, 'Tidak memiliki akses ke halaman ini');
         }
 
-        // Filter by bidang
-        if ($request->filled('bidang_id')) {
-            $pegawaiQuery->where('bidang_id', $request->bidang_id);
+        $query = Penugasan::with([
+            'pegawai:id,nama',
+            'pegawai.profile:id,user_id,jabatan_id,bidang_id',
+            'pegawai.profile.jabatan:id,nama',
+            'pegawai.profile.bidang:id,nama',
+            'pemberiTugas:id,nama',
+            'validator:id,nama',
+        ]);
+
+        $jenis = $request->get('jenis');
+        if ($jenis) {
+            $query->where('jenis', $jenis);
         }
 
-        // Search
-        if ($request->filled('search')) {
-            $pegawaiQuery->where(function ($q) use ($request) {
-                $q->where('nama', 'like', "%{$request->search}%")
-                    ->orWhere('nip', 'like', "%{$request->search}%");
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
+            // Lihat semua
+        } elseif ($kodeJabatan === 'KABID') {
+            $query->whereHas('pegawai', function ($q) use ($user) {
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
+            });
+        } elseif ($kodeJabatan === 'KASUBAG') {
+            $query->where(function ($q) use ($user) {
+                $q->where('pemberi_tugas_id', $user->id)
+                    ->orWhereHas('pegawai', function ($subQ) use ($user) {
+                        $subQ->whereRelation('profile', 'atasan_langsung_id', $user->id);
+                    });
             });
         }
 
-        // Only show pegawai yang punya tugas
-        if ($request->get('has_tugas', false)) {
-            $pegawaiQuery->has('tugasPokok');
-        }
-
-        // Sort - default by jabatan then nomor_identitas
-        if ($request->has('sort_by')) {
-            $sortBy = $request->get('sort_by');
-            $sortOrder = $request->get('sort_order', 'asc');
-            $pegawaiQuery->orderBy($sortBy, $sortOrder);
-        } else {
-            // Default sorting: jabatan_id ASC, then nomor_identitas ASC
-            $pegawaiQuery->orderBy('jabatan_id', 'asc')
-                ->orderBy('nomor_identitas', 'asc');
-        }
-
-        $pegawaiList = $pegawaiQuery->paginate($request->get('per_page', 15));
-
-        // Hitung total_tugas dari semua jenis tugas
-        $pegawaiList->getCollection()->transform(function ($pegawai) {
-            $pegawai->total_tugas = ($pegawai->tugas_pokok_count ?? 0) +
-                ($pegawai->tugas_harian_count ?? 0) +
-                ($pegawai->tugas_tambahan_count ?? 0);
-            return $pegawai;
-        });
-
-        // Get filter options
-        $tahuns = TugasPokok::selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
-            ->distinct()
-            ->orderBy('tahun', 'desc')
-            ->pluck('tahun')
-            ->filter();
-
-        $jabatans = MasterJabatan::where('is_active', true)
-            ->orderBy('level')
-            ->get();
-
-        $bidangs = MasterBidang::where('is_active', true)
-            ->orderBy('nama')
-            ->get();
-
-        // Statistics
-        $stats = [
-            'total_pegawai' => MasterPegawai::where('status_aktif', 'Aktif')->count(),
-            'pegawai_dengan_tugas' => MasterPegawai::where('status_aktif', 'Aktif')
-                ->whereHas('tugasPokok', function ($q) use ($tahun) {
-                    $q->whereYear('tanggal_mulai', $tahun);
-                })->count(),
-            'total_tugas' => TugasPokok::whereYear('tanggal_mulai', $tahun)->count(),
-            'pending' => TugasPokok::whereYear('tanggal_mulai', $tahun)
-                ->where('status', 'pending')->count(),
-            'dikerjakan' => TugasPokok::whereYear('tanggal_mulai', $tahun)
-                ->where('status', 'dikerjakan')->count(),
-            'selesai' => TugasPokok::whereYear('tanggal_mulai', $tahun)
-                ->where('status', 'selesai')->count(),
-        ];
-
-        return view('penugasan::penugasan.daftar', compact(
-            'pegawaiList',
-            'tahuns',
-            'tahun',
-            'jabatans',
-            'bidangs',
-            'stats'
-        ));
-    }
-
-    /**
-     * Show the specified resource.
-     */
-    public function show(Request $request, $id)
-    {
-        $pegawai = MasterPegawai::with(['jabatan', 'bidang'])->findOrFail($id);
-
-        $tahun = $request->get('tahun', date('Y'));
-
-        // Query tugas pokok untuk pegawai ini
-        $query = TugasPokok::where('pegawai_id', $id)
-            ->with([
-                'perjanjianKinerja',
-                'indikatorPK',
-                'attachedFiles',
-                'progress'
-            ])
-            ->whereYear('tanggal_mulai', $tahun);
-
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Search
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('nama_tugas', 'like', "%{$request->search}%")
-                    ->orWhere('deskripsi', 'like', "%{$request->search}%");
+        if ($request->filled('bidang_id')) {
+            $query->whereHas('pegawai', function ($q) use ($request) {
+                $q->whereRelation('profile', 'bidang_id', $request->bidang_id);
             });
         }
 
-        // Sort
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('nama_tugas', 'like', "%{$request->search}%")
+                    ->orWhere('deskripsi', 'like', "%{$request->search}%")
+                    ->orWhereHas('pegawai', function ($subQ) use ($request) {
+                        $subQ->where('nama', 'like', "%{$request->search}%");
+                    });
+            });
+        }
+
         $sortBy = $request->get('sort_by', 'tanggal_mulai');
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 
-        $tugasPokok = $query->paginate($request->get('per_page', 10));
+        $penugasan = $query->paginate($request->get('per_page', 20))->withQueryString();
 
-        // Get tahun options untuk pegawai ini
-        $tahuns = TugasPokok::where('pegawai_id', $id)
-            ->selectRaw('EXTRACT(YEAR FROM tanggal_mulai) as tahun')
-            ->distinct()
-            ->orderBy('tahun', 'desc')
-            ->pluck('tahun')
-            ->filter();
+        $bidangList = MasterBidang::where('is_active', true)->orderBy('nama')->get();
 
-        // Query tugas harian untuk pegawai ini
-        $tugasHarianQuery = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
-            ->with([
-                'tugasPokok',
-                'pemberiTugas',
-                'attachedFiles',
-                'progress'
-            ])
-            ->whereYear('tanggal_mulai', $tahun);
+        $statsQuery = Penugasan::query();
+        if ($jenis) {
+            $statsQuery->where('jenis', $jenis);
+        }
+        if ($kodeJabatan === 'KABID') {
+            $statsQuery->whereHas('pegawai', function ($q) use ($user) {
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id);
+            });
+        }
+        $stats = [
+            'total' => (clone $statsQuery)->count(),
+            'pending' => (clone $statsQuery)->where('status', Penugasan::STATUS_PENDING)->count(),
+            'proses' => (clone $statsQuery)->whereIn('status', [Penugasan::STATUS_PROSES, Penugasan::STATUS_REVISI])->count(),
+            'terlambat' => (clone $statsQuery)->where('status', Penugasan::STATUS_TERLAMBAT)->count(),
+            'menunggu_nilai' => (clone $statsQuery)->where('status', Penugasan::STATUS_SELESAI)->whereNull('realisasi_persen')->count(),
+            'selesai' => (clone $statsQuery)->where('status', Penugasan::STATUS_SELESAI)->whereNotNull('realisasi_persen')->count(),
+        ];
 
-        // Sort tugas harian
-        $tugasHarianQuery->orderBy('tanggal_mulai', 'desc');
+        return view('penugasan::penugasan.daftar', compact('penugasan', 'bidangList', 'stats', 'jenis'));
+    }
 
-        $tugasHarian = $tugasHarianQuery->paginate($request->get('per_page_harian', 10), ['*'], 'page_harian');
+    /**
+     * Halaman gabungan "Tugas Saya" (tab=saya, default) dan
+     * "Tugas yang Saya Berikan" (tab=diberikan) — dok. 08 §4.1.
+     */
+    public function tugasSaya(Request $request)
+    {
+        $user = $request->user();
+        $bisaMemberi = Gate::forUser($user)->allows('create', Penugasan::class);
+        $tab = $this->resolveTabTugasSaya($request, $bisaMemberi);
 
-        // Get tugas tambahan list for this pegawai
-        $tugasTambahanList = \Modules\Penugasan\Models\TugasTambahan::with([
-            'pemberiTugas',
-            'validator',
-            'attachedFiles'
-        ])->where('pegawai_id', $pegawai->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $penugasan = $this->queryTugasSaya($request, $tab, $user)->paginate(12)->withQueryString();
+        $stats = $this->statsTugasSaya($tab, $user);
 
-        // Statistics untuk pegawai ini
-        // Total Tugas Pokok
-        $totalTugasPokok = TugasPokok::where('pegawai_id', $id)
-            ->whereYear('tanggal_mulai', $tahun)
-            ->count();
+        $perpanjanganMenunggu = collect();
+        if ($tab === 'diberikan') {
+            $perpanjanganMenunggu = PerpanjanganWaktu::where('status', PerpanjanganWaktu::STATUS_MENUNGGU)
+                ->whereHas('penugasan', fn ($q) => $q->where('pemberi_tugas_id', $user->id))
+                ->with(['penugasan:id,nama_tugas,pegawai_id', 'penugasan.pegawai:id,nama'])
+                ->get();
+        }
 
-        // Total Tugas Harian
-        $totalTugasHarian = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
-            ->whereYear('tanggal_mulai', $tahun)
-            ->count();
+        $statusOptions = Penugasan::STATUSES;
+        $prioritasOptions = Penugasan::PRIORITASES;
 
-        // Tugas Harian Selesai
-        $tugasSelesai = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
-            ->whereYear('tanggal_mulai', $tahun)
-            ->where('status', 'selesai')
-            ->count();
-
-        // Tugas Harian Berjalan (dikerjakan + revisi)
-        $tugasBerjalan = \Modules\Penugasan\Models\TugasHarian::where('pegawai_id', $id)
-            ->whereYear('tanggal_mulai', $tahun)
-            ->whereIn('status', ['dikerjakan', 'revisi'])
-            ->count();
-
-        // Tugas Tambahan Stats
-        $totalTugasTambahan = $tugasTambahanList->count();
-        $tugasTambahanSelesai = $tugasTambahanList->where('status', 'selesai')->count();
-        $tugasTambahanProgress = $tugasTambahanList->whereIn('status', ['dikerjakan', 'revisi', 'validasi'])->count();
-
-        // Get all tugas pokok for dropdown (not paginated)
-        $tugasPokokList = TugasPokok::where('pegawai_id', $id)
-            ->orderBy('nama_tugas')
-            ->get();
-
-        return view('penugasan::penugasan.detail', compact(
-            'pegawai',
-            'tugasPokok',
-            'tugasHarian',
-            'tahuns',
-            'tahun',
-            'tugasTambahanList',
-            'totalTugasPokok',
-            'totalTugasHarian',
-            'tugasSelesai',
-            'tugasBerjalan',
-            'totalTugasTambahan',
-            'tugasTambahanSelesai',
-            'tugasTambahanProgress',
-            'tugasPokokList'
+        return view('penugasan::penugasan.tugas-saya', compact(
+            'penugasan', 'tab', 'bisaMemberi', 'statusOptions', 'prioritasOptions', 'perpanjanganMenunggu', 'stats'
         ));
     }
 
     /**
-     * Berikan tugas (harian atau tambahan) ke pegawai
+     * Endpoint AJAX yang di-polling berkala oleh halaman Tugas Saya (fetch tiap
+     * beberapa detik) supaya tabel & statistik ringkas ter-update tanpa reload penuh.
+     * Mengembalikan potongan HTML yang sama persis dengan render awal, satu sumber
+     * markup/badge di partial `penugasan.partials.tugas-saya-tabel` — bukan
+     * duplikasi logic warna status di JavaScript.
      */
-    public function berikanTugas(Request $request)
+    public function tugasSayaData(Request $request)
     {
-        try {
-            // Validasi berdasarkan jenis tugas
-            $rules = [
-                'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-                'pegawai_id' => 'required|exists:master_pegawai,id',
-                'nama_tugas' => 'required|string|max:255',
-                'deskripsi' => 'nullable|string',
-                'tanggal_mulai' => 'required|date',
-                'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-                // Ganti bobot_persen dengan target penilaian
-                'target_penilaian' => 'nullable|numeric|min:0|max:100',
-                'target_value' => 'required|numeric|min:0',
-                'satuan' => 'required|string|max:50',
-            ];
+        $user = $request->user();
+        $bisaMemberi = Gate::forUser($user)->allows('create', Penugasan::class);
+        $tab = $this->resolveTabTugasSaya($request, $bisaMemberi);
 
-            // Tambahan validasi untuk tugas harian
-            if ($request->jenis_tugas === 'tugas_harian') {
-                $rules['tugas_pokok_id'] = 'required|exists:knj_tugas_pokok,id';
-            }
+        $penugasan = $this->queryTugasSaya($request, $tab, $user)->paginate(12)->withQueryString();
+        $stats = $this->statsTugasSaya($tab, $user);
 
-            $validated = $request->validate($rules);
+        return view('penugasan::penugasan.partials.tugas-saya-tabel', compact('penugasan', 'tab', 'stats'));
+    }
 
-            // Check authorization based on task type
-            if ($validated['jenis_tugas'] === 'tugas_harian') {
-                $this->authorize('create', TugasHarian::class);
-            } else {
-                $this->authorize('create', TugasTambahan::class);
-            }
+    private function resolveTabTugasSaya(Request $request, bool $bisaMemberi): string
+    {
+        $tab = $request->get('tab', 'saya');
 
-            DB::beginTransaction();
-            try {
-                // Get pemberi tugas id from authenticated user (MasterPegawai)
-                $pemberiTugasId = Auth::id(); // ID dari MasterPegawai yang login
+        if (! in_array($tab, ['saya', 'diberikan'], true) || ($tab === 'diberikan' && ! $bisaMemberi)) {
+            return 'saya';
+        }
 
-                // Validasi pemberi tugas
-                if (!$pemberiTugasId) {
-                    throw new \Exception('Anda harus login untuk memberikan tugas.');
-                }
+        return $tab;
+    }
 
-                if ($validated['jenis_tugas'] === 'tugas_harian') {
-                    // Verifikasi bahwa tugas pokok memang milik pegawai yang dituju
-                    $tugasPokok = \Modules\Penugasan\Models\TugasPokok::where('id', $validated['tugas_pokok_id'])
-                        ->where('pegawai_id', $validated['pegawai_id'])
-                        ->first();
-
-                    if (!$tugasPokok) {
-                        throw new \Exception('Tugas pokok tidak sesuai dengan pegawai yang dipilih');
-                    }
-
-                    // Buat tugas harian
-                    $tugasHarian = TugasHarian::create([
-                        'tugas_pokok_id' => $validated['tugas_pokok_id'],
-                        'pegawai_id' => $validated['pegawai_id'],
-                        'pemberi_tugas_id' => $pemberiTugasId,
-                        'is_mandiri' => false, // Tugas dari atasan
-                        'nama_tugas' => $validated['nama_tugas'],
-                        'deskripsi' => $validated['deskripsi'] ?? null,
-                        'tanggal_mulai' => $validated['tanggal_mulai'],
-                        'tanggal_selesai' => $validated['tanggal_selesai'],
-                        'target_penilaian' => $validated['target_penilaian'] ?? null,
-                        'target_value' => $validated['target_value'],
-                        'satuan' => $validated['satuan'],
-                        'status' => 'pending', // Sesuai dengan enum di migrasi
-                    ]);
-
-                    $message = 'Tugas harian berhasil diberikan kepada pegawai';
-                } else {
-                    // Buat tugas tambahan
-                    $tugasTambahan = TugasTambahan::create([
-                        'pegawai_id' => $validated['pegawai_id'],
-                        'pemberi_tugas_id' => $pemberiTugasId,
-                        'nama_tugas' => $validated['nama_tugas'],
-                        'deskripsi' => $validated['deskripsi'] ?? null,
-                        'tanggal_mulai' => $validated['tanggal_mulai'],
-                        'tanggal_selesai' => $validated['tanggal_selesai'],
-                        'target_penilaian' => $validated['target_penilaian'] ?? null,
-                        'status' => 'pending', // Sesuai dengan enum di migrasi
-                    ]);
-
-                    $message = 'Tugas tambahan berhasil diberikan kepada pegawai';
-                }
-
-                DB::commit();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
+    private function queryTugasSaya(Request $request, string $tab, User $user)
+    {
+        if ($tab === 'diberikan') {
+            $query = Penugasan::where('pemberi_tugas_id', $user->id)
+                ->with([
+                    'pegawai:id,nama',
+                    'pegawai.profile:id,user_id,jabatan_id,bidang_id',
+                    'pegawai.profile.jabatan:id,nama',
+                    'validator:id,nama',
                 ]);
-            } catch (\Exception $e) {
-                DB::rollBack();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Gagal memberikan tugas: ' . $e->getMessage(),
-                ], 500);
-            }
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda tidak memiliki hak akses untuk melakukan operasi ini.',
-            ], 403);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $e->errors(),
-            ], 422);
-        }
-    }
-
-    /**
-     * Upload bukti pengerjaan tugas
-     * UPDATED: Menggunakan Terminal Data (td_files) dengan polymorphic relation
-     */
-    public function uploadBukti(Request $request)
-    {
-        $validated = $request->validate([
-            'tugas_id' => 'required|string|uuid',
-            'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-            'files' => 'nullable|array',
-            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,xls|max:10240',
-            'folder_ids' => 'nullable|array',
-            'folder_ids.*' => 'required|uuid|exists:td_folders,id',
-            'replacements' => 'nullable|array',
-            'replacements.*.old_file_id' => 'required|uuid|exists:td_files,id',
-            'replacements.*.file' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,xls|max:10240',
-            'replacements.*.folder_id' => 'required|uuid|exists:td_folders,id',
-            'keterangan' => 'nullable|string|max:1000',
-        ]);
-
-        // At least one file or replacement is required
-        if (empty($validated['files']) && empty($validated['replacements'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Minimal harus ada file baru atau file pengganti',
-            ], 422);
-        }
-
-        DB::beginTransaction();
-        try {
-            $modelClass = $validated['jenis_tugas'] === 'tugas_harian'
-                ? \Modules\Penugasan\Models\TugasHarian::class
-                : \Modules\Penugasan\Models\TugasTambahan::class;
-
-            $tugas = $modelClass::findOrFail($validated['tugas_id']);
-
-            // Validasi pegawai
-            if ($tugas->pegawai_id !== Auth::id()) {
-                throw new \Exception('Anda tidak memiliki izin untuk upload bukti tugas ini');
-            }
-
-            if (!in_array($tugas->status, ['dikerjakan', 'revisi'])) {
-                throw new \Exception('Status tugas harus dikerjakan atau revisi untuk dapat upload bukti');
-            }
-
-            $isRevision = $tugas->status === 'revisi';
-            $uploadedFiles = [];
-            $replacedFiles = [];
-
-            // Process file replacements first
-            if (!empty($validated['replacements'])) {
-                foreach ($validated['replacements'] as $replacement) {
-                    $oldFile = \Modules\TerminalData\Models\TdFile::findOrFail($replacement['old_file_id']);
-
-                    // Verify file belongs to this tugas
-                    if ($oldFile->attachable_id !== $tugas->id || $oldFile->attachable_type !== $modelClass) {
-                        throw new \Exception('File tidak terkait dengan tugas ini');
-                    }
-
-                    $file = $replacement['file'];
-                    $folderId = $replacement['folder_id'];
-
-                    // Upload new version file
-                    $fileName = time() . '_v' . ($oldFile->version + 1) . '_' . $file->getClientOriginalName();
-                    $filePath = $file->store('terminal-data', 'public');
-
-                    // Mark old file as not latest
-                    $oldFile->update(['is_latest_version' => false]);
-
-                    // Create new version
-                    $newVersion = \Modules\TerminalData\Models\TdFile::create([
-                        'folder_id' => $folderId,
-                        'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-                        'original_name' => $file->getClientOriginalName(),
-                        'description' => 'Revisi: ' . ($validated['keterangan'] ?? 'File diperbarui'),
-                        'storage_path' => $filePath,
-                        'extension' => $file->getClientOriginalExtension(),
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                        'hash' => hash_file('sha256', $file->getRealPath()),
-                        'version' => $oldFile->version + 1,
-                        'original_file_id' => $oldFile->original_file_id ?? $oldFile->id,
-                        'is_latest_version' => true,
-                        'version_notes' => 'Revisi dari versi ' . $oldFile->version . ': ' . ($validated['keterangan'] ?? ''),
-                        'created_by' => Auth::id(),
-                        // Polymorphic relation - same as parent
-                        'attachable_type' => $oldFile->attachable_type,
-                        'attachable_id' => $oldFile->attachable_id,
-                    ]);
-
-                    $replacedFiles[] = [
-                        'old' => $oldFile->original_name,
-                        'new' => $newVersion->original_name,
-                        'version' => $newVersion->version,
-                    ];
-                    $uploadedFiles[] = $newVersion;
-                }
-            }
-
-            // Process new files
-            if (!empty($request->file('files'))) {
-                foreach ($request->file('files') as $index => $file) {
-                    $folderId = $validated['folder_ids'][$index] ?? $validated['folder_ids'][0];
-
-                    // Upload file ke storage
-                    $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
-                    $filePath = $file->store('terminal-data', 'public');
-
-                    // Create TdFile record (polymorphic ke tugas)
-                    $tdFile = \Modules\TerminalData\Models\TdFile::create([
-                        'folder_id' => $folderId,
-                        'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-                        'original_name' => $file->getClientOriginalName(),
-                        'description' => $validated['keterangan'],
-                        'storage_path' => $filePath,
-                        'extension' => $file->getClientOriginalExtension(),
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                        'hash' => hash_file('sha256', $file->getRealPath()),
-                        'version' => 1,
-                        'is_latest_version' => true,
-                        'version_notes' => $isRevision ? 'File tambahan saat revisi: ' . $validated['keterangan'] : null,
-                        'created_by' => Auth::id(),
-                        // Polymorphic relation
-                        'attachable_type' => $modelClass,
-                        'attachable_id' => $tugas->id,
-                    ]);
-
-                    $uploadedFiles[] = $tdFile;
-                }
-            }
-
-            // Update status tugas
-            $tugas->update(['status' => 'validasi']);
-
-            // Build description message
-            $progressDesc = [];
-            if (count($replacedFiles) > 0) {
-                $progressDesc[] = count($replacedFiles) . " file diperbarui";
-            }
-            if (count($uploadedFiles) - count($replacedFiles) > 0) {
-                $progressDesc[] = (count($uploadedFiles) - count($replacedFiles)) . " file baru";
-            }
-            $descMessage = "Upload bukti: " . implode(", ", $progressDesc);
-            if ($validated['keterangan']) {
-                $descMessage .= " - " . $validated['keterangan'];
-            }
-
-            // Update or create progress record untuk hari ini (hindari duplicate)
-            \Modules\Penugasan\Models\Progress::updateOrCreate(
-                [
-                    'tipe_progress' => $modelClass,
-                    'tipe_progress_id' => $tugas->id,
-                    'tanggal' => now()->toDateString(), // Hanya tanggal, tanpa waktu
-                ],
-                [
-                    'pegawai_id' => $tugas->pegawai_id,
-                    'progress_persen' => 100.00,
-                    'deskripsi_kegiatan' => $descMessage,
-                ]
-            );
-
-            // Simpan history revisi jika ini revisi
-            if ($isRevision) {
-                $this->saveRevisionHistory($tugas, $validated, $modelClass);
-            }
-
-            DB::commit();
-
-            $message = 'Bukti berhasil diupload. Status tugas diubah menjadi menunggu validasi.';
-            if (count($replacedFiles) > 0) {
-                $message .= ' ' . count($replacedFiles) . ' file telah diperbarui dengan versi baru.';
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'files' => $uploadedFiles,
-                'replaced_files' => $replacedFiles,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal upload bukti: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Validasi tugas oleh atasan
-     */
-    public function validasiTugas(Request $request, $id)
-    {
-        // Wrap everything in outer try-catch to catch AuthorizationException
-        try {
-            $validated = $request->validate([
-                'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-                'status_validasi' => 'required|in:diterima,revisi',
-                'penilaian_kualitas' => 'required_if:status_validasi,diterima|nullable|numeric|min:0|max:100',
-                'catatan_validasi' => 'nullable|string|max:1000',
-                'catatan_revisi' => 'required_if:status_validasi,revisi|nullable|string|max:1000',
-                'progress_update_type' => 'required_if:status_validasi,diterima|nullable|in:otomatis,manual',
-                'progress_value' => 'required_if:progress_update_type,manual|nullable|numeric|min:0',
-            ]);
-
-            DB::beginTransaction();
-            try {
-                $modelClass = $validated['jenis_tugas'] === 'tugas_harian'
-                    ? TugasHarian::class
-                    : TugasTambahan::class;
-
-                $tugas = $modelClass::findOrFail($id);
-
-                // Check authorization berdasarkan status validasi
-                if ($validated['status_validasi'] === 'diterima') {
-                    $this->authorize('validate', $tugas);
-                } else {
-                    $this->authorize('revise', $tugas);
-                }
-
-                // Validasi bahwa tugas dalam status validasi
-                if ($tugas->status !== 'validasi') {
-                    throw new \Exception('Tugas harus dalam status validasi untuk dapat divalidasi');
-                }
-
-                if ($validated['status_validasi'] === 'diterima') {
-                    // ========================================
-                    // HITUNG PENILAIAN DENGAN HELPER
-                    // ========================================
-                    $nilaiKualitas = $validated['penilaian_kualitas'];
-                    $tanggalSelesai = now(); // Tanggal validasi = tanggal selesai
-
-                    // Gunakan PenilaianHelper untuk hitung nilai
-                    $hasilPenilaian = PenilaianHelper::hitungDanSimpanPenilaian(
-                        $tugas,
-                        $nilaiKualitas,
-                        $tanggalSelesai
-                    );
-
-                    // VALIDASI DITERIMA - Status jadi selesai
-                    $tugas->update([
-                        'status' => 'selesai',
-                        'validator_id' => Auth::id(),
-                        'validated_at' => $tanggalSelesai,
-                        'hasil_validasi' => 'diterima',
-                        'catatan_validasi' => $validated['catatan_validasi'] ?? 'Tugas diterima dan selesai',
-                        // penilaian_kualitas dan nilai_akhir sudah di-update oleh helper
-                    ]);
-
-                    // Update progress tugas pokok jika tugas harian
-                    if ($validated['jenis_tugas'] === 'tugas_harian') {
-                        $this->updateProgressTugasPokok($tugas, $validated);
-                    }
-
-                    $message = sprintf(
-                        'Tugas berhasil divalidasi! Nilai Waktu: %.2f, Nilai Kualitas: %.2f, Nilai Akhir: %.2f (%s)',
-                        $hasilPenilaian['waktu']['nilai'],
-                        $nilaiKualitas,
-                        $hasilPenilaian['nilai_akhir'],
-                        $hasilPenilaian['grade']['kategori']
-                    );
-                } else {
-                    // VALIDASI REVISI - Status jadi revisi
-                    $tugas->update([
-                        'status' => 'revisi',
-                        'validator_id' => Auth::id(),
-                        'validated_at' => now(),
-                        'hasil_validasi' => 'revisi',
-                        'catatan_validasi' => $validated['catatan_revisi'] ?? 'Perlu revisi',
-                    ]);
-
-                    // Simpan history revisi dengan model class
-                    $jenisTugas = $validated['jenis_tugas'] === 'tugas_harian'
-                        ? TugasHarian::class
-                        : TugasTambahan::class;
-
-                    $this->saveRevisionHistory($tugas, $validated, $jenisTugas);
-
-                    $message = 'Tugas dikembalikan untuk revisi';
-                }
-
-                DB::commit();
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    'status' => $tugas->status,
-                    'penilaian' => $validated['status_validasi'] === 'diterima' ? [
-                        'nilai_waktu' => $hasilPenilaian['waktu']['nilai'],
-                        'nilai_kualitas' => $nilaiKualitas,
-                        'nilai_akhir' => $hasilPenilaian['nilai_akhir'],
-                        'grade' => $hasilPenilaian['grade'],
-                        'keterlambatan' => $hasilPenilaian['waktu']['status'],
-                    ] : null
-                ]);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                throw $e; // Re-throw to outer catch
-            }
-        } catch (AuthorizationException $e) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        } catch (ValidationException $e) {
-            return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Update progress tugas pokok berdasarkan penyelesaian tugas harian
-     */
-    private function updateProgressTugasPokok($tugasHarian, $validated)
-    {
-        $tugasPokok = $tugasHarian->tugasPokok;
-
-        if ($validated['progress_update_type'] === 'otomatis') {
-            // Otomatis: hitung berdasarkan target value
-            $progressValue = $tugasHarian->target_value;
         } else {
-            // Manual: gunakan nilai yang diinput atasan
-            $progressValue = $validated['progress_value'];
+            $query = Penugasan::where('pegawai_id', $user->id)
+                ->with(['pemberiTugas:id,nama', 'validator:id,nama']);
         }
 
-        // Update atau create progress tugas pokok dengan polymorphic
-        \Modules\Penugasan\Models\Progress::create([
-            'tipe_progress' => \Modules\Penugasan\Models\TugasPokok::class,
-            'tipe_progress_id' => $tugasPokok->id,
-            'pegawai_id' => $tugasHarian->pegawai_id,
-            'tanggal' => now(),
-            'progress_persen' => 100.00,
-            'deskripsi_kegiatan' => "Penyelesaian tugas harian: {$tugasHarian->nama_tugas} (Nilai: {$tugasHarian->nilai_akhir})",
-        ]);
+        if ($request->filled('jenis')) {
+            $query->where('jenis', $request->string('jenis'));
+        }
 
-        // Update total progress tugas pokok
-        $this->recalculateProgressTugasPokok($tugasPokok);
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('prioritas')) {
+            $query->where('prioritas', $request->string('prioritas'));
+        }
+
+        return match ($request->get('sort', 'urgensi')) {
+            'prioritas' => $query->orderByRaw("
+                CASE prioritas
+                    WHEN 'tinggi' THEN 1
+                    WHEN 'sedang' THEN 2
+                    ELSE 3
+                END
+            ")->orderBy('deadline_terbaru', 'asc'),
+            'terbaru' => $query->orderByDesc('created_at'),
+            'nama' => $query->orderBy('nama_tugas'),
+            // 'urgensi' (default): terlambat > revisi > proses > pending > sisanya (fix bug orderByRaw lama
+            // yang memakai literal status 'dikerjakan' yang sudah tidak ada sejak rencana 07, lihat dok. 08 §3.3).
+            default => $query->orderByRaw("
+                CASE status
+                    WHEN 'terlambat' THEN 1
+                    WHEN 'revisi' THEN 2
+                    WHEN 'proses' THEN 3
+                    WHEN 'pending' THEN 4
+                    ELSE 5
+                END
+            ")->orderBy('deadline_terbaru', 'asc'),
+        };
     }
 
     /**
-     * Recalculate total progress tugas pokok
+     * Statistik ringkas per status untuk tab aktif — sengaja dihitung dari seluruh data
+     * tab (tidak ikut filter status/prioritas/jenis) supaya angka totalnya stabil sebagai
+     * acuan, terlepas dari filter yang sedang diterapkan pada tabel di bawahnya.
+     *
+     * @return array<string, int>
      */
-    private function recalculateProgressTugasPokok($tugasPokok)
+    private function statsTugasSaya(string $tab, User $user): array
     {
-        // Hitung rata-rata nilai dari semua tugas harian yang selesai
-        $avgNilai = TugasHarian::where('tugas_pokok_id', $tugasPokok->id)
-            ->where('status', 'selesai')
-            ->whereNotNull('nilai_akhir')
-            ->avg('nilai_akhir');
+        $base = $tab === 'diberikan'
+            ? Penugasan::where('pemberi_tugas_id', $user->id)
+            : Penugasan::where('pegawai_id', $user->id);
 
-        if ($avgNilai) {
-            $tugasPokok->update([
-                'progress_persen' => round($avgNilai, 2),
-                'updated_at' => now(),
-            ]);
-        }
+        return [
+            'total' => (clone $base)->count(),
+            'pending' => (clone $base)->where('status', Penugasan::STATUS_PENDING)->count(),
+            'proses' => (clone $base)->where('status', Penugasan::STATUS_PROSES)->count(),
+            'revisi' => (clone $base)->where('status', Penugasan::STATUS_REVISI)->count(),
+            'terlambat' => (clone $base)->where('status', Penugasan::STATUS_TERLAMBAT)->count(),
+            'selesai' => (clone $base)->where('status', Penugasan::STATUS_SELESAI)->count(),
+        ];
     }
 
     /**
-     * Simpan history revisi dengan polymorphic relation
+     * Wizard pembuatan tugas — Jalur A (berikan ke pegawai lain/grup) & Jalur B (mandiri).
+     * Kedua jalur dirender di satu halaman, disembunyikan sesuai hak akses role (dok. 08 §5.2, §5.5).
      */
-    private function saveRevisionHistory($tugas, $validated, $modelClass)
+    public function create(Request $request)
     {
-        if (class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
-            \Modules\Penugasan\Models\HistoriRevisi::create([
-                'tipe_revisi' => $modelClass,
-                'tipe_revisi_id' => $tugas->id,
-                'revisi_ke' => $this->getNextRevisionNumber($tugas, $modelClass),
-                'tanggal_revisi' => now(),
-                'catatan_revisi' => $validated['catatan_revisi'] ?? $validated['catatan_validasi'] ?? 'Revisi',
-                'deadline_revisi' => now()->addDays(3), // Default 3 hari untuk revisi
-                'direvisi_oleh' => Auth::id(),
-                'pegawai_id' => $tugas->pegawai_id,
-                'status' => 'pending',
-            ]);
-        }
+        $user = $request->user();
+        $bisaMemberi = Gate::forUser($user)->allows('create', Penugasan::class);
+
+        $calonPegawai = $bisaMemberi ? $this->calonPegawaiBisaDitugaskan($user) : collect();
+        $atasanKandidat = app(AtasanMandiriEligibility::class)->kandidatUntuk($user);
+        $pegawaiIdTerpilih = $request->integer('pegawai_id') ?: null;
+
+        return view('penugasan::penugasan.create', compact('bisaMemberi', 'calonPegawai', 'atasanKandidat', 'pegawaiIdTerpilih'));
     }
 
-    /**
-     * Get next revision number
-     */
-    private function getNextRevisionNumber($tugas, $modelClass)
+    public function store(Request $request)
     {
-        if (!class_exists('\Modules\Penugasan\Models\HistoriRevisi')) {
-            return 1;
-        }
-
-        $lastRevision = \Modules\Penugasan\Models\HistoriRevisi::where('tipe_revisi', $modelClass)
-            ->where('tipe_revisi_id', $tugas->id)
-            ->max('revisi_ke');
-
-        return ($lastRevision ?? 0) + 1;
-    }
-
-    /**
-     * Preview penilaian sebelum validasi (untuk modal)
-     */
-    public function previewPenilaian(Request $request)
-    {
-        $request->validate([
-            'tugas_id' => 'required|uuid',
-            'jenis_tugas' => 'required|in:tugas_harian,tugas_tambahan',
-            'nilai_kualitas' => 'required|numeric|min:0|max:100',
-        ]);
-
         try {
-            $modelClass = $request->jenis_tugas === 'tugas_harian'
-                ? TugasHarian::class
-                : TugasTambahan::class;
+            $validated = $request->validate(PenugasanActionService::aturanBuat());
+            $penugasan = $this->actionService->buat($validated, $request->user());
 
-            $tugas = $modelClass::findOrFail($request->tugas_id);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'Penugasan berhasil dibuat', 'data' => $penugasan], 201);
+            }
 
-            // Preview penilaian menggunakan helper
-            $preview = PenilaianHelper::previewPenilaian(
-                \Carbon\Carbon::parse($tugas->tanggal_selesai),
-                $request->nilai_kualitas,
-                now()
-            );
+            $tab = ((int) $validated['pegawai_id']) === $request->user()->id ? 'saya' : 'diberikan';
 
-            return response()->json([
-                'success' => true,
-                'preview' => $preview,
-                'tanggal_deadline' => $tugas->tanggal_selesai->format('d/m/Y'),
-                'tanggal_selesai' => now()->format('d/m/Y H:i'),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal preview penilaian: ' . $e->getMessage()
-            ], 500);
+            return redirect()->route('penugasan.tugas-saya', ['tab' => $tab])
+                ->with('success', 'Penugasan berhasil dibuat');
+        } catch (AuthorizationException $e) {
+            $message = $e->getMessage() ?: 'Tidak memiliki hak akses untuk memberikan tugas kepada pegawai ini';
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 403);
+            }
+
+            return redirect()->back()->with('error', $message)->withInput();
+        } catch (ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
+            }
+
+            return redirect()->back()->withErrors($e->errors())->withInput();
         }
     }
 
     /**
-     * Dashboard monitoring untuk Kaban
+     * Jalur A (grup): satu tugas ke lebih dari satu pegawai sekaligus (kolektif/per_orang).
      */
-    public function dashboardMonitoring(Request $request)
+    public function storeGrup(Request $request)
     {
-        $tahun = $request->get('tahun', date('Y'));
-        $bulan = $request->get('bulan', date('m'));
+        try {
+            $validated = $request->validate(PenugasanActionService::aturanBuatGrup());
+            $this->actionService->buatGrup($validated, $request->user());
 
-        // Statistik umum
-        $stats = [
-            'total_pegawai' => \App\Models\MasterPegawai::where('status_aktif', 'Aktif')->count(),
-            'tugas_harian_total' => TugasHarian::whereYear('tanggal_mulai', $tahun)->count(),
-            'tugas_tambahan_total' => TugasTambahan::whereYear('tanggal_mulai', $tahun)->count(),
-            'menunggu_validasi' => TugasHarian::where('status', 'validasi')->count() +
-                TugasTambahan::where('status', 'validasi')->count(),
+            return redirect()->route('penugasan.tugas-saya', ['tab' => 'diberikan'])
+                ->with('success', 'Penugasan grup berhasil dibuat');
+        } catch (AuthorizationException $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage() ?: 'Tidak memiliki hak akses untuk memberikan tugas ke salah satu pegawai')
+                ->withInput();
+        } catch (ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
+    }
+
+    public function show(Request $request, string $id)
+    {
+        $penugasan = Penugasan::with([
+            'pegawai:id,nama',
+            'pegawai.profile:id,user_id,jabatan_id,bidang_id',
+            'pegawai.profile.jabatan:id,nama',
+            'pegawai.profile.bidang:id,nama',
+            'pemberiTugas:id,nama',
+            'validator:id,nama',
+            'eviden',
+            'progress' => fn ($q) => $q->orderByDesc('tanggal'),
+            'historyRevisi' => fn ($q) => $q->with('direvisiOleh:id,nama')->orderByDesc('revisi_ke'),
+            'perpanjanganWaktu' => fn ($q) => $q->orderByDesc('created_at'),
+            'grupAnggota.pegawai:id,nama',
+        ])->findOrFail($id);
+
+        $this->authorize('view', $penugasan);
+
+        $user = $request->user();
+        $izin = [
+            'terima' => Gate::forUser($user)->allows('terima', $penugasan),
+            'tolak' => Gate::forUser($user)->allows('tolak', $penugasan),
+            'batalkanPenolakan' => Gate::forUser($user)->allows('batalkanPenolakan', $penugasan),
+            'submit' => Gate::forUser($user)->allows('submit', $penugasan),
+            'update' => Gate::forUser($user)->allows('update', $penugasan),
+            'delete' => Gate::forUser($user)->allows('delete', $penugasan),
+            'uploadEviden' => Gate::forUser($user)->allows('uploadEviden', $penugasan),
+            'nilai' => Gate::forUser($user)->allows('nilai', $penugasan),
+            'revisi' => Gate::forUser($user)->allows('revisi', $penugasan),
+            'approveMandiri' => Gate::forUser($user)->allows('approveMandiri', $penugasan),
+            'rejectMandiri' => Gate::forUser($user)->allows('rejectMandiri', $penugasan),
+            'ajukanPerpanjangan' => Gate::forUser($user)->allows('ajukanPerpanjangan', $penugasan),
+            'putuskanPerpanjangan' => Gate::forUser($user)->allows('putuskanPerpanjangan', $penugasan)
+                && $penugasan->perpanjanganWaktu->contains('status', PerpanjanganWaktu::STATUS_MENUNGGU),
         ];
 
-        // Penilaian bulanan pegawai
-        $penilaianBulanan = \App\Models\MasterPegawai::with(['tugasHarian', 'tugasTambahan'])
-            ->where('status_aktif', 'Aktif')
-            ->get()
-            ->map(function ($pegawai) use ($tahun, $bulan) {
-                $tugasHarian = TugasHarian::where('pegawai_id', $pegawai->id)
-                    ->whereYear('tanggal_mulai', $tahun)
-                    ->whereMonth('tanggal_mulai', $bulan)
-                    ->whereNotNull('nilai_akhir')
-                    ->avg('nilai_akhir');
-
-                $tugasTambahan = TugasTambahan::where('pegawai_id', $pegawai->id)
-                    ->whereYear('tanggal_mulai', $tahun)
-                    ->whereMonth('tanggal_mulai', $bulan)
-                    ->whereNotNull('nilai_akhir')
-                    ->avg('nilai_akhir');
-
-                return [
-                    'pegawai' => $pegawai,
-                    'rata_rata_harian' => round($tugasHarian ?? 0, 2),
-                    'rata_rata_tambahan' => round($tugasTambahan ?? 0, 2),
-                    'rata_rata_total' => round((($tugasHarian ?? 0) + ($tugasTambahan ?? 0)) / 2, 2),
-                ];
-            });
-
-        return view('penugasan::monitoring.dashboard', compact('stats', 'penilaianBulanan', 'tahun', 'bulan'));
+        return view('penugasan::penugasan.detail', compact('penugasan', 'izin'));
     }
 
     /**
-     * Buat tugas mandiri (pegawai membuat tugas harian untuk diri sendiri)
+     * Endpoint ringan yang di-polling halaman detail tugas untuk mendeteksi ada tidaknya
+     * perubahan (status, progress, bukti baru, revisi, pengajuan perpanjangan) sejak
+     * halaman dimuat — supaya halaman detail terasa dinamis tanpa perlu partial-render
+     * ulang seluruh tombol aksi/modal yang bergantung pada $izin per status/role.
      */
-    public function buatTugas(Request $request)
+    public function meta(Request $request, string $id)
     {
-        $validated = $request->validate([
-            'tugas_pokok_id' => 'required|uuid|exists:knj_tugas_pokok,id',
-            'nama_tugas' => 'required|string|max:500',
-            'deskripsi' => 'nullable|string',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'target_value' => 'required|numeric|min:1',
+        $penugasan = Penugasan::findOrFail($id);
+        $this->authorize('view', $penugasan);
+
+        return response()->json([
+            'updated_at' => optional($penugasan->updated_at)->toIso8601String(),
+            'status' => $penugasan->status,
+            'progress_persen' => (float) $penugasan->progress_persen,
+            'attached_files_count' => $penugasan->eviden()->count(),
+            'progress_count' => $penugasan->progress()->count(),
+            'history_revisi_count' => $penugasan->historyRevisi()->count(),
+            'perpanjangan_waktu_count' => $penugasan->perpanjanganWaktu()->count(),
         ]);
+    }
 
-        DB::beginTransaction();
+    public function update(Request $request, string $id)
+    {
         try {
-            $currentUserId = Auth::id();
+            $penugasan = Penugasan::findOrFail($id);
+            $validated = $request->validate(PenugasanActionService::aturanPerbarui());
 
-            // Ambil satuan dari tugas pokok yang dipilih
-            $tugasPokok = TugasPokok::findOrFail($validated['tugas_pokok_id']);
+            $penugasan = $this->actionService->perbarui($penugasan, $validated, $request->user());
 
-            // Tugas Mandiri = Tugas Harian yang dibuat pegawai sendiri
-            $tugasHarian = TugasHarian::create([
-                'pegawai_id' => $currentUserId, // Pegawai adalah user yang login
-                'tugas_pokok_id' => $validated['tugas_pokok_id'],
-                'pemberi_tugas_id' => $currentUserId, // Pemberi tugas adalah diri sendiri
-                'is_mandiri' => true, // Penanda tugas mandiri
-                'nama_tugas' => $validated['nama_tugas'],
-                'deskripsi' => $validated['deskripsi'] ?? null,
-                'tanggal_mulai' => $validated['tanggal_mulai'],
-                'tanggal_selesai' => $validated['tanggal_selesai'],
-                'target_value' => $validated['target_value'],
-                'satuan' => $tugasPokok->satuan, // Ambil satuan dari tugas pokok
-                'status' => 'pending',
-            ]);
+            return response()->json(['success' => true, 'message' => 'Penugasan berhasil diperbarui', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
+        }
+    }
 
-            DB::commit();
+    public function destroy(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $this->actionService->hapus($penugasan, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Penugasan berhasil dihapus']);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+    }
+
+    public function terima(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->terima($penugasan, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Penugasan diterima dan mulai dikerjakan', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+        }
+    }
+
+    public function tolak(Request $request, string $id)
+    {
+        try {
+            $validated = $request->validate(['alasan_penolakan' => 'required|string|max:1000']);
+            $penugasan = Penugasan::findOrFail($id);
+            $this->actionService->tolak($penugasan, $request->user(), $validated['alasan_penolakan']);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tugas harian mandiri berhasil dibuat',
-                'data' => $tugasHarian,
-                'tahun' => date('Y', strtotime($validated['tanggal_mulai'])) // Tahun dari tanggal mulai
+                'message' => 'Penugasan ditolak. Bisa dibatalkan dalam '.Penugasan::MASA_TENGGANG_PENOLAKAN_JAM.' jam ke depan sebelum dihapus otomatis.',
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Validasi gagal',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal membuat tugas: ' . $e->getMessage()
-            ], 500);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
         }
+    }
+
+    public function batalkanPenolakan(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $this->actionService->batalkanPenolakan($penugasan, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Penolakan dibatalkan, tugas kembali berstatus Pending']);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+    }
+
+    public function submit(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->submit($penugasan, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Penugasan berhasil diajukan Selesai', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage() ?: 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+        }
+    }
+
+    /**
+     * Atasan mengisi realisasi tugas berstatus Selesai yang belum pernah dinilai.
+     */
+    public function nilai(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $validated = $request->validate(PenugasanActionService::aturanNilai());
+
+            $penugasan = $this->actionService->nilai($penugasan, $validated, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Penilaian berhasil disimpan', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
+        }
+    }
+
+    /**
+     * Atasan memberi revisi pasca-Selesai, hanya sebelum dinilai (aturan E8).
+     */
+    public function revisi(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $validated = $request->validate([
+                'catatan_revisi' => 'required|string',
+                'deadline_baru' => 'required|date|after:today',
+            ]);
+
+            $penugasan = $this->actionService->revisi($penugasan, $validated, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Revisi berhasil diberikan', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
+        }
+    }
+
+    public function approveMandiri(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $validated = $request->validate([
+                'prioritas' => 'sometimes|in:'.implode(',', Penugasan::PRIORITASES),
+                'bobot_persen' => 'sometimes|numeric|min:0|max:100',
+                'tanggal_mulai' => 'sometimes|date',
+                'deadline_terbaru' => 'sometimes|date',
+            ]);
+
+            $penugasan = $this->actionService->approveMandiri($penugasan, $validated, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Tugas mandiri disetujui', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+        }
+    }
+
+    public function rejectMandiri(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $validated = $request->validate(['alasan_reject' => 'required|string|max:1000']);
+
+            $penugasan = $this->actionService->rejectMandiri($penugasan, $validated, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Tugas mandiri ditolak', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+        }
+    }
+
+    public function ajukanPerpanjangan(Request $request, string $id)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+            $validated = $request->validate([
+                'deadline_diminta' => 'required|date|after:'.($penugasan->deadline_terbaru?->toDateString() ?? $penugasan->tanggal_selesai->toDateString()),
+                'alasan_pengajuan' => 'required|string',
+            ]);
+
+            $pengajuan = $this->actionService->ajukanPerpanjangan($penugasan, $validated, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Pengajuan perpanjangan waktu berhasil dikirim', 'data' => $pengajuan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
+        }
+    }
+
+    public function setujuiPerpanjangan(Request $request, string $id, string $perpanjanganId)
+    {
+        return $this->putuskanPerpanjangan($request, $id, $perpanjanganId, disetujui: true);
+    }
+
+    public function tolakPerpanjangan(Request $request, string $id, string $perpanjanganId)
+    {
+        return $this->putuskanPerpanjangan($request, $id, $perpanjanganId, disetujui: false);
+    }
+
+    private function putuskanPerpanjangan(Request $request, string $id, string $perpanjanganId, bool $disetujui)
+    {
+        try {
+            $penugasan = Penugasan::findOrFail($id);
+
+            $validated = $disetujui
+                ? $request->validate(['deadline_disetujui' => 'required|date', 'catatan_atasan' => 'nullable|string'])
+                : $request->validate(['catatan_atasan' => 'nullable|string']);
+
+            $pengajuan = $this->actionService->putuskanPerpanjangan($penugasan, $perpanjanganId, $disetujui, $validated, $request->user());
+
+            $message = $disetujui ? 'Perpanjangan waktu disetujui' : 'Perpanjangan waktu ditolak';
+
+            return response()->json(['success' => true, 'message' => $message, 'data' => $pengajuan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
+        }
+    }
+
+    public function updateProgress(Request $request, string $id)
+    {
+        try {
+            $validated = $request->validate([
+                'progress_persen' => 'required|numeric|min:0|max:100',
+                'deskripsi_kegiatan' => 'required|string',
+                'kendala' => 'nullable|string',
+            ]);
+
+            $penugasan = Penugasan::findOrFail($id);
+            $penugasan = $this->actionService->updateProgress($penugasan, $validated, $request->user());
+
+            return response()->json(['success' => true, 'message' => 'Progress tugas berhasil diperbarui', 'data' => $penugasan]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        } catch (ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+        }
+    }
+
+    public function formUploadBukti(string $id)
+    {
+        $tugas = Penugasan::with(['pegawai:id,nama'])->findOrFail($id);
+
+        if ($tugas->pegawai_id !== request()->user()->id) {
+            abort(403, 'Tidak memiliki akses');
+        }
+
+        if ($tugas->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $tugas->is_koordinator) {
+            abort(403, 'Hanya koordinator grup yang bisa upload bukti pengerjaan untuk tugas ini');
+        }
+
+        return view('penugasan::penugasan.upload-eviden', ['tugas' => $tugas, 'jenisTugas' => $tugas->jenis]);
+    }
+
+    /**
+     * Upload bukti pengerjaan (eviden) dan lampirkan ke penugasan lewat pivot knj_penugasan_eviden.
+     */
+    public function uploadBukti(Request $request, string $id)
+    {
+        $penugasan = Penugasan::findOrFail($id);
+
+        if ($request->user()->id !== $penugasan->pegawai_id) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $penugasan->is_koordinator) {
+            return response()->json(['success' => false, 'message' => 'Hanya koordinator grup yang bisa upload bukti pengerjaan untuk tugas ini'], 403);
+        }
+
+        $validated = $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'max:102400',
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,bmp,svg,webp',
+            ],
+        ], [
+            'file.mimes' => 'File harus berupa dokumen (PDF, Word, Excel, PowerPoint) atau gambar (JPG, PNG, GIF, dll)',
+            'file.max' => 'Ukuran file maksimal 100MB',
+        ]);
+
+        // Folder ditentukan otomatis (Eviden Kinerja > Pegawai > Tahun > Bulan), bukan dipilih
+        // manual — supaya konsisten & tidak terpecah saat pegawai rotasi bidang. Karena folder ini
+        // system-managed dan sudah scoped ke pegawai yang mengunggah, tidak perlu lagi lewat
+        // TdFilePolicy::upload() (yang mengecek kecocokan bidang folder — tidak relevan di sini).
+        $folder = $this->evidenFolderResolver->resolveForPegawai($request->user());
+
+        $uploadedFile = $request->file('file');
+        $originalName = $uploadedFile->getClientOriginalName();
+        $stored = $this->fileManager->store($uploadedFile, 'terminal-data/eviden-kinerja/'.$folder->id);
+
+        $atributFile = [
+            'folder_id' => $folder->id,
+            'bidang_id' => $folder->bidang_id,
+            'sub_bidang_id' => $folder->sub_bidang_id,
+            'name' => pathinfo($originalName, PATHINFO_FILENAME),
+            'original_name' => $originalName,
+            'storage_path' => $stored['path'],
+            'disk' => $stored['disk'],
+            'extension' => $stored['extension'],
+            'mime_type' => $stored['mime_type'],
+            'size' => $stored['size'],
+            'hash' => $stored['hash'],
+            'version' => 1,
+            'is_latest_version' => true,
+            'created_by' => $request->user()->id,
+        ];
+
+        $file = TdFile::create($atributFile);
+        $penugasan->eviden()->attach($file->id, ['created_by' => $request->user()->id]);
+
+        // Penilaian tim (mode_grup kolektif) dinilai satu kesatuan — bukti pengerjaan harus
+        // ikut disinkronkan ke penugasan setiap anggota grup, bukan hanya ke pengunggah, supaya
+        // semua anggota (dan atasan saat membuka detail siapa pun) melihat bukti yang sama. Karena
+        // lewat pivot, cukup tautkan baris TdFile yang SAMA ke anggota lain — tidak perlu lagi
+        // menduplikasi baris TdFile seperti pola attachable sebelumnya.
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF) {
+            foreach ($penugasan->grupAnggota as $anggota) {
+                $anggota->eviden()->attach($file->id, ['created_by' => $request->user()->id]);
+            }
+        }
+
+        $folder->updateStats();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bukti pengerjaan berhasil diupload',
+            'data' => ['id' => $file->id, 'name' => $file->original_name],
+        ]);
+    }
+
+    /**
+     * Hapus bukti pengerjaan (eviden). Otorisasi mengikuti aturan yang sama dengan upload
+     * (pemilik tugas, status masih proses/revisi/terlambat) — bukan lewat TdFilePolicy generik,
+     * karena itu tidak mengecek status penugasan.
+     */
+    public function hapusBukti(Request $request, string $id, string $fileId)
+    {
+        $penugasan = Penugasan::findOrFail($id);
+
+        try {
+            Gate::forUser($request->user())->authorize('uploadEviden', $penugasan);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => 'Tidak memiliki izin untuk melakukan aksi ini'], 403);
+        }
+
+        if ($penugasan->mode_grup === Penugasan::MODE_GRUP_KOLEKTIF && ! $penugasan->is_koordinator) {
+            return response()->json(['success' => false, 'message' => 'Hanya koordinator grup yang bisa menghapus bukti pengerjaan untuk tugas ini'], 403);
+        }
+
+        $file = $penugasan->eviden()->where('td_files.id', $fileId)->first();
+
+        if (! $file) {
+            return response()->json(['success' => false, 'message' => 'File tidak ditemukan'], 404);
+        }
+
+        // Eviden diperlakukan sebagai satu kesatuan milik tugas (termasuk seluruh anggota grup
+        // kolektif yang ikut ditautkan lewat pivot saat upload) — hapus berarti melepas tautan
+        // dari SEMUA penugasan yang mereferensikannya sekaligus, baru file fisik & baris TdFile-nya.
+        // Tidak ada entity lain yang memakai pivot ini, jadi baris pivot pasti habis setelah ini.
+        PenugasanEviden::where('td_file_id', $file->id)->delete();
+        $file->delete();
+
+        return response()->json(['success' => true, 'message' => 'Bukti pengerjaan berhasil dihapus']);
+    }
+
+    /**
+     * Daftar pegawai yang bisa ditugaskan oleh user login, mengikuti aturan yang
+     * sama persis dengan PenugasanPolicy::assignTo() — hanya untuk mengisi opsi
+     * di wizard, otorisasi final tetap divalidasi server-side lewat policy.
+     *
+     * @return Collection<int, User>
+     */
+    private function calonPegawaiBisaDitugaskan(User $user): Collection
+    {
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
+        $query = User::whereRelation('profile', 'status_aktif', 'Aktif')->where('id', '!=', $user->id);
+
+        if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'], true)) {
+            $query->whereHas('profile.jabatan', fn ($q) => $q->where('kode', '!=', 'GATEK'));
+        } elseif ($kodeJabatan === 'KABID') {
+            $query->where(function ($q) use ($user) {
+                $q->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id)
+                    ->orWhereHas('profile.jabatan', fn ($sub) => $sub->where('kode', 'GATEK'));
+            });
+        } elseif ($kodeJabatan === 'KASUBAG') {
+            $query->where(function ($q) use ($user) {
+                $q->whereRelation('profile', 'atasan_langsung_id', $user->id)
+                    ->orWhereHas('profile.jabatan', fn ($sub) => $sub->where('kode', 'GATEK'));
+            });
+        } elseif ($kodeJabatan === 'JAFUNG') {
+            $query->whereRelation('profile', 'bidang_id', $user->profile?->bidang_id)
+                ->whereHas('profile.jabatan', fn ($sub) => $sub->whereIn('kode', ['PELAKSANA', 'GATEK']));
+        } else {
+            $query->whereRelation('profile', 'atasan_langsung_id', $user->id);
+        }
+
+        return $query->with(['profile.jabatan', 'profile.bidang'])->orderBy('nama')->get();
     }
 }

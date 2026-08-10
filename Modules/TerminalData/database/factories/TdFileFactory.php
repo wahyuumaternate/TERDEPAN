@@ -2,9 +2,9 @@
 
 namespace Modules\TerminalData\Database\Factories;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\TerminalData\Models\TdFile;
 use Modules\TerminalData\Models\TdFolder;
-use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TdFileFactory extends Factory
 {
@@ -18,9 +18,10 @@ class TdFileFactory extends Factory
         return [
             'folder_id' => TdFolder::factory(),
             'name' => $name,
-            'original_name' => $name . '.' . $extension,
+            'original_name' => $name.'.'.$extension,
             'description' => $this->faker->sentence(),
-            'storage_path' => 'terminal-data/' . $this->faker->uuid() . '.' . $extension,
+            'storage_path' => 'terminal-data/'.$this->faker->uuid().'.'.$extension,
+            'disk' => 'local',
             'extension' => $extension,
             'mime_type' => $this->getMimeType($extension),
             'size' => $this->faker->numberBetween(1024, 5242880), // 1KB to 5MB

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\MasterPegawai;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,10 +16,10 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nomor_identitas' => ['required', 'string', 'max:18', Rule::unique(MasterPegawai::class)->ignore($this->user()->id)],
+            'nomor_identitas' => ['required', 'string', 'max:18', Rule::unique('user_profiles', 'nomor_identitas')->ignore($this->user()->id, 'user_id')],
             'tipe_identitas' => ['required', 'in:NIP,NIK'],
             'nama' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(MasterPegawai::class)->ignore($this->user()->id)],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'no_telepon' => ['nullable', 'string', 'max:20'],
             'gelar_depan' => ['nullable', 'string', 'max:20'],
             'gelar_belakang' => ['nullable', 'string', 'max:20'],

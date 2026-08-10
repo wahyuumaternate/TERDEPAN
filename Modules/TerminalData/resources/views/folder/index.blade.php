@@ -1,7 +1,55 @@
-@extends('terminaldata::components.layouts.master')
+@extends('layouts.main')
 
 @section('main')
     <section class="section">
+
+        <!-- Statistik Penyimpanan -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="card stats-card bg-gradient-primary text-white border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="bi bi-folder2 stats-card-icon me-3"></i>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="totalFolder">0</h3>
+                            <small>Total Folder</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card stats-card bg-gradient-info text-white border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="bi bi-diagram-3 stats-card-icon me-3"></i>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="totalRootFolder">0</h3>
+                            <small>Folder Utama</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card stats-card bg-gradient-success text-white border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="bi bi-magic stats-card-icon me-3"></i>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="totalAutoFolder">0</h3>
+                            <small>Folder Otomatis</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card stats-card bg-gradient-warning text-white border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="bi bi-file-earmark stats-card-icon me-3"></i>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="totalFiles">0</h3>
+                            <small>Total File</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-lg-12">
@@ -120,6 +168,11 @@
 
         .bg-gradient-warning {
             background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .stats-card-icon {
+            font-size: 2rem;
+            opacity: 0.85;
         }
 
         /* Google Drive Style Folder Cards */

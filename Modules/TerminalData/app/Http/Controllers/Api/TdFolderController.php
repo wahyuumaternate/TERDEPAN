@@ -2,19 +2,200 @@
 
 namespace Modules\TerminalData\Http\Controllers\Api;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Http\Requests\StoreTdFolderRequest;
 use Modules\TerminalData\Http\Requests\UpdateTdFolderRequest;
 use Modules\TerminalData\Http\Resources\TdFolderResource;
+use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Services\TdFolderService;
 
+/**
+ * @OA\Tag(
+ *     name="Folders",
+ *     description="API folder Terminal Data. Struktur folder bertingkat (parent_id), scoping akses per bidang lewat TdFolderPolicy."
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="List folder (root jika parent_id kosong, atau anak dari parent_id)",
+ *
+ *     @OA\Parameter(name="parent_id", in="query", @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki akses")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Buat folder baru. Untuk selain ADMIN/KABAN/SEKBAN, bidang_id otomatis mengikuti bidang user (atau bidang parent_id)",
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\JsonContent(
+ *             required={"name"},
+ *
+ *             @OA\Property(property="parent_id", type="string", format="uuid", nullable=true),
+ *             @OA\Property(property="name", type="string", example="Laporan Triwulan"),
+ *             @OA\Property(property="description", type="string", nullable=true),
+ *             @OA\Property(property="bidang_id", type="integer", nullable=true, description="Diabaikan untuk role selain ADMIN/KABAN/SEKBAN"),
+ *             @OA\Property(property="color", type="string", example="#4f46e5"),
+ *             @OA\Property(property="icon", type="string", example="folder"),
+ *             @OA\Property(property="is_public", type="boolean"),
+ *             @OA\Property(property="is_starred", type="boolean")
+ *         )
+ *     ),
+ *
+ *     @OA\Response(response=201, description="Created"),
+ *     @OA\Response(response=403, description="Hanya boleh membuat folder di bidang sendiri"),
+ *     @OA\Response(response=422, description="Validasi gagal")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Detail folder",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=404, description="Folder tidak ditemukan")
+ * )
+ *
+ * @OA\Put(
+ *     path="/folders/{folder}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Update nama/deskripsi/visibilitas folder",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *
+ *         @OA\JsonContent(
+ *             required={"name"},
+ *
+ *             @OA\Property(property="name", type="string"),
+ *             @OA\Property(property="description", type="string", nullable=true),
+ *             @OA\Property(property="is_public", type="boolean")
+ *         )
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin"),
+ *     @OA\Response(response=422, description="Validasi gagal")
+ * )
+ *
+ * @OA\Delete(
+ *     path="/folders/{folder}",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Pindahkan folder ke sampah (soft delete). Ditolak jika masih berisi subfolder/file",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=400, description="Folder masih memiliki subfolder atau file")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}/children",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="List subfolder langsung",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki akses"),
+ *     @OA\Response(response=404, description="Folder tidak ditemukan")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}/breadcrumb",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Breadcrumb folder (dari root sampai folder ini)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Get(
+ *     path="/folders/{folder}/stats",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Statistik folder (jumlah file, subfolder, ukuran total)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders/{folder}/move",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Pindahkan folder ke parent lain (null berarti dipindahkan ke root)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\RequestBody(
+ *
+ *         @OA\JsonContent(@OA\Property(property="parent_id", type="string", format="uuid", nullable=true))
+ *     ),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=400, description="Gagal memindahkan folder")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders/{folder}/toggle-star",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Tandai/batalkan tanda favorit folder",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK")
+ * )
+ *
+ * @OA\Post(
+ *     path="/folders/{folder}/restore",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Pulihkan folder dari sampah",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ *
+ * @OA\Delete(
+ *     path="/folders/{folder}/force-delete",
+ *     security={{"bearerAuth":{}}},
+ *     tags={"Folders"},
+ *     summary="Hapus folder permanen (harus sudah di sampah)",
+ *
+ *     @OA\Parameter(name="folder", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+ *
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=403, description="Tidak memiliki izin")
+ * )
+ */
 class TdFolderController extends Controller
 {
     use AuthorizesRequests;
@@ -24,12 +205,13 @@ class TdFolderController extends Controller
     ) {
         $this->middleware('auth:sanctum');
     }
+
     /**
      * Display a listing of folders
      */
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\MasterPegawai $user */
+        /** @var \App\Models\User $user */
         $user = $request->user();
         $parentId = $request->get('parent_id');
 
@@ -56,14 +238,15 @@ class TdFolderController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
-            Log::error('Error loading folders: ' . $e->getMessage());
+            Log::error('Error loading folders: '.$e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memuat folder',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -74,7 +257,7 @@ class TdFolderController extends Controller
     public function store(StoreTdFolderRequest $request): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             $folder = $this->folderService->createFolder($request->validated(), $user);
@@ -82,17 +265,17 @@ class TdFolderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dibuat',
-                'data' => new TdFolderResource($folder)
+                'data' => new TdFolderResource($folder),
             ], 201);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal membuat folder: ' . $e->getMessage()
+                'message' => 'Gagal membuat folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -103,32 +286,32 @@ class TdFolderController extends Controller
     public function show($folderId): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get folder by ID using service
             $folder = $this->folderService->getFolderById($folderId, $user);
 
-            if (!$folder) {
+            if (! $folder) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Folder tidak ditemukan'
+                    'message' => 'Folder tidak ditemukan',
                 ], 404);
             }
 
             return response()->json([
                 'success' => true,
-                'data' => new TdFolderResource($folder)
+                'data' => new TdFolderResource($folder),
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -139,16 +322,16 @@ class TdFolderController extends Controller
     public function children($folderId): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = request()->user();
 
             // Get folder by ID using service
             $folder = $this->folderService->getFolderById($folderId, $user);
 
-            if (!$folder) {
+            if (! $folder) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Folder tidak ditemukan'
+                    'message' => 'Folder tidak ditemukan',
                 ], 404);
             }
 
@@ -165,12 +348,12 @@ class TdFolderController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -181,7 +364,7 @@ class TdFolderController extends Controller
     public function update(UpdateTdFolderRequest $request, TdFolder $folder): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             $folder = $this->folderService->updateFolder($folder, $request->validated(), $user);
@@ -189,17 +372,17 @@ class TdFolderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil diupdate',
-                'data' => new TdFolderResource($folder)
+                'data' => new TdFolderResource($folder),
             ]);
         } catch (AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal update folder: ' . $e->getMessage()
+                'message' => 'Gagal update folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -210,14 +393,14 @@ class TdFolderController extends Controller
     public function destroy(TdFolder $folder, Request $request): JsonResponse
     {
         try {
-            /** @var \App\Models\MasterPegawai $user */
+            /** @var \App\Models\User $user */
             $user = $request->user();
 
             // Check if folder has subfolders
             if ($folder->subfolders()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder'
+                    'message' => 'Tidak dapat menghapus folder yang masih memiliki subfolder',
                 ], 400);
             }
 
@@ -225,7 +408,7 @@ class TdFolderController extends Controller
             if ($folder->files()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak dapat menghapus folder yang masih memiliki file'
+                    'message' => 'Tidak dapat menghapus folder yang masih memiliki file',
                 ], 400);
             }
 
@@ -234,12 +417,12 @@ class TdFolderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dipindahkan ke sampah'
+                'message' => 'Folder berhasil dipindahkan ke sampah',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus folder: ' . $e->getMessage()
+                'message' => 'Gagal menghapus folder: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -256,7 +439,7 @@ class TdFolderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => TdFolderResource::collection($breadcrumb)
+            'data' => TdFolderResource::collection($breadcrumb),
         ]);
     }
 
@@ -266,7 +449,7 @@ class TdFolderController extends Controller
     public function move(Request $request, TdFolder $folder): JsonResponse
     {
         $request->validate([
-            'parent_id' => 'nullable|uuid|exists:td_folders,id'
+            'parent_id' => 'nullable|uuid|exists:td_folders,id',
         ]);
 
         try {
@@ -275,12 +458,12 @@ class TdFolderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Folder berhasil dipindahkan',
-                'data' => new TdFolderResource($folder->fresh())
+                'data' => new TdFolderResource($folder->fresh()),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -288,17 +471,14 @@ class TdFolderController extends Controller
     /**
      * Toggle star status
      */
-    public function toggleStar(TdFolder $folder): JsonResponse
+    public function toggleStar(Request $request, TdFolder $folder): JsonResponse
     {
-        // Authorize view (user must be able to see the folder to star it)
-        $this->authorize('view', $folder);
-
-        $folder->update(['is_starred' => !$folder->is_starred]);
+        $folder = $this->folderService->toggleStar($folder, $request->user());
 
         return response()->json([
             'success' => true,
             'message' => $folder->is_starred ? 'Folder ditandai' : 'Tanda dihapus',
-            'data' => new TdFolderResource($folder)
+            'data' => new TdFolderResource($folder),
         ]);
     }
 
@@ -318,7 +498,7 @@ class TdFolderController extends Controller
                 'total_size' => $folder->total_size,
                 'human_size' => $folder->getHumanSize(),
                 'level' => $folder->level,
-            ]
+            ],
         ]);
     }
 
@@ -338,19 +518,49 @@ class TdFolderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dipulihkan'
+                'message' => 'Folder berhasil dipulihkan',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk memulihkan folder ini'
+                'message' => 'Anda tidak memiliki izin untuk memulihkan folder ini',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memulihkan folder: ' . $e->getMessage()
+                'message' => 'Gagal memulihkan folder: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Detail folder + breadcrumb + riwayat aktivitas terakhir — dipakai panel info
+     * (Detail + Aktivitas) di UI.
+     */
+    public function detail($folderId): JsonResponse
+    {
+        $folder = TdFolder::with(['bidang', 'subBidang', 'parent', 'creator', 'updater'])->findOrFail($folderId);
+
+        $this->authorize('view', $folder);
+
+        $activities = $folder->activities()
+            ->with('user:id,nama')
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn ($activity) => [
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'user_nama' => $activity->user?->nama,
+                'created_at' => $activity->created_at->format('Y-m-d H:i:s'),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => new TdFolderResource($folder),
+            'breadcrumb' => TdFolderResource::collection($folder->getBreadcrumb()),
+            'activities' => $activities,
+        ]);
     }
 
     /**
@@ -369,17 +579,17 @@ class TdFolderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Folder berhasil dihapus permanen'
+                'message' => 'Folder berhasil dihapus permanen',
             ]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak memiliki izin untuk menghapus folder ini secara permanen'
+                'message' => 'Anda tidak memiliki izin untuk menghapus folder ini secara permanen',
             ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghapus folder permanen: ' . $e->getMessage()
+                'message' => 'Gagal menghapus folder permanen: '.$e->getMessage(),
             ], 500);
         }
     }

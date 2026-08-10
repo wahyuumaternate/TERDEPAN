@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('pk_perjanjian_kinerja', function (Blueprint $table) {
             $table->foreignId('periode_id')->nullable()->after('template_id')->constrained('pk_periode')->onDelete('set null');
-            $table->foreignId('divalidasi_oleh')->nullable()->after('status_dokumen')->constrained('master_pegawai')->onDelete('set null');
+            $table->foreignId('divalidasi_oleh')->nullable()->after('status_dokumen')->constrained('users')->onDelete('set null');
             $table->timestamp('divalidasi_pada')->nullable()->after('divalidasi_oleh');
             $table->text('catatan_validasi')->nullable()->after('divalidasi_pada');
             $table->enum('status_validasi', ['Menunggu', 'Disetujui', 'Ditolak', 'Revisi'])->default('Menunggu')->after('catatan_validasi');
@@ -33,7 +33,7 @@ return new class extends Migration
                 'divalidasi_oleh',
                 'divalidasi_pada',
                 'catatan_validasi',
-                'status_validasi'
+                'status_validasi',
             ]);
         });
     }

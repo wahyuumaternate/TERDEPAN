@@ -2,9 +2,9 @@
 
 namespace Modules\PerjanjianKinerja\Policies;
 
-use App\Models\MasterPegawai;
-use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Modules\PerjanjianKinerja\Models\PkPerjanjianKinerja;
 
 class PkPerjanjianKinerjaPolicy
 {
@@ -13,18 +13,19 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can view any PK
      */
-    public function viewAny(MasterPegawai $user)
+    public function viewAny(User $user)
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID']);
     }
 
     /**
      * Determine if user can view specific PK
      */
-    public function view(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function view(User $user, PkPerjanjianKinerja $pk)
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Admin, Kaban, Sekban can view all
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -32,7 +33,7 @@ class PkPerjanjianKinerjaPolicy
         }
 
         // Kabid can view in their bidang
-        if ($kodeJabatan === 'KABID' && $pk->pegawai->bidang_id === $user->bidang_id) {
+        if ($kodeJabatan === 'KABID' && $pk->pegawai->profile?->bidang_id === $user->profile?->bidang_id) {
             return true;
         }
 
@@ -52,15 +53,15 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can create PK
      */
-    public function create(MasterPegawai $user)
+    public function create(User $user)
     {
         // Check if there's active periode
         $periodeAktif = \Modules\PerjanjianKinerja\Models\PkPeriode::getPeriodeAktif();
-        if (!$periodeAktif) {
+        if (! $periodeAktif) {
             return false;
         }
 
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Admin, Kaban, Sekban, Kabid can create for others
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN', 'KABID'])) {
@@ -69,13 +70,13 @@ class PkPerjanjianKinerjaPolicy
 
         // Regular users can create for themselves if they don't have PK yet
         // and they're not tenaga teknis
-        if ($user->status_kepegawaian !== 'Kontrak' && $user->atasan_langsung_id) {
+        if ($user->profile?->status_kepegawaian !== 'Kontrak' && $user->profile?->atasan_langsung_id) {
             $existingPk = PkPerjanjianKinerja::where('pegawai_id', $user->id)
                 ->where('tahun', date('Y'))
                 ->where('periode_id', $periodeAktif->id)
                 ->exists();
 
-            return !$existingPk;
+            return ! $existingPk;
         }
 
         return false;
@@ -84,7 +85,7 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can update PK
      */
-    public function update(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function update(User $user, PkPerjanjianKinerja $pk)
     {
         // Cannot update if locked
         if ($pk->is_locked) {
@@ -96,7 +97,7 @@ class PkPerjanjianKinerjaPolicy
             return false;
         }
 
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Admin, Kaban, Sekban can update any
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -114,14 +115,14 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can delete PK
      */
-    public function delete(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function delete(User $user, PkPerjanjianKinerja $pk)
     {
         // Cannot delete if locked or already validated
         if ($pk->is_locked || $pk->status_validasi !== 'Menunggu') {
             return false;
         }
 
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Only Admin, Kaban, Sekban can delete
         return in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN']);
@@ -130,7 +131,7 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can validate PK
      */
-    public function validate(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function validate(User $user, PkPerjanjianKinerja $pk)
     {
         // Must be atasan langsung
         if ($pk->atasan_id !== $user->id) {
@@ -143,16 +144,17 @@ class PkPerjanjianKinerjaPolicy
         }
 
         // Must be authorized role (KABAN, SEKBAN, KABID only)
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
+
         return in_array($kodeJabatan, ['KABAN', 'SEKBAN', 'KABID']);
     }
 
     /**
      * Determine if user can generate PDF
      */
-    public function generatePdf(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function generatePdf(User $user, PkPerjanjianKinerja $pk)
     {
-        $kodeJabatan = $user->jabatan?->kode;
+        $kodeJabatan = $user->profile?->jabatan?->kode;
 
         // Admin, Kaban, Sekban can generate any
         if (in_array($kodeJabatan, ['ADMIN', 'KABAN', 'SEKBAN'])) {
@@ -170,7 +172,7 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can sign PK
      */
-    public function sign(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function sign(User $user, PkPerjanjianKinerja $pk)
     {
         // Must be owner
         if ($pk->pegawai_id !== $user->id) {
@@ -193,7 +195,7 @@ class PkPerjanjianKinerjaPolicy
     /**
      * Determine if user can download PK
      */
-    public function download(MasterPegawai $user, PkPerjanjianKinerja $pk)
+    public function download(User $user, PkPerjanjianKinerja $pk)
     {
         return $this->view($user, $pk);
     }

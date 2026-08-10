@@ -2,25 +2,31 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
-use App\Models\MasterPegawai;
+use Modules\Penugasan\Database\Factories\HistoriRevisiFactory;
 
 class HistoriRevisi extends Model
 {
     use HasFactory;
 
+    protected static function newFactory(): HistoriRevisiFactory
+    {
+        return HistoriRevisiFactory::new();
+    }
+
     protected $table = 'knj_histori_revisi';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
-        'tipe_revisi',
-        'tipe_revisi_id',
+        'penugasan_id',
         'revisi_ke',
         'tanggal_revisi',
         'catatan_revisi',
@@ -45,7 +51,7 @@ class HistoriRevisi extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -55,21 +61,20 @@ class HistoriRevisi extends Model
 
     // Status constants
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_DIKIRIM = 'dikirim';
+
     public const STATUS_DITERIMA = 'diterima';
-    
+
     public const STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_DIKIRIM,
         self::STATUS_DITERIMA,
     ];
 
-    /**
-     * Get the parent revisable model (TugasHarian, TugasTambahan)
-     */
-    public function revisable(): MorphTo
+    public function penugasan(): BelongsTo
     {
-        return $this->morphTo('revisable', 'tipe_revisi', 'tipe_revisi_id');
+        return $this->belongsTo(Penugasan::class, 'penugasan_id');
     }
 
     /**
@@ -77,7 +82,7 @@ class HistoriRevisi extends Model
      */
     public function direvisiOleh(): BelongsTo
     {
-        return $this->belongsTo(MasterPegawai::class, 'direvisi_oleh');
+        return $this->belongsTo(User::class, 'direvisi_oleh');
     }
 
     /**
@@ -85,7 +90,7 @@ class HistoriRevisi extends Model
      */
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(User::class, 'pegawai_id');
     }
 
     /**

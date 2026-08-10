@@ -2,10 +2,9 @@
 
 namespace Modules\PerjanjianKinerja\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\MasterJabatan;
-use App\Models\MasterPegawai;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 class PkDokumen extends Model
@@ -13,6 +12,7 @@ class PkDokumen extends Model
     use HasFactory;
 
     protected $table = 'pk_dokumen';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -46,7 +46,7 @@ class PkDokumen extends Model
 
     public function generator()
     {
-        return $this->belongsTo(MasterPegawai::class, 'generated_by');
+        return $this->belongsTo(User::class, 'generated_by');
     }
 
     public function scopeLatest($query)

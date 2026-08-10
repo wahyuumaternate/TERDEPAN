@@ -2,29 +2,28 @@
 
 namespace Modules\Penugasan\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
-
-// use Modules\Penugasan\Database\Factories\ProgressFactory;
+use Modules\Penugasan\Database\Factories\ProgressFactory;
 
 class Progress extends Model
 {
     use HasFactory;
 
     protected $table = 'knj_progress';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'tipe_progress',
-        'tipe_progress_id',
+        'penugasan_id',
         'pegawai_id',
         'tanggal',
         'progress_persen',
@@ -40,7 +39,7 @@ class Progress extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -48,19 +47,21 @@ class Progress extends Model
         });
     }
 
-    // Relationships
-    
-    /**
-     * Get the parent progressable model (TugasPokok, TugasHarian, TugasTambahan)
-     */
-    public function progressable(): MorphTo
+    protected static function newFactory(): ProgressFactory
     {
-        return $this->morphTo('progressable', 'tipe_progress', 'tipe_progress_id');
+        return ProgressFactory::new();
+    }
+
+    // Relationships
+
+    public function penugasan(): BelongsTo
+    {
+        return $this->belongsTo(Penugasan::class, 'penugasan_id');
     }
 
     public function pegawai(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\MasterPegawai::class, 'pegawai_id');
+        return $this->belongsTo(\App\Models\User::class, 'pegawai_id');
     }
 
     /**
@@ -82,14 +83,8 @@ class Progress extends Model
         return $query->where('tanggal', $tanggal);
     }
 
-    public function scopeByProgressable($query, $type, $id)
+    public function scopeByPenugasan($query, $penugasanId)
     {
-        return $query->where('tipe_progress', $type)
-                    ->where('tipe_progress_id', $id);
+        return $query->where('penugasan_id', $penugasanId);
     }
-
-    // protected static function newFactory(): ProgressFactory
-    // {
-    //     // return ProgressFactory::new();
-    // }
 }

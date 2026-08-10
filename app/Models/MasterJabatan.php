@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MasterJabatan extends Model
 {
     protected $table = 'master_jabatan';
+
     protected $guarded = [];
 
     protected $casts = [
@@ -19,6 +20,6 @@ class MasterJabatan extends Model
 
     public function pegawai()
     {
-        return $this->hasMany(MasterPegawai::class, 'jabatan_id');
+        return $this->hasMany(UserProfile::class, 'jabatan_id');
     }
 }

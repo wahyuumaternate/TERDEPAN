@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MasterBidang extends Model
 {
     protected $table = 'master_bidang';
+
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -17,11 +18,6 @@ class MasterBidang extends Model
 
     public function pegawai()
     {
-        return $this->hasMany(MasterPegawai::class, 'bidang_id');
-    }
-
-    public function folder()
-    {
-        return $this->hasMany(\Modules\Dokumen\Models\Folder::class, 'bidang_id');
+        return $this->hasMany(UserProfile::class, 'bidang_id');
     }
 }

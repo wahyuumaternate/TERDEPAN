@@ -6,6 +6,8 @@
 /storage/*.key
 /storage/pail
 /vendor
+Modules/*/node_modules
+Modules/*/vendor
 .env
 .env.backup
 .env.production
@@ -22,4 +24,9 @@ yarn-error.log
 /.vscode
 /.zed
 /docs
+<<<<<<< HEAD
 /CLAUDE.md
+=======
+/CLAUDE.md
+/boost.json
+>>>>>>> 30ab696395e98fce260117dcf53a0524eba83aeb

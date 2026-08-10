@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MasterSubBidang extends Model
 {
     protected $table = 'master_sub';
+
     protected $guarded = ['id'];
 
     protected $fillable = [
@@ -18,4 +19,9 @@ class MasterSubBidang extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    public function bidang()
+    {
+        return $this->belongsTo(MasterBidang::class, 'bidang_id');
+    }
 }

@@ -15,12 +15,1720 @@
         }
     ],
     "paths": {
+        "/penugasan": {
+            "get": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "List penugasan (filter: jenis, status, pegawai_id)",
+                "operationId": "12996d6dc361a085fcc2c1e36c377e2f",
+                "parameters": [
+                    {
+                        "name": "jenis",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pokok",
+                                "tambahan"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "proses",
+                                "revisi",
+                                "terlambat",
+                                "selesai",
+                                "ditolak"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pegawai_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Buat penugasan baru. pegawai_id == user login berarti tugas mandiri (wajib sertakan atasan_id, menunggu approval atasan); selain itu pemberi_tugas_id otomatis diisi user login",
+                "operationId": "f0d7769394723dad9e6837f8c671675f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "pegawai_id",
+                                    "jenis",
+                                    "prioritas",
+                                    "nama_tugas",
+                                    "deskripsi",
+                                    "tanggal_mulai",
+                                    "tanggal_selesai"
+                                ],
+                                "properties": {
+                                    "pegawai_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "atasan_id": {
+                                        "description": "Wajib jika pegawai_id == user login (tugas mandiri)",
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "jenis": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pokok",
+                                            "tambahan"
+                                        ],
+                                        "example": "tambahan"
+                                    },
+                                    "prioritas": {
+                                        "type": "string",
+                                        "enum": [
+                                            "rendah",
+                                            "sedang",
+                                            "tinggi"
+                                        ],
+                                        "example": "sedang"
+                                    },
+                                    "nama_tugas": {
+                                        "type": "string",
+                                        "example": "Menyusun laporan triwulan"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Menyusun dan mengumpulkan laporan triwulan bidang"
+                                    },
+                                    "alasan_penugasan": {
+                                        "type": "string",
+                                        "example": "Menggantikan staf yang cuti"
+                                    },
+                                    "tanggal_mulai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-01"
+                                    },
+                                    "tanggal_selesai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-15"
+                                    },
+                                    "target_value": {
+                                        "type": "number",
+                                        "example": 1
+                                    },
+                                    "satuan": {
+                                        "type": "string",
+                                        "example": "dokumen"
+                                    },
+                                    "bobot_persen": {
+                                        "description": "Opsional — boleh diisi di awal atau ditunda sampai POST .../nilai (aturan E4)",
+                                        "type": "number",
+                                        "example": 15
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses untuk memberikan tugas ke pegawai ini"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}": {
+            "get": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Detail penugasan",
+                "operationId": "40759ca81553678a7b17901c6a1fae65",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki akses"
+                    },
+                    "404": {
+                        "description": "Penugasan tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Update penugasan (pemberi tugas saat status pending, atau pegawai sendiri untuk tugas mandiri berstatus ditolak)",
+                "operationId": "a56a7d71cfe7b26b5a9438ebe617de3e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Hapus penugasan (pemberi tugas saat status pending, atau pegawai sendiri untuk tugas mandiri berstatus ditolak)",
+                "operationId": "c9598467cf1db97ea38567ed3b6f7ad4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/atasan-mandiri": {
+            "get": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Daftar kandidat atasan yang boleh dipilih user login saat mengajukan tugas mandiri",
+                "operationId": "c4b694c9a79f96796602aeae53b33ae5",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/approve-mandiri": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan terpilih menyetujui tugas mandiri (pending -> proses). prioritas opsional (override), bobot_persen/tanggal_mulai/deadline_terbaru opsional",
+                "operationId": "2d6e5071bbf964ced8d7c98d5ea70e9b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/reject-mandiri": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan terpilih menolak tugas mandiri (pending -> ditolak), wajib alasan_reject",
+                "operationId": "75bdd4ca7b4a83cb0aa1786d2c8817ec",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/terima": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai menerima penugasan bukan-mandiri (pending -> proses)",
+                "operationId": "cda963e00dc5598ad89beefa1ba64ddc",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/tolak": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai menolak penugasan bukan-mandiri (status pending)",
+                "operationId": "71a16999934af6fff9d5fdc19e0e8302",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "alasan_penolakan"
+                                ],
+                                "properties": {
+                                    "alasan_penolakan": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/submit": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai mengajukan Selesai (proses/revisi/terlambat -> selesai)",
+                "operationId": "4c85b4ca2ee8458c1623846f5c6db5b7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai atau belum ada bukti pengerjaan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/nilai": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan mengisi realisasi (selesai, belum dinilai). Menghitung nilai_awal, persentase_terlambat, nilai_akhir",
+                "operationId": "59f289465cb056de02daf1ec1b0d69b7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "realisasi_persen"
+                                ],
+                                "properties": {
+                                    "realisasi_persen": {
+                                        "type": "number",
+                                        "example": 90
+                                    },
+                                    "bobot_persen": {
+                                        "description": "Wajib jika belum pernah diisi sebelumnya",
+                                        "type": "number",
+                                        "example": 80
+                                    },
+                                    "catatan_validasi": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal, status tidak sesuai, atau sudah dinilai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/revisi": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan memberi revisi pasca-Selesai, hanya sebelum dinilai (selesai -> revisi, deadline_terbaru diperbarui)",
+                "operationId": "4c8128be5791ee7cb404dd4fe59083a2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "catatan_revisi",
+                                    "deadline_baru"
+                                ],
+                                "properties": {
+                                    "catatan_revisi": {
+                                        "type": "string"
+                                    },
+                                    "deadline_baru": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai atau sudah dinilai"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/perpanjangan-waktu": {
+            "get": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Riwayat pengajuan perpanjangan waktu tugas",
+                "operationId": "2d2ff8aaa24cd66ad1be18463498c766",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Pegawai mengajukan perpanjangan waktu (maks. 3x disetujui), wajib alasan_pengajuan",
+                "operationId": "235cd700e0e354f7a510e633117760a1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Status tidak sesuai atau kuota habis"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/perpanjangan-waktu/{perpanjanganId}/setujui": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan menyetujui perpanjangan waktu, wajib deadline_disetujui (boleh beda dari yang diminta)",
+                "operationId": "e7a888f99011c4beaaab02dc7171aa2e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "perpanjanganId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/perpanjangan-waktu/{perpanjanganId}/tolak": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Atasan menolak perpanjangan waktu",
+                "operationId": "b155d42405510e1c1ed512b49f205ded",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "perpanjanganId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/berikan-tugas-grup": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Beri satu tugas ke lebih dari satu pegawai sekaligus (mode kolektif/per_orang)",
+                "operationId": "74652c2557178c6def9f5e8c6541b503",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "pegawai_ids",
+                                    "mode_grup",
+                                    "jenis",
+                                    "prioritas",
+                                    "nama_tugas",
+                                    "deskripsi",
+                                    "tanggal_mulai",
+                                    "tanggal_selesai"
+                                ],
+                                "properties": {
+                                    "pegawai_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            2,
+                                            3,
+                                            4
+                                        ]
+                                    },
+                                    "mode_grup": {
+                                        "type": "string",
+                                        "enum": [
+                                            "kolektif",
+                                            "per_orang"
+                                        ]
+                                    },
+                                    "koordinator_id": {
+                                        "description": "Wajib jika mode_grup = kolektif",
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses ke salah satu pegawai"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/penugasan/{id}/progress": {
+            "post": {
+                "tags": [
+                    "Penugasan"
+                ],
+                "summary": "Catat progress harian dan update progress_persen berjalan",
+                "operationId": "c6e93a4062bb3cf822e10a82c7138c08",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "progress_persen",
+                                    "deskripsi_kegiatan"
+                                ],
+                                "properties": {
+                                    "progress_persen": {
+                                        "type": "number",
+                                        "example": 50
+                                    },
+                                    "deskripsi_kegiatan": {
+                                        "type": "string",
+                                        "example": "Mengumpulkan data dari bidang terkait"
+                                    },
+                                    "kendala": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/upload": {
+            "post": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Upload file ke folder",
+                "operationId": "82070cc87cff23e649e770321b8150bd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "folder_id",
+                                    "file"
+                                ],
+                                "properties": {
+                                    "folder_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin upload ke folder ini"
+                    },
+                    "422": {
+                        "description": "Validasi gagal (tipe/ukuran file tidak sesuai)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/search": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Cari file lintas folder (nama/deskripsi, tipe, pemilik, rentang hari terakhir)",
+                "operationId": "828d2586b73e651af95f7185f92c0130",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "creator_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/{file}/download": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Download file (attachment)",
+                "operationId": "f7ef09c14d57bffe5f2d18c5e31aee89",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Isi file"
+                    },
+                    "404": {
+                        "description": "File tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/{file}/serve": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Tampilkan file inline (preview di browser)",
+                "operationId": "f69056cb1f58ad3bf7cc5c58d51c83ab",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Isi file"
+                    },
+                    "404": {
+                        "description": "File tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/{file}": {
+            "put": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Ubah nama file",
+                "operationId": "ca432633340a89280906c8c093f852db",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Pindahkan file ke sampah (soft delete)",
+                "operationId": "5d0e0077c7906cf4c92e72895513be4b",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/{file}/restore": {
+            "post": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Pulihkan file dari sampah",
+                "operationId": "546eb08a5619cb8b69750ca87f887c09",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/files/{file}/force-delete": {
+            "delete": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Hapus file permanen (harus sudah di sampah)",
+                "operationId": "af1547e2a1d61a26eeaa36860fc3309e",
+                "parameters": [
+                    {
+                        "name": "file",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/trash/empty": {
+            "post": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Kosongkan sampah (hapus permanen banyak file/folder sekaligus)",
+                "operationId": "04ac2856e6934b1bad6fc3f05d50b887",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "items"
+                                ],
+                                "properties": {
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "file",
+                                                        "folder"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders": {
+            "get": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "List folder (root jika parent_id kosong, atau anak dari parent_id)",
+                "operationId": "11c2263d82256414d1302382180dff18",
+                "parameters": [
+                    {
+                        "name": "parent_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki akses"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Buat folder baru. Untuk selain ADMIN/KABAN/SEKBAN, bidang_id otomatis mengikuti bidang user (atau bidang parent_id)",
+                "operationId": "4b5c83e025dc4eda59d0820dfa14c8b1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "parent_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "nullable": true
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Laporan Triwulan"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "bidang_id": {
+                                        "description": "Diabaikan untuk role selain ADMIN/KABAN/SEKBAN",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "color": {
+                                        "type": "string",
+                                        "example": "#4f46e5"
+                                    },
+                                    "icon": {
+                                        "type": "string",
+                                        "example": "folder"
+                                    },
+                                    "is_public": {
+                                        "type": "boolean"
+                                    },
+                                    "is_starred": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Hanya boleh membuat folder di bidang sendiri"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}": {
+            "get": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Detail folder",
+                "operationId": "6ac7e8ff05d789564c52e06ccbff049b",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "Folder tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Update nama/deskripsi/visibilitas folder",
+                "operationId": "da914a36281521f67975a1916c91ce25",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_public": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Pindahkan folder ke sampah (soft delete). Ditolak jika masih berisi subfolder/file",
+                "operationId": "c276cc31edfa2edc4c83133d0c4bc2fb",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Folder masih memiliki subfolder atau file"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/children": {
+            "get": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "List subfolder langsung",
+                "operationId": "6d4c69848eb33be2460a4d276192802e",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki akses"
+                    },
+                    "404": {
+                        "description": "Folder tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/breadcrumb": {
+            "get": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Breadcrumb folder (dari root sampai folder ini)",
+                "operationId": "4701466bf022d8816f9cc69ce09b8846",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/stats": {
+            "get": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Statistik folder (jumlah file, subfolder, ukuran total)",
+                "operationId": "1cfd3a02ab2cc15d9afa90817d95f6bc",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/move": {
+            "post": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Pindahkan folder ke parent lain (null berarti dipindahkan ke root)",
+                "operationId": "0f16134e6ae9e2ffb3060587dfc12e4a",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parent_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Gagal memindahkan folder"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/toggle-star": {
+            "post": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Tandai/batalkan tanda favorit folder",
+                "operationId": "c1fa64d39f3f1148ddda60b32f8f7ea5",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/restore": {
+            "post": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Pulihkan folder dari sampah",
+                "operationId": "d531b4d3fc68b4e79b0215d0401bd41f",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/folders/{folder}/force-delete": {
+            "delete": {
+                "tags": [
+                    "Folders"
+                ],
+                "summary": "Hapus folder permanen (harus sudah di sampah)",
+                "operationId": "cc744659fdac397e3068ece33c3679c7",
+                "parameters": [
+                    {
+                        "name": "folder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki izin"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/login": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Login user (MasterPegawai) menggunakan NIP atau NIK",
+                "summary": "Login user menggunakan email",
                 "operationId": "a3674f0652b564b652bd25c2326691d7",
                 "requestBody": {
                     "required": true,
@@ -28,13 +1736,13 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "nomor_identitas",
+                                    "email",
                                     "password"
                                 ],
                                 "properties": {
-                                    "nomor_identitas": {
+                                    "email": {
                                         "type": "string",
-                                        "example": "197001011990011001"
+                                        "example": "pegawai@email.com"
                                     },
                                     "password": {
                                         "type": "string",
@@ -61,16 +1769,43 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Logout user (MasterPegawai)",
+                "summary": "Logout user (revoke token yang sedang dipakai)",
                 "operationId": "77804f17cec28bcf3a347376362b98a4",
                 "responses": {
                     "200": {
-                        "description": "Login sukses, return token"
+                        "description": "Logout sukses"
                     },
                     "401": {
                         "description": "Unauthorized"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/me": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Data user yang sedang login",
+                "operationId": "555b5edf7b5d75230193a95842d65e9c",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/master-bidang": {
@@ -782,13 +2517,13 @@
                 ]
             }
         },
-        "/master-pegawai": {
+        "/master-sub-bidang": {
             "get": {
                 "tags": [
-                    "MasterPegawai"
+                    "MasterSubBidang"
                 ],
-                "summary": "List semua pegawai",
-                "operationId": "454a6cd93ceba7ec850bc2ad149612d6",
+                "summary": "List semua sub bidang",
+                "operationId": "30276bb8b55303b95f4bd0d7ff796aca",
                 "responses": {
                     "200": {
                         "description": "OK"
@@ -802,11 +2537,290 @@
             },
             "post": {
                 "tags": [
-                    "MasterPegawai"
+                    "MasterSubBidang"
+                ],
+                "summary": "Tambah sub bidang",
+                "operationId": "5b36109bc43d91631137c074d898a723",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "bidang_id",
+                                    "nama"
+                                ],
+                                "properties": {
+                                    "bidang_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Sub Bidang Data"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Sub bidang berhasil ditambah"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Sub Bidang Data"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/master-sub-bidang/{id}": {
+            "get": {
+                "tags": [
+                    "MasterSubBidang"
+                ],
+                "summary": "Detail sub bidang",
+                "operationId": "4cbabfece4dd0c8b7688660fb2ae2b86",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID sub bidang",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail sub bidang"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Sub Bidang Data"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Sub bidang tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "MasterSubBidang"
+                ],
+                "summary": "Update sub bidang",
+                "operationId": "0e9d2fa884020389e6b1f45d47c675d3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID sub bidang",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "bidang_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Sub Bidang Data"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Sub bidang berhasil diupdate"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "bidang_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama": {
+                                                    "type": "string",
+                                                    "example": "Sub Bidang Data"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Sub bidang tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "MasterSubBidang"
+                ],
+                "summary": "Hapus sub bidang",
+                "operationId": "09e148c4f93732434974743987d8c7b9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users": {
+            "get": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "List semua pegawai",
+                "operationId": "119035f2212e07ed2b4f988c4cdd59e2",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "User"
                 ],
                 "summary": "Tambah pegawai",
-                "description": "Menambah data pegawai baru.",
-                "operationId": "e962a82bfc2a9dafe1f7abe25ca9865f",
+                "description": "Menambah data pegawai baru (users + user_profiles).",
+                "operationId": "c16daeb14c1bd6b0d688a28578a43755",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -891,14 +2905,6 @@
                                                     "type": "integer",
                                                     "example": 1
                                                 },
-                                                "nomor_identitas": {
-                                                    "type": "string",
-                                                    "example": "197812312005011001"
-                                                },
-                                                "tipe_identitas": {
-                                                    "type": "string",
-                                                    "example": "NIP"
-                                                },
                                                 "nama": {
                                                     "type": "string",
                                                     "example": "Ahmad Pegawai"
@@ -906,14 +2912,6 @@
                                                 "email": {
                                                     "type": "string",
                                                     "example": "pegawai@email.com"
-                                                },
-                                                "jabatan_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "bidang_id": {
-                                                    "type": "integer",
-                                                    "example": 1
                                                 }
                                             },
                                             "type": "object"
@@ -935,14 +2933,14 @@
                 ]
             }
         },
-        "/master-pegawai/{id}": {
+        "/users/{id}": {
             "get": {
                 "tags": [
-                    "MasterPegawai"
+                    "User"
                 ],
                 "summary": "Detail pegawai",
-                "description": "Mengambil detail data pegawai beserta relasi jabatan, bidang, atasan langsung, dan ttd digital.",
-                "operationId": "69b788b6a0770ff5bf8fd4c496073780",
+                "description": "Mengambil detail data pegawai beserta relasi profile (jabatan, bidang, atasan langsung).",
+                "operationId": "4e8a3688e747dab304a777f1e610e598",
                 "parameters": [
                     {
                         "name": "id",
@@ -975,14 +2973,6 @@
                                                     "type": "integer",
                                                     "example": 1
                                                 },
-                                                "nomor_identitas": {
-                                                    "type": "string",
-                                                    "example": "197812312005011001"
-                                                },
-                                                "tipe_identitas": {
-                                                    "type": "string",
-                                                    "example": "NIP"
-                                                },
                                                 "nama": {
                                                     "type": "string",
                                                     "example": "Ahmad Pegawai"
@@ -991,16 +2981,26 @@
                                                     "type": "string",
                                                     "example": "pegawai@email.com"
                                                 },
-                                                "jabatan": {
-                                                    "type": "object"
-                                                },
-                                                "bidang": {
-                                                    "type": "object"
-                                                },
-                                                "atasanLangsung": {
-                                                    "type": "object"
-                                                },
-                                                "ttdDigital": {
+                                                "profile": {
+                                                    "properties": {
+                                                        "nomor_identitas": {
+                                                            "type": "string",
+                                                            "example": "197812312005011001"
+                                                        },
+                                                        "tipe_identitas": {
+                                                            "type": "string",
+                                                            "example": "NIP"
+                                                        },
+                                                        "jabatan": {
+                                                            "type": "object"
+                                                        },
+                                                        "bidang": {
+                                                            "type": "object"
+                                                        },
+                                                        "atasanLangsung": {
+                                                            "type": "object"
+                                                        }
+                                                    },
                                                     "type": "object"
                                                 }
                                             },
@@ -1024,11 +3024,11 @@
             },
             "put": {
                 "tags": [
-                    "MasterPegawai"
+                    "User"
                 ],
                 "summary": "Update pegawai",
-                "description": "Mengupdate data pegawai berdasarkan ID. Hanya field yang aman diubah: nama, jabatan_id, bidang_id, jenis_kelamin, status_kepegawaian, email, no_telepon, pangkat, golongan, gelar_depan, gelar_belakang, tanggal_lahir, alamat, status_aktif, tanggal_masuk, tanggal_keluar, password.",
-                "operationId": "f0699a9fdf7622ad5500eeab66423725",
+                "description": "Mengupdate data pegawai berdasarkan ID. Field identitas (nama, email, password) masuk ke tabel users, sisanya ke user_profiles.",
+                "operationId": "94ec4499f96d1ceed73030d0d2d7ff42",
                 "parameters": [
                     {
                         "name": "id",
@@ -1153,14 +3153,6 @@
                                                     "type": "integer",
                                                     "example": 1
                                                 },
-                                                "nomor_identitas": {
-                                                    "type": "string",
-                                                    "example": "197812312005011001"
-                                                },
-                                                "tipe_identitas": {
-                                                    "type": "string",
-                                                    "example": "NIP"
-                                                },
                                                 "nama": {
                                                     "type": "string",
                                                     "example": "Ahmad Pegawai"
@@ -1168,14 +3160,6 @@
                                                 "email": {
                                                     "type": "string",
                                                     "example": "pegawai@email.com"
-                                                },
-                                                "jabatan_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "bidang_id": {
-                                                    "type": "integer",
-                                                    "example": 1
                                                 }
                                             },
                                             "type": "object"
@@ -1201,10 +3185,10 @@
             },
             "delete": {
                 "tags": [
-                    "MasterPegawai"
+                    "User"
                 ],
                 "summary": "Hapus pegawai",
-                "operationId": "f43c2809893bf90ca7b9827b5bb3d892",
+                "operationId": "10f1c3c26b421d29259e88195e0a7d5d",
                 "parameters": [
                     {
                         "name": "id",
@@ -1226,112 +3210,6 @@
                     }
                 ]
             }
-        },
-        "/api/v1/master-ttd-digital": {
-            "get": {
-                "tags": [
-                    "MasterTtdDigital"
-                ],
-                "summary": "List semua TTD Digital",
-                "operationId": "4989bfd42dc7d3e345b9cf77839be6bf",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "MasterTtdDigital"
-                ],
-                "summary": "Tambah TTD Digital",
-                "operationId": "70f3f385ef65d3b3eb308f403a582454",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {}
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Created"
-                    }
-                }
-            }
-        },
-        "/api/v1/master-ttd-digital/{id}": {
-            "get": {
-                "tags": [
-                    "MasterTtdDigital"
-                ],
-                "summary": "Detail TTD Digital",
-                "operationId": "6b8c0ad1b99a2c752d7cca52f1966c5c",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            },
-            "put": {
-                "tags": [
-                    "MasterTtdDigital"
-                ],
-                "summary": "Update TTD Digital",
-                "operationId": "e138ed4d507b9c868ebac24fa7360bb9",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {}
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "MasterTtdDigital"
-                ],
-                "summary": "Hapus TTD Digital",
-                "operationId": "2a4b176170780c50781066b27ec4e8b9",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
         }
     },
     "components": {
@@ -1345,6 +3223,18 @@
     },
     "tags": [
         {
+            "name": "Penugasan",
+            "description": "API Penugasan. Status: pending, proses, revisi, terlambat, selesai, ditolak. Nilai akhir = (bobot_persen x realisasi_persen / 100) x (1 - persentase_terlambat / 100)."
+        },
+        {
+            "name": "Files",
+            "description": "API file Terminal Data. Maks. 100MB per file, tipe: dokumen (PDF/Word/Excel/PowerPoint) atau gambar (JPG/PNG/GIF/BMP/SVG/WEBP)."
+        },
+        {
+            "name": "Folders",
+            "description": "API folder Terminal Data. Struktur folder bertingkat (parent_id), scoping akses per bidang lewat TdFolderPolicy."
+        },
+        {
             "name": "Auth",
             "description": "API Authentication"
         },
@@ -1357,12 +3247,12 @@
             "description": "API Master Jabatan"
         },
         {
-            "name": "MasterPegawai",
-            "description": "API Master Pegawai"
+            "name": "MasterSubBidang",
+            "description": "API Master Sub Bidang"
         },
         {
-            "name": "MasterTtdDigital",
-            "description": "API Master TTD Digital"
+            "name": "User",
+            "description": "API Master Pegawai"
         }
     ]
 }

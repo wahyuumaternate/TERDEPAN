@@ -3,15 +3,22 @@
 namespace App\Providers;
 
 use App\Helpers\StorageHelper;
+use App\Models\Panduan;
+use App\Models\User;
+use App\Policies\PanduanPolicy;
 use App\Services\NomorDokumenService;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use Modules\TerminalData\Models\TdFolder;
+use Modules\Penugasan\Models\HistoriRevisi;
+use Modules\Penugasan\Models\Penugasan;
+use Modules\Penugasan\Models\Progress;
 use Modules\TerminalData\Models\TdFile;
-use Modules\TerminalData\Policies\TdFolderPolicy;
+use Modules\TerminalData\Models\TdFolder;
 use Modules\TerminalData\Policies\TdFilePolicy;
+use Modules\TerminalData\Policies\TdFolderPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register NomorDokumenService sebagai singleton
         $this->app->singleton(NomorDokumenService::class, function ($app) {
-            return new NomorDokumenService();
+            return new NomorDokumenService;
         });
         //
     }
@@ -30,14 +37,26 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-
     public function boot(): void
     {
         Paginator::useBootstrap();
 
+        // Morph map stabil untuk Spatie Permission (model_has_roles/model_has_permissions)
+        // dan untuk relasi polymorphic attachable (td_files), supaya tidak terikat ke nama
+        // class penuh yang bisa berubah lagi ke depannya.
+        Relation::enforceMorphMap([
+            'user' => User::class,
+            'penugasan' => Penugasan::class,
+            'penugasan_progress' => Progress::class,
+            'penugasan_histori_revisi' => HistoriRevisi::class,
+            'td_folder' => TdFolder::class,
+            'td_file' => TdFile::class,
+        ]);
+
         // Register policies
         Gate::policy(TdFolder::class, TdFolderPolicy::class);
         Gate::policy(TdFile::class, TdFilePolicy::class);
+        Gate::policy(Panduan::class, PanduanPolicy::class);
 
         // Hitung total & penggunaan storage di disk 'public'
         $used = StorageHelper::getFolderSize(); // tanpa argumen, default ke public

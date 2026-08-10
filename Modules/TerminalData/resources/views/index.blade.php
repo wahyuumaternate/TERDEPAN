@@ -1,4 +1,4 @@
-@extends('terminaldata::components.layouts.master')
+@extends('layouts.main')
 
 @section('main')
     <div class="pagetitle">

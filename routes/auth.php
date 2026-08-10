@@ -35,7 +35,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'must_change_password'])->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
@@ -51,6 +51,11 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+
+    // password.force & password.update sengaja tetap dalam grup yang sama supaya dapat
+    // proteksi 'auth' — EnsurePasswordIsChanged sendiri yang mengecualikan keduanya dari
+    // redirect (lihat App\Http\Middleware\EnsurePasswordIsChanged), jadi tidak redirect loop.
+    Route::get('password/force', [PasswordController::class, 'forceCreate'])->name('password.force');
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 

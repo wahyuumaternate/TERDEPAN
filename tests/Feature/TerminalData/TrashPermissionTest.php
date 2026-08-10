@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\TerminalData;
 
-use Tests\TestCase;
-use App\Models\MasterPegawai;
-use App\Models\MasterJabatan;
 use App\Models\MasterBidang;
-use Modules\TerminalData\Models\TdFolder;
-use Modules\TerminalData\Models\TdFile;
+use App\Models\MasterJabatan;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Models\TdFolder;
+use Tests\TestCase;
 
 class TrashPermissionTest extends TestCase
 {
@@ -37,14 +37,17 @@ class TrashPermissionTest extends TestCase
         ]);
 
         // Create pegawai for created_by constraint
-        MasterPegawai::create([
-            'nomor_identitas' => '199001012020011001',
-            'tipe_identitas' => 'NIP',
+        $testUser = User::create([
             'nama' => 'Test User',
-            'jenis_kelamin' => 'L',
-            'status_kepegawaian' => 'PNS',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
+        ]);
+        $testUser->profile()->create([
+            'nomor_identitas' => '199001012020011001',
+            'tipe_identitas' => 'NIP',
+            'jenis_kelamin' => 'L',
+            'status_kepegawaian' => 'PNS',
+            'status_aktif' => 'Aktif',
             'jabatan_id' => 1,
             'bidang_id' => 1,
         ]);
@@ -52,8 +55,9 @@ class TrashPermissionTest extends TestCase
 
     /**
      * Test restore file permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanRestoreDeleteProvider
      */
     public function test_1_restore_file_permission_by_jabatan($jabatanKode, $fileBidangId, $userBidangId, $canRestore)
@@ -75,7 +79,7 @@ class TrashPermissionTest extends TestCase
             'bidang_id' => $fileBidangId,
             'created_by' => $canRestore && in_array($jabatanKode, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
                 ? $user->id
-                : $owner->id
+                : $owner->id,
         ]);
 
         // Soft delete file
@@ -88,20 +92,21 @@ class TrashPermissionTest extends TestCase
             $response->assertStatus(200)
                 ->assertJson([
                     'success' => true,
-                    'message' => 'File berhasil dipulihkan'
+                    'message' => 'File berhasil dipulihkan',
                 ]);
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'success' => false
+                    'success' => false,
                 ]);
         }
     }
 
     /**
      * Test force delete file permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanRestoreDeleteProvider
      */
     public function test_2_force_delete_file_permission_by_jabatan($jabatanKode, $fileBidangId, $userBidangId, $canForceDelete)
@@ -123,7 +128,7 @@ class TrashPermissionTest extends TestCase
             'bidang_id' => $fileBidangId,
             'created_by' => $canForceDelete && in_array($jabatanKode, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
                 ? $user->id
-                : $owner->id
+                : $owner->id,
         ]);
 
         // Soft delete file
@@ -136,20 +141,21 @@ class TrashPermissionTest extends TestCase
             $response->assertStatus(200)
                 ->assertJson([
                     'success' => true,
-                    'message' => 'File berhasil dihapus permanen'
+                    'message' => 'File berhasil dihapus permanen',
                 ]);
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'success' => false
+                    'success' => false,
                 ]);
         }
     }
 
     /**
      * Test restore folder permission by jabatan
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanRestoreDeleteProvider
      */
     public function test_3_restore_folder_permission_by_jabatan($jabatanKode, $folderBidangId, $userBidangId, $canRestore)
@@ -164,7 +170,7 @@ class TrashPermissionTest extends TestCase
             'bidang_id' => $folderBidangId,
             'created_by' => $canRestore && in_array($jabatanKode, ['KASUBAG', 'PELAKSANA', 'JAFUNG', 'GATEK'])
                 ? $user->id
-                : $owner->id
+                : $owner->id,
         ]);
 
         // Soft delete folder
@@ -177,12 +183,12 @@ class TrashPermissionTest extends TestCase
             $response->assertStatus(200)
                 ->assertJson([
                     'success' => true,
-                    'message' => 'Folder berhasil dipulihkan'
+                    'message' => 'Folder berhasil dipulihkan',
                 ]);
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'success' => false
+                    'success' => false,
                 ]);
         }
     }
@@ -190,8 +196,9 @@ class TrashPermissionTest extends TestCase
     /**
      * Test force delete folder permission by jabatan
      * Hanya ADMIN, KABAN, SEKBAN yang bisa force delete folder
-     * 
+     *
      * @test
+     *
      * @dataProvider jabatanForceDeleteFolderProvider
      */
     public function test_4_force_delete_folder_permission_by_jabatan($jabatanKode, $folderBidangId, $userBidangId, $canForceDelete)
@@ -204,7 +211,7 @@ class TrashPermissionTest extends TestCase
         // Buat folder yang sudah di-delete (soft delete)
         $folder = TdFolder::factory()->create([
             'bidang_id' => $folderBidangId,
-            'created_by' => $owner->id
+            'created_by' => $owner->id,
         ]);
 
         // Soft delete folder
@@ -217,12 +224,12 @@ class TrashPermissionTest extends TestCase
             $response->assertStatus(200)
                 ->assertJson([
                     'success' => true,
-                    'message' => 'Folder berhasil dihapus permanen'
+                    'message' => 'Folder berhasil dihapus permanen',
                 ]);
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'success' => false
+                    'success' => false,
                 ]);
         }
     }
@@ -231,7 +238,7 @@ class TrashPermissionTest extends TestCase
      * Test tidak bisa restore file di folder Eviden Kinerja yang sudah dihapus
      * File di Eviden Kinerja tidak bisa dihapus, tapi jika somehow terhapus,
      * seharusnya juga tidak bisa direstore
-     * 
+     *
      * @test
      */
     public function test_5_cannot_restore_file_in_eviden_kinerja()
@@ -305,21 +312,27 @@ class TrashPermissionTest extends TestCase
 
     // ==================== HELPER METHODS ====================
 
-    protected function createUserWithJabatan(string $kodeJabatan, ?int $bidangId = null): MasterPegawai
+    protected function createUserWithJabatan(string $kodeJabatan, ?int $bidangId = null): User
     {
         $jabatan = MasterJabatan::where('kode', $kodeJabatan)->firstOrFail();
-        $nip = '1990' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT) . '001';
+        $nip = '1990'.str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT).'001';
 
-        return MasterPegawai::create([
+        $user = User::create([
+            'nama' => 'User '.$kodeJabatan,
+            'email' => strtolower($kodeJabatan).rand(1, 9999).'@test.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $user->profile()->create([
             'nomor_identitas' => $nip,
             'tipe_identitas' => 'NIP',
-            'nama' => 'User ' . $kodeJabatan,
             'jenis_kelamin' => 'L',
             'status_kepegawaian' => 'PNS',
-            'email' => strtolower($kodeJabatan) . rand(1, 9999) . '@test.com',
-            'password' => bcrypt('password'),
+            'status_aktif' => 'Aktif',
             'jabatan_id' => $jabatan->id,
             'bidang_id' => $bidangId ?? MasterBidang::first()->id,
         ]);
+
+        return $user->fresh('profile');
     }
 }

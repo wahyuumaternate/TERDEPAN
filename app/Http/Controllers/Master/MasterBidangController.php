@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterBidang;
-use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class MasterBidangController extends Controller
 {
@@ -34,9 +34,10 @@ class MasterBidangController extends Controller
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -60,7 +61,7 @@ class MasterBidangController extends Controller
             ]);
 
             // Set default is_active if not provided
-            if (!isset($data['is_active'])) {
+            if (! isset($data['is_active'])) {
                 $data['is_active'] = true;
             }
 
@@ -70,7 +71,7 @@ class MasterBidangController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Bidang berhasil ditambah',
-                    'data' => $bidang
+                    'data' => $bidang,
                 ]);
             }
 
@@ -84,11 +85,13 @@ class MasterBidangController extends Controller
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
             }
+
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -97,6 +100,7 @@ class MasterBidangController extends Controller
     {
         try {
             $bidang = MasterBidang::with(['pegawai'])->findOrFail($id);
+
             return view('master-data.show-edit-bidang', compact('bidang'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Bidang tidak ditemukan');
@@ -108,8 +112,9 @@ class MasterBidangController extends Controller
     public function edit($id)
     {
         try {
-            $bidang = MasterBidang::findOrFail($id);
-            return view('master-data.edit-bidang', compact('bidang'));
+            $bidang = MasterBidang::with(['pegawai'])->findOrFail($id);
+
+            return view('master-data.show-edit-bidang', compact('bidang'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Bidang tidak ditemukan');
         } catch (\Exception $e) {
@@ -125,7 +130,7 @@ class MasterBidangController extends Controller
             $this->authorize('update', $bidang);
 
             $data = $request->validate([
-                'kode' => 'required|unique:master_bidang,kode,' . $id . '|max:20',
+                'kode' => 'required|unique:master_bidang,kode,'.$id.'|max:20',
                 'nama' => 'required|string|max:100',
                 'deskripsi' => 'nullable|string',
                 'warna' => 'nullable|string|max:7',
@@ -138,7 +143,7 @@ class MasterBidangController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Bidang berhasil diperbarui',
-                    'data' => $bidang
+                    'data' => $bidang,
                 ]);
             }
 
@@ -152,16 +157,19 @@ class MasterBidangController extends Controller
             if ($request->ajax()) {
                 return response()->json(['error' => 'Bidang tidak ditemukan'], 404);
             }
+
             return redirect()->back()->with('error', 'Bidang tidak ditemukan');
         } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->ajax()) {
                 return response()->json(['errors' => $e->errors()], 422);
             }
+
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
@@ -179,6 +187,7 @@ class MasterBidangController extends Controller
                 if ($request->ajax()) {
                     return response()->json(['error' => $message], 422);
                 }
+
                 return redirect()->back()->with('error', $message);
             }
 
@@ -187,7 +196,7 @@ class MasterBidangController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Bidang berhasil dihapus'
+                    'message' => 'Bidang berhasil dihapus',
                 ]);
             }
 
@@ -201,11 +210,13 @@ class MasterBidangController extends Controller
             if ($request->ajax()) {
                 return response()->json(['error' => 'Bidang tidak ditemukan'], 404);
             }
+
             return redirect()->back()->with('error', 'Bidang tidak ditemukan');
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json(['error' => $e->getMessage()], 500);
             }
+
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
