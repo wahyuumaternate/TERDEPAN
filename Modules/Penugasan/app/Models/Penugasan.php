@@ -63,6 +63,7 @@ class Penugasan extends Model
         'catatan_validasi',
         'validated_at',
         'diterima_at',
+        'deadline_reminder_sent_at',
     ];
 
     protected $casts = [
@@ -73,6 +74,7 @@ class Penugasan extends Model
         'validated_at' => 'datetime',
         'diterima_at' => 'datetime',
         'ditolak_pada' => 'datetime',
+        'deadline_reminder_sent_at' => 'datetime',
         'target_value' => 'decimal:2',
         'bobot_persen' => 'decimal:2',
         'progress_persen' => 'decimal:2',

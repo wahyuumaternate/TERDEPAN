@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Penugasan\Http\Controllers\Api\PushSubscriptionController;
 use Modules\Penugasan\Http\Controllers\ApiController;
 use Modules\Penugasan\Http\Controllers\DashboardController;
 use Modules\Penugasan\Http\Controllers\PenugasanController;
@@ -60,6 +61,11 @@ Route::middleware(['auth', 'must_change_password'])->prefix('penugasan')->name('
         Route::get('/workload-tim', [ApiController::class, 'workloadTim'])->name('workload-tim');
         Route::get('/progress-anggota/{pegawai}', [ApiController::class, 'progressAnggota'])->name('progress-anggota');
         Route::get('/pegawai/{pegawai}/tugas-pokok', [ApiController::class, 'tugasPokokByPegawai'])->name('tugas-pokok-by-pegawai');
+
+        // Web push subscription — dipanggil dari toggle "Aktifkan Notifikasi Browser" di header,
+        // pakai sesi web yang sama (bukan token Sanctum) karena bukan API eksternal.
+        Route::post('/push-subscription', [PushSubscriptionController::class, 'store'])->name('push-subscription.store');
+        Route::delete('/push-subscription', [PushSubscriptionController::class, 'destroy'])->name('push-subscription.destroy');
     });
 
     // ============================================

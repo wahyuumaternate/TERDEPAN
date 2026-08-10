@@ -6,6 +6,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Modules\Penugasan\Console\Commands\KirimReminderDeadlinePenugasan;
 use Modules\Penugasan\Console\Commands\PurgeTugasDitolak;
 use Modules\Penugasan\Console\Commands\TandaiTugasTerlambat;
 use Modules\Penugasan\Models\Penugasan;
@@ -61,6 +62,7 @@ class PenugasanServiceProvider extends ServiceProvider
         $this->commands([
             TandaiTugasTerlambat::class,
             PurgeTugasDitolak::class,
+            KirimReminderDeadlinePenugasan::class,
         ]);
     }
 
@@ -73,6 +75,7 @@ class PenugasanServiceProvider extends ServiceProvider
             $schedule = $this->app->make(Schedule::class);
             $schedule->command(TandaiTugasTerlambat::class)->dailyAt('00:05');
             $schedule->command(PurgeTugasDitolak::class)->hourly();
+            $schedule->command(KirimReminderDeadlinePenugasan::class)->dailyAt('08:00');
         });
     }
 

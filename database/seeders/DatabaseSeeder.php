@@ -26,11 +26,11 @@ class DatabaseSeeder extends Seeder
             // PerjanjianKinerjaDatabaseSeeder::class, // Modul PerjanjianKinerja nonaktif sementara (lihat modules_statuses.json)
         ]);
 
-        // if (! app()->isProduction()) {
-        //     $this->call([
-        //         DataPegawaiSeeder::class,
-        //         PenugasanDatabaseSeeder::class,
-        //     ]);
-        // }
+        if (! app()->isProduction()) {
+            $this->call([
+                DataPegawaiSeeder::class,
+                PenugasanDatabaseSeeder::class,
+            ]);
+        }
     }
 }

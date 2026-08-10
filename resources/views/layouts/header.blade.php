@@ -104,11 +104,19 @@
                      <li class="dropdown-footer">
                          <a href="{{ route('notifications.index') }}">Lihat semua notifikasi</a>
                      </li>
+                     <li>
+                         <hr class="dropdown-divider">
+                     </li>
+                     <li class="dropdown-footer">
+                         <a href="#" id="push-toggle-btn" class="d-flex align-items-center justify-content-center gap-1">
+                             <i class="bi bi-bell-slash" id="push-toggle-icon"></i>
+                             <span id="push-toggle-label">Aktifkan Notifikasi Browser</span>
+                         </a>
+                     </li>
 
                  </ul><!-- End Notification Dropdown Items -->
 
              </li><!-- End Notification Nav -->
-
 
              <li class="nav-item dropdown pe-3">
 
@@ -223,3 +231,104 @@
          </div>
      </div>
  </div>
+
+ @push('scripts')
+     <script>
+         (function () {
+             const VAPID_PUBLIC_KEY = @json(config('webpush.vapid.public_key'));
+             const SUBSCRIBE_URL = @json(route('penugasan.api.push-subscription.store'));
+             const UNSUBSCRIBE_URL = @json(route('penugasan.api.push-subscription.destroy'));
+             const btn = document.getElementById('push-toggle-btn');
+             const icon = document.getElementById('push-toggle-icon');
+             const label = document.getElementById('push-toggle-label');
+
+             if (!btn || !('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) {
+                 return;
+             }
+
+             function urlBase64ToUint8Array(base64String) {
+                 const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+                 const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                 const rawData = window.atob(base64);
+                 return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+             }
+
+             function csrfToken() {
+                 return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+             }
+
+             function updateIcon(subscribed) {
+                 icon.classList.toggle('bi-bell-slash', !subscribed);
+                 icon.classList.toggle('bi-bell-fill', subscribed);
+                 label.textContent = subscribed ? 'Nonaktifkan Notifikasi Browser' : 'Aktifkan Notifikasi Browser';
+             }
+
+             async function getSubscription() {
+                 const registration = await navigator.serviceWorker.register('/sw.js');
+                 return registration.pushManager.getSubscription();
+             }
+
+             async function subscribe() {
+                 const registration = await navigator.serviceWorker.register('/sw.js');
+                 const subscription = await registration.pushManager.subscribe({
+                     userVisibleOnly: true,
+                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+                 });
+
+                 await fetch(SUBSCRIBE_URL, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                     body: JSON.stringify(subscription.toJSON()),
+                 });
+
+                 updateIcon(true);
+             }
+
+             async function unsubscribe() {
+                 const subscription = await getSubscription();
+                 if (!subscription) {
+                     updateIcon(false);
+                     return;
+                 }
+
+                 await fetch(UNSUBSCRIBE_URL, {
+                     method: 'DELETE',
+                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                     body: JSON.stringify({ endpoint: subscription.endpoint }),
+                 });
+
+                 await subscription.unsubscribe();
+                 updateIcon(false);
+             }
+
+             btn.addEventListener('click', async function (event) {
+                 event.preventDefault();
+
+                 try {
+                     const existing = await getSubscription();
+
+                     if (existing) {
+                         await unsubscribe();
+                         return;
+                     }
+
+                     if (Notification.permission === 'denied') {
+                         alert('Izin notifikasi browser diblokir. Aktifkan lewat pengaturan browser Anda.');
+                         return;
+                     }
+
+                     const permission = await Notification.requestPermission();
+                     if (permission !== 'granted') {
+                         return;
+                     }
+
+                     await subscribe();
+                 } catch (error) {
+                     console.error('Gagal mengatur notifikasi push:', error);
+                 }
+             });
+
+             getSubscription().then((subscription) => updateIcon(!!subscription));
+         })();
+     </script>
+ @endpush

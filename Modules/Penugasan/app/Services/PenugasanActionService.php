@@ -13,6 +13,9 @@ use Modules\Penugasan\Models\Penugasan;
 use Modules\Penugasan\Models\PerpanjanganWaktu;
 use Modules\Penugasan\Models\Progress;
 use Modules\Penugasan\Models\RiwayatPenolakan;
+use Modules\Penugasan\Notifications\PenugasanBaruNotification;
+use Modules\Penugasan\Notifications\PenugasanDinilaiNotification;
+use Modules\Penugasan\Notifications\PenugasanRevisiNotification;
 
 /**
  * Logic inti alur Penugasan, dipakai bersama oleh Api\PenugasanController
@@ -110,6 +113,7 @@ class PenugasanActionService
     {
         $isSelfInitiated = ((int) $validated['pegawai_id']) === $pembuat->id;
         $pemberiTugasId = $pembuat->id;
+        $target = null;
 
         if ($isSelfInitiated) {
             if (empty($validated['atasan_id'])) {
@@ -133,7 +137,7 @@ class PenugasanActionService
             Gate::forUser($pembuat)->authorize('assignTo', [Penugasan::class, $target]);
         }
 
-        return Penugasan::create([
+        $penugasan = Penugasan::create([
             ...$validated,
             'pemberi_tugas_id' => $pemberiTugasId,
             'is_mandiri' => $isSelfInitiated,
@@ -141,6 +145,12 @@ class PenugasanActionService
             'status' => Penugasan::STATUS_PENDING,
             'status_approval' => $isSelfInitiated ? Penugasan::APPROVAL_PENDING : null,
         ]);
+
+        // Tugas mandiri: pembuat adalah pegawai itu sendiri, tidak perlu diberi tahu soal
+        // tugas yang baru saja ia buat sendiri — cuma notify kalau benar-benar ditugaskan atasan.
+        $target?->notify(new PenugasanBaruNotification($penugasan));
+
+        return $penugasan;
     }
 
     /**
@@ -167,7 +177,7 @@ class PenugasanActionService
         $grupId = (string) Str::uuid();
 
         return collect($validated['pegawai_ids'])->map(function ($pegawaiId) use ($validated, $pembuat, $grupId) {
-            return Penugasan::create([
+            $penugasan = Penugasan::create([
                 'pegawai_id' => $pegawaiId,
                 'pemberi_tugas_id' => $pembuat->id,
                 'is_mandiri' => false,
@@ -188,6 +198,10 @@ class PenugasanActionService
                 'bobot_persen' => $validated['bobot_persen'] ?? null,
                 'status' => Penugasan::STATUS_PENDING,
             ]);
+
+            $penugasan->pegawai->notify(new PenugasanBaruNotification($penugasan));
+
+            return $penugasan;
         })->values();
     }
 
@@ -374,7 +388,10 @@ class PenugasanActionService
         $penugasan->update($update);
         $this->cascadeKeGrup($penugasan, $update);
 
-        return $penugasan->fresh();
+        $penugasan = $penugasan->fresh();
+        $penugasan->pegawai->notify(new PenugasanDinilaiNotification($penugasan));
+
+        return $penugasan;
     }
 
     /**
@@ -418,10 +435,14 @@ class PenugasanActionService
                     'penugasan_id' => $anggota->id,
                     'pegawai_id' => $anggota->pegawai_id,
                 ]);
+                $anggota->pegawai->notify(new PenugasanRevisiNotification($anggota));
             }
         }
 
-        return $penugasan->fresh();
+        $penugasan = $penugasan->fresh();
+        $penugasan->pegawai->notify(new PenugasanRevisiNotification($penugasan));
+
+        return $penugasan;
     }
 
     /**
