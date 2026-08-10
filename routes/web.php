@@ -6,6 +6,7 @@ use App\Http\Controllers\Master\MasterJabatanController;
 use App\Http\Controllers\Master\MasterPegawaiController;
 use App\Http\Controllers\Master\MasterSubBidangController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -74,6 +75,18 @@ Route::middleware(['auth', 'must_change_password'])->prefix('master')->name('mas
         'update' => 'jabatan.update',
         'destroy' => 'jabatan.destroy',
     ]);
+});
+
+Route::middleware(['auth', 'must_change_password'])->prefix('panduan')->name('panduan.')->group(function () {
+    // Rute statis (create) didaftarkan sebelum wildcard {panduan} supaya tidak tertimpa.
+    Route::get('/', [PanduanController::class, 'index'])->name('index');
+    Route::get('/create', [PanduanController::class, 'create'])->name('create');
+    Route::post('/', [PanduanController::class, 'store'])->name('store');
+    Route::get('/{panduan}/preview', [PanduanController::class, 'preview'])->name('preview');
+    Route::get('/{panduan}/download', [PanduanController::class, 'download'])->name('download');
+    Route::get('/{panduan}/edit', [PanduanController::class, 'edit'])->name('edit');
+    Route::put('/{panduan}', [PanduanController::class, 'update'])->name('update');
+    Route::delete('/{panduan}', [PanduanController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware(['auth', 'must_change_password'])->group(function () {

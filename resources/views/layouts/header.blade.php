@@ -24,13 +24,11 @@
 
      <!-- Action Buttons -->
      <div class="d-flex align-items-center gap-2 ms-3">
-         <!-- Modul Penggunaan Button (Visible on all devices) -->
-         <button class="btn btn-success text-white btn-sm btn-md-normal" data-bs-toggle="modal"
-             data-bs-target="#modalModulPenggunaan">
-             <i class="bi bi-download me-1"></i>
-             <span class="d-none d-md-inline">Modul Penggunaan</span>
-             <span class="d-inline d-md-none">Modul</span>
-         </button>
+         <!-- Panduan Button (Visible on all devices) -->
+         <a href="{{ route('panduan.index') }}" class="btn btn-success text-white btn-sm btn-md-normal">
+             <i class="bi bi-journal-text me-1"></i>
+             <span>Panduan</span>
+         </a>
 
          <!-- Download APK Button (Only visible on mobile) -->
          <button class="btn btn-primary text-white btn-sm d-block d-lg-none" data-bs-toggle="modal"
@@ -117,6 +115,12 @@
                  </ul><!-- End Notification Dropdown Items -->
 
              </li><!-- End Notification Nav -->
+
+             <li class="nav-item">
+                 <a href="#" id="reopen-modul-penggunaan-btn" class="nav-link nav-icon" title="Panduan Awal">
+                     <i class="bi bi-question-circle"></i>
+                 </a>
+             </li><!-- End Reopen Onboarding Modal -->
 
              <li class="nav-item dropdown pe-3">
 
@@ -206,24 +210,33 @@
      </div>
  </div>
 
- <!-- Modal Modul Penggunaan -->
+ <!-- Modal Modul Penggunaan (Onboarding) -->
  <div class="modal fade" id="modalModulPenggunaan" tabindex="-1" aria-labelledby="modalModulPenggunaanLabel"
      aria-hidden="true">
      <div class="modal-dialog modal-dialog-centered">
          <div class="modal-content">
              <div class="modal-header border-0">
                  <h5 class="modal-title" id="modalModulPenggunaanLabel">
-                     <i class="bi bi-book text-success me-2"></i>Modul Penggunaan
+                     <i class="bi bi-book text-success me-2"></i>Selamat Datang di TERDEPAN
                  </h5>
                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
              </div>
-             <div class="modal-body text-center py-4">
-                 <i class="bi bi-cone-striped text-warning" style="font-size: 4rem;"></i>
-                 <h5 class="mt-3 mb-2">Modul Dalam Tahap Pengembangan</h5>
+             <div class="modal-body py-4">
                  <p class="text-muted">
-                     Modul penggunaan aplikasi TERDEPAN sedang dalam tahap penyusunan.<br>
-                     Mohon tunggu hingga modul siap untuk diunduh.
+                     Beberapa hal yang bisa Anda lakukan di aplikasi ini:
                  </p>
+                 <ul class="text-muted">
+                     <li><strong>Penugasan</strong> — kelola tugas yang Anda terima maupun berikan.</li>
+                     <li><strong>Penyimpanan</strong> — simpan dan kelola dokumen kerja Anda.</li>
+                     <li><strong>Panduan</strong> — baca panduan/manual penggunaan aplikasi kapan saja lewat
+                         tombol "Panduan" di header.</li>
+                 </ul>
+                 <div class="form-check mt-3">
+                     <input class="form-check-input" type="checkbox" id="modal-penggunaan-dont-show">
+                     <label class="form-check-label" for="modal-penggunaan-dont-show">
+                         Jangan tampilkan lagi
+                     </label>
+                 </div>
              </div>
              <div class="modal-footer border-0">
                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
@@ -329,6 +342,36 @@
              });
 
              getSubscription().then((subscription) => updateIcon(!!subscription));
+         })();
+     </script>
+
+     <script>
+         (function () {
+             const STORAGE_KEY = 'terdepan_hide_modul_penggunaan_modal';
+             const modalEl = document.getElementById('modalModulPenggunaan');
+             const reopenBtn = document.getElementById('reopen-modul-penggunaan-btn');
+             const dontShowCheckbox = document.getElementById('modal-penggunaan-dont-show');
+
+             if (!modalEl) {
+                 return;
+             }
+
+             const modal = new bootstrap.Modal(modalEl);
+
+             if (localStorage.getItem(STORAGE_KEY) !== '1') {
+                 modal.show();
+             }
+
+             reopenBtn?.addEventListener('click', function (event) {
+                 event.preventDefault();
+                 modal.show();
+             });
+
+             modalEl.addEventListener('hidden.bs.modal', function () {
+                 if (dontShowCheckbox?.checked) {
+                     localStorage.setItem(STORAGE_KEY, '1');
+                 }
+             });
          })();
      </script>
  @endpush

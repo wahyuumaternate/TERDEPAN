@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Helpers\StorageHelper;
+use App\Models\Panduan;
 use App\Models\User;
+use App\Policies\PanduanPolicy;
 use App\Services\NomorDokumenService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
@@ -54,6 +56,7 @@ class AppServiceProvider extends ServiceProvider
         // Register policies
         Gate::policy(TdFolder::class, TdFolderPolicy::class);
         Gate::policy(TdFile::class, TdFilePolicy::class);
+        Gate::policy(Panduan::class, PanduanPolicy::class);
 
         // Hitung total & penggunaan storage di disk 'public'
         $used = StorageHelper::getFolderSize(); // tanpa argumen, default ke public
