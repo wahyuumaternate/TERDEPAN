@@ -281,6 +281,8 @@
                                         <option value="">Pilih Status Kepegawaian</option>
                                         <option value="PNS" {{ old('status_kepegawaian') == 'PNS' ? 'selected' : '' }}>
                                             PNS</option>
+                                        <option value="CPNS"
+                                            {{ old('status_kepegawaian') == 'CPNS' ? 'selected' : '' }}>CPNS</option>
                                         <option value="PPPK"
                                             {{ old('status_kepegawaian') == 'PPPK' ? 'selected' : '' }}>PPPK</option>
                                         <option value="Kontrak"

@@ -94,6 +94,10 @@
                                                     <span class="badge bg-success">PNS</span>
                                                 @break
 
+                                                @case('CPNS')
+                                                    <span class="badge bg-success bg-opacity-50">CPNS</span>
+                                                @break
+
                                                 @case('PPPK')
                                                     <span class="badge bg-info">PPPK</span>
                                                 @break

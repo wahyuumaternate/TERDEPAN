@@ -16,8 +16,10 @@ class MasterBidangSeeder extends Seeder
     {
         $daftarBidang = [
             [
+                // Level instansi/pimpinan (KABAN, dsb), bukan bidang kerja — sengaja
+                // is_active=false, jadi tidak dapat folder & tidak masuk statistik bidang.
                 'kode' => 'BAPPEDA',
-                'nama' => 'Bappeda',
+                'nama' => 'Pimpinan',
                 'warna' => '#FFFFFF',
                 'is_active' => false,
             ],
@@ -28,14 +30,16 @@ class MasterBidangSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                // Penamaan resmi mengikuti DUK BAPPEDA per Maret 2026.
                 'kode' => 'EKONOMI',
-                'nama' => 'Bidang Ekonomi dan Perdagangan',
+                'nama' => 'Bidang Perekonomian dan Perdagangan',
                 'warna' => '#81C784',
                 'is_active' => true,
             ],
             [
+                // Penamaan resmi mengikuti DUK BAPPEDA per Maret 2026.
                 'kode' => 'IPW',
-                'nama' => 'Bidang Infrastruktur dan Pembangunan Wilayah',
+                'nama' => 'Bidang Infrastruktur dan Pengembangan Wilayah',
                 'warna' => '#FFB74D',
                 'is_active' => true,
             ],

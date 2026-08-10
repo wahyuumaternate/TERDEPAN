@@ -21,7 +21,7 @@ class PegawaiImportCsvTest extends TestCase
 
         MasterJabatan::create(['id' => 1, 'kode' => 'ADMIN', 'nama' => 'Admin', 'level' => 1]);
         MasterJabatan::create(['id' => 2, 'kode' => 'PELAKSANA', 'nama' => 'Pelaksana', 'level' => 5]);
-        $bidang = MasterBidang::create(['kode' => 'SEKRE', 'nama' => 'Sekretariat']);
+        $bidang = MasterBidang::create(['kode' => 'SEKRETARIAT', 'nama' => 'Sekretariat']);
 
         $this->admin = User::factory()->create(['nama' => 'Admin Test']);
         $this->admin->profile()->create([
@@ -51,7 +51,8 @@ class PegawaiImportCsvTest extends TestCase
         $response = $this->actingAs($this->admin)
             ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
 
-        $response->assertRedirect(route('master.pegawai.index'));
+        $response->assertRedirect(route('master.pegawai.import'));
+        $response->assertSessionHas('success');
 
         $budi = User::where('email', 'budi@test.local')->with('profile')->first();
         $siti = User::where('email', 'siti@test.local')->first();
@@ -84,7 +85,7 @@ class PegawaiImportCsvTest extends TestCase
         $this->assertSame('2020-04-01', $iksan->profile->tmt_golongan->toDateString());
     }
 
-    public function test_baris_dengan_jabatan_tidak_dikenali_dilewati(): void
+    public function test_baris_dengan_bidang_tidak_dikenali_dilewati(): void
     {
         $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
         $barisRusak = 'Anonim;anonim@test.local;Jabatan Aneh;Bidang Aneh;199001012020011003;;;08125;L;;;PNS;Aktif;;;;';
@@ -94,6 +95,102 @@ class PegawaiImportCsvTest extends TestCase
             ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
 
         $this->assertDatabaseMissing('users', ['email' => 'anonim@test.local']);
+    }
+
+    public function test_jabatan_yang_tidak_dikenali_default_pelaksana_bukan_dilewati(): void
+    {
+        // Judul jabatan literal dari sumber data asli (mis. DUK: "PENELAAH TEKNIS
+        // KEBIJAKAN") tidak boleh bikin baris dilewati — harus tetap masuk sebagai
+        // PELAKSANA (akses minim), dengan judul aslinya tersimpan di jabatan_asli.
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
+        $baris = 'Rosihan Thamrin;rosihan@test.local;PENELAAH TEKNIS KEBIJAKAN;Sekretariat;198001012020011099;;;;L;;;PNS;Aktif;;;;';
+        $csv = implode("\n", [$header, $baris]);
+
+        $this->actingAs($this->admin)
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $pegawai = User::where('email', 'rosihan@test.local')->with('profile.jabatan')->first();
+
+        $this->assertNotNull($pegawai);
+        $this->assertSame('PELAKSANA', $pegawai->profile->jabatan->kode);
+        $this->assertSame('PENELAAH TEKNIS KEBIJAKAN', $pegawai->profile->jabatan_asli);
+    }
+
+    public function test_bidang_kosong_default_sekretariat(): void
+    {
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
+        $baris = 'Tanpa Bidang;tanpabidang@test.local;Pelaksana;;198001012020011098;;;;L;;;PNS;Aktif;;;;';
+        $csv = implode("\n", [$header, $baris]);
+
+        $this->actingAs($this->admin)
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $pegawai = User::where('email', 'tanpabidang@test.local')->with('profile.bidang')->first();
+
+        $this->assertNotNull($pegawai);
+        $this->assertSame('Sekretariat', $pegawai->profile->bidang->nama);
+    }
+
+    public function test_nama_bidang_dicocokkan_case_insensitive(): void
+    {
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
+        $baris = 'Beda Kapital;bedakapital@test.local;Pelaksana;sekretariat;198001012020011097;;;;L;;;PNS;Aktif;;;;';
+        $csv = implode("\n", [$header, $baris]);
+
+        $this->actingAs($this->admin)
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $pegawai = User::where('email', 'bedakapital@test.local')->with('profile.bidang')->first();
+
+        $this->assertNotNull($pegawai);
+        $this->assertSame('Sekretariat', $pegawai->profile->bidang->nama);
+    }
+
+    public function test_status_kepegawaian_cpns_diterima(): void
+    {
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
+        $baris = 'Calon Pegawai;calonpegawai@test.local;Pelaksana;Sekretariat;198001012020011096;;;;L;;;CPNS;Aktif;;;;';
+        $csv = implode("\n", [$header, $baris]);
+
+        $this->actingAs($this->admin)
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $pegawai = User::where('email', 'calonpegawai@test.local')->with('profile')->first();
+
+        $this->assertNotNull($pegawai);
+        $this->assertSame('CPNS', $pegawai->profile->status_kepegawaian);
+    }
+
+    public function test_csv_dengan_bom_utf8_tetap_terbaca(): void
+    {
+        // Regresi: file CSV yang disimpan dari Excel sering diawali BOM UTF-8 (EF BB BF),
+        // yang kalau tidak dilewati akan menempel di nama kolom header pertama sehingga
+        // $row['Nama'] selalu kosong dan SEMUA baris dianggap "Kolom Nama kosong".
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
+        $baris = 'Pegawai Bom;pegawaibom@test.local;Pelaksana;Sekretariat;198001012020011095;;;;L;;;PNS;Aktif;;;;';
+        $csv = "\xEF\xBB\xBF".implode("\n", [$header, $baris]);
+
+        $this->actingAs($this->admin)
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $this->assertDatabaseHas('users', ['email' => 'pegawaibom@test.local']);
+    }
+
+    public function test_pesan_sukses_import_tampil_di_halaman_setelah_redirect(): void
+    {
+        // Regresi: sebelumnya importStore() redirect ke master.pegawai.index, dan flash
+        // session('success') tidak pernah dirender di halaman mana pun — jadi user tidak
+        // melihat apa-apa setelah import walau datanya sebenarnya berhasil masuk.
+        $header = 'Nama;Email;Jabatan;Bidang;NIP / ID;Gelar Depan;Gelar Belakang;No Telpon;Jenis Kelamin;Tanggal Lahir;Alamat;Status Kepeg;Status Aktif;Pangkat;Golongan;Tanggal Masuk;Atasan Langsung';
+        $baris = 'Rina Wulandari;rina@test.local;Pelaksana;Sekretariat;198005052020011005;;;08126;P;05-05-1980;;PNS;Aktif;;;01-01-2020;';
+        $csv = implode("\n", [$header, $baris]);
+
+        $response = $this->actingAs($this->admin)
+            ->followingRedirects()
+            ->post(route('master.pegawai.import.store'), ['file_csv' => $this->buatCsv($csv)]);
+
+        $response->assertOk();
+        $response->assertSee('1 pegawai berhasil diimpor', false);
     }
 
     public function test_bukan_admin_tidak_bisa_import(): void

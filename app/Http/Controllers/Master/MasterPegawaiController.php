@@ -22,7 +22,7 @@ class MasterPegawaiController extends Controller
         'golongan', 'gelar_depan', 'gelar_belakang', 'tanggal_lahir', 'alamat',
         'tanggal_masuk', 'tanggal_keluar', 'atasan_langsung_id', 'foto_profile_path',
         'tempat_lahir', 'agama', 'tmt_cpns', 'tmt_pns', 'tmt_golongan', 'eselon',
-        'pendidikan_terakhir', 'jenjang_pendidikan',
+        'pendidikan_terakhir', 'jenjang_pendidikan', 'jabatan_asli',
     ];
 
     public function index()
@@ -59,7 +59,7 @@ class MasterPegawaiController extends Controller
                 'jabatan_id' => 'required|exists:master_jabatan,id',
                 'bidang_id' => 'required|exists:master_bidang,id',
                 'jenis_kelamin' => 'required|in:L,P',
-                'status_kepegawaian' => 'required|in:PNS,PPPK,Kontrak',
+                'status_kepegawaian' => 'required|in:PNS,CPNS,PPPK,Kontrak',
                 'status_aktif' => 'required|in:Aktif,Nonaktif,Cuti,Pensiun',
                 'email' => 'required|email|unique:users,email',
                 'no_telepon' => 'nullable|string|max:20',
@@ -80,6 +80,7 @@ class MasterPegawaiController extends Controller
                 'eselon' => 'nullable|string|max:20',
                 'pendidikan_terakhir' => 'nullable|string|max:100',
                 'jenjang_pendidikan' => 'nullable|string|max:50',
+                'jabatan_asli' => 'nullable|string|max:150',
                 'password' => 'required|min:6|confirmed',
                 'foto_profile' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             ]);
@@ -187,7 +188,7 @@ class MasterPegawaiController extends Controller
                 'jabatan_id' => 'required|exists:master_jabatan,id',
                 'bidang_id' => 'required|exists:master_bidang,id',
                 'jenis_kelamin' => 'required|in:L,P',
-                'status_kepegawaian' => 'required|in:PNS,PPPK,Kontrak',
+                'status_kepegawaian' => 'required|in:PNS,CPNS,PPPK,Kontrak',
                 'status_aktif' => 'required|in:Aktif,Nonaktif,Cuti,Pensiun',
                 'email' => 'required|email|unique:users,email,'.$id,
                 'no_telepon' => 'nullable|string|max:20',
@@ -208,6 +209,7 @@ class MasterPegawaiController extends Controller
                 'eselon' => 'nullable|string|max:20',
                 'pendidikan_terakhir' => 'nullable|string|max:100',
                 'jenjang_pendidikan' => 'nullable|string|max:50',
+                'jabatan_asli' => 'nullable|string|max:150',
                 'password' => 'nullable|min:6|confirmed',
                 'foto_profile' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             ]);
@@ -348,7 +350,7 @@ class MasterPegawaiController extends Controller
                 $pesan .= ' '.count($hasil['dilewati']).' baris dilewati.';
             }
 
-            return redirect()->route('master.pegawai.index')
+            return redirect()->route('master.pegawai.import')
                 ->with('success', $pesan)
                 ->with('import_dilewati', $hasil['dilewati']);
         } catch (AuthorizationException $e) {

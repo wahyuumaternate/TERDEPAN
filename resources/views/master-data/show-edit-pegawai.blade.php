@@ -345,6 +345,8 @@
                                         <select class="form-select" name="status_kepegawaian" required>
                                             <option value="PNS"
                                                 {{ $pegawai->profile?->status_kepegawaian == 'PNS' ? 'selected' : '' }}>PNS</option>
+                                            <option value="CPNS"
+                                                {{ $pegawai->profile?->status_kepegawaian == 'CPNS' ? 'selected' : '' }}>CPNS</option>
                                             <option value="PPPK"
                                                 {{ $pegawai->profile?->status_kepegawaian == 'PPPK' ? 'selected' : '' }}>PPPK
                                             </option>

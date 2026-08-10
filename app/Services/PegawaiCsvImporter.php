@@ -68,14 +68,22 @@ class PegawaiCsvImporter
                     $jabatanName = 'Pelaksana';
                 }
 
+                // Jabatan literal (mis. judul asli dari DUK: "PENELAAH TEKNIS KEBIJAKAN")
+                // hampir tidak pernah gagal dipetakan — kalau tidak cocok dengan kode
+                // jabatan struktural manapun, otomatis jatuh ke PELAKSANA (akses minim)
+                // supaya baris tidak dilewati hanya karena judul jabatannya tidak baku.
                 $jabatanId = $this->getJabatanIdFromName($jabatanName);
-                $bidangId = $this->getBidangIdFromName($row['Bidang'] ?? '');
 
-                if (! $jabatanId || ! $bidangId) {
+                $bidangName = trim($row['Bidang'] ?? '');
+                $bidangId = $this->getBidangIdFromName($bidangName);
+
+                if (! $bidangId) {
                     $dilewati[] = [
                         'baris' => $baris,
                         'nama' => $nama,
-                        'alasan' => "Jabatan/Bidang tidak dikenali (Jabatan: {$jabatanName}, Bidang: ".($row['Bidang'] ?? '').')',
+                        'alasan' => $bidangName === ''
+                            ? 'Kolom Bidang kosong dan default (Sekretariat) tidak ditemukan'
+                            : "Bidang \"{$bidangName}\" tidak dikenali",
                     ];
 
                     continue;
@@ -111,6 +119,7 @@ class PegawaiCsvImporter
                     'tanggal_lahir' => $this->parseTanggal($row['Tanggal Lahir'] ?? ''),
                     'alamat' => trim($row['Alamat'] ?? ''),
                     'jabatan_id' => $jabatanId,
+                    'jabatan_asli' => $jabatanName,
                     'bidang_id' => $bidangId,
                     'status_kepegawaian' => trim($row['Status Kepeg'] ?? '') ?: 'PNS',
                     'status_aktif' => trim($row['Status Aktif'] ?? '') ?: 'Aktif',
@@ -170,6 +179,14 @@ class PegawaiCsvImporter
         $data = [];
         $file = fopen($filePath, 'r');
 
+        // File CSV yang disimpan dari Excel sering diawali BOM UTF-8 (EF BB BF). Kalau
+        // tidak dilewati, byte itu menempel di nama kolom header pertama (mis. jadi
+        // "\xEF\xBB\xBFNama" alih-alih "Nama"), sehingga $row['Nama'] selalu kosong dan
+        // SEMUA baris dianggap "Kolom Nama kosong".
+        if (fread($file, 3) !== "\xEF\xBB\xBF") {
+            rewind($file);
+        }
+
         $header = fgetcsv($file, 0, ';');
 
         while (($row = fgetcsv($file, 0, ';')) !== false) {
@@ -223,6 +240,12 @@ class PegawaiCsvImporter
         return null;
     }
 
+    /**
+     * Petakan judul jabatan (bebas teks, mis. dari DUK) ke salah satu dari 8 kode
+     * jabatan struktural sistem yang menentukan hak akses. Judul yang tidak cocok
+     * mapping manapun otomatis jatuh ke PELAKSANA (akses minim) — judul aslinya tetap
+     * tersimpan utuh di user_profiles.jabatan_asli untuk referensi, tidak hilang.
+     */
     private function getJabatanIdFromName(string $jabatanName): ?int
     {
         $jabatanName = strtolower(trim($jabatanName));
@@ -230,7 +253,7 @@ class PegawaiCsvImporter
         $mapping = [
             'plh kabid' => 'KABID',
             'kepala badan' => 'KABAN',
-            'sekretari badan' => 'SEKBAN',
+            'sekretaris badan' => 'SEKBAN',
             'kepala bidang' => 'KABID',
             'kabid ipw' => 'KABID',
             'kabid' => 'KABID',
@@ -251,22 +274,27 @@ class PegawaiCsvImporter
             $kode = 'JAFUNG';
         }
 
-        if (! $kode) {
-            return null;
-        }
+        $kode ??= 'PELAKSANA';
 
         return DB::table('master_jabatan')->where('kode', $kode)->value('id');
     }
 
+    /**
+     * Cocokkan nama bidang case-insensitive (data lapangan sering beda kapitalisasi,
+     * mis. "Dan" vs "dan"). Kolom Bidang kosong di CSV default ke Sekretariat — tapi
+     * kalau TERISI dan tetap tidak cocok apa pun, sengaja dikembalikan null (bukan
+     * ditebak) supaya baris itu dilewati dan pengguna diberi tahu, bukan salah
+     * menempatkan pegawai (mis. kepala bidang) ke bidang yang keliru.
+     */
     private function getBidangIdFromName(string $bidangName): ?int
     {
         $bidangName = trim($bidangName);
 
         if ($bidangName === '') {
-            return null;
+            return DB::table('master_bidang')->where('kode', 'SEKRETARIAT')->value('id');
         }
 
-        $id = DB::table('master_bidang')->where('nama', $bidangName)->value('id');
+        $id = DB::table('master_bidang')->whereRaw('LOWER(nama) = ?', [strtolower($bidangName)])->value('id');
         if ($id) {
             return $id;
         }
@@ -276,6 +304,6 @@ class PegawaiCsvImporter
             return $id;
         }
 
-        return DB::table('master_bidang')->where('nama', 'like', "%{$bidangName}%")->value('id');
+        return DB::table('master_bidang')->whereRaw('LOWER(nama) LIKE ?', ['%'.strtolower($bidangName).'%'])->value('id');
     }
 }

@@ -92,6 +92,24 @@
     <script src="{{ asset('assets/vendor/sweetalert/sweetalert2.all.min.js') }}"></script>
     @stack('scripts')
     <script>
+        @if (session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: @json(session('success')),
+                timer: 3000,
+                showConfirmButton: false
+            });
+        @endif
+
+        @if (session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: @json(session('error')),
+            });
+        @endif
+
         function confirmLogout() {
             Swal.fire({
                 title: 'Keluar dari Sistem?',
