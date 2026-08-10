@@ -219,8 +219,8 @@
                                     <div class="col-md-6 mb-3">
                                         <div class="d-flex align-items-center p-3 border rounded">
                                             <div class="me-3">
-                                                @if ($pegawai->foto_profile_path && file_exists(public_path('uploads/pegawai/' . $pegawai->foto_profile_path)))
-                                                    <img src="{{ asset('uploads/pegawai/' . $pegawai->foto_profile_path) }}"
+                                                @if ($pegawai->foto_profile_url)
+                                                    <img src="{{ $pegawai->foto_profile_url }}"
                                                         alt="Foto" class="rounded-circle"
                                                         style="width: 50px; height: 50px; object-fit: cover;">
                                                 @else

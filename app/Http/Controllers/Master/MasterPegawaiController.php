@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Master;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\PegawaiCsvImporter;
+use App\Services\ProfilePhotoService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -20,10 +21,12 @@ class MasterPegawaiController extends Controller
         'nomor_identitas', 'tipe_identitas', 'jabatan_id', 'bidang_id', 'sub_bidang_id',
         'jenis_kelamin', 'status_kepegawaian', 'status_aktif', 'no_telepon', 'pangkat',
         'golongan', 'gelar_depan', 'gelar_belakang', 'tanggal_lahir', 'alamat',
-        'tanggal_masuk', 'tanggal_keluar', 'atasan_langsung_id', 'foto_profile_path',
+        'tanggal_masuk', 'tanggal_keluar', 'atasan_langsung_id', 'foto_profile_path', 'disk',
         'tempat_lahir', 'agama', 'tmt_cpns', 'tmt_pns', 'tmt_golongan', 'eselon',
         'pendidikan_terakhir', 'jenjang_pendidikan', 'jabatan_asli',
     ];
+
+    public function __construct(private readonly ProfilePhotoService $photoService) {}
 
     public function index()
     {
@@ -91,26 +94,7 @@ class MasterPegawaiController extends Controller
                 $data['status_aktif'] = 'Aktif';
             }
 
-            // Handle photo upload before creating pegawai
-            $fotoPath = null;
-            if ($request->hasFile('foto_profile')) {
-                $file = $request->file('foto_profile');
-                $filename = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
-                $fotoPath = 'uploads/pegawai/photos/'.$filename;
-
-                $directory = public_path('uploads/pegawai/photos');
-                if (! file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-
-                $file->move($directory, $filename);
-                Log::info('Photo uploaded to: '.$fotoPath);
-            }
-
-            if ($fotoPath) {
-                $data['foto_profile_path'] = $fotoPath;
-            }
-
+            $fotoProfile = $request->file('foto_profile');
             unset($data['foto_profile']);
 
             $profileData = array_intersect_key($data, array_flip(self::PROFILE_FIELDS));
@@ -118,13 +102,21 @@ class MasterPegawaiController extends Controller
             // User + profile dibungkus 1 transaction — tanpa ini, kalau profile()->create()
             // gagal (mis. constraint tidak terduga), baris users sudah kepalang tersimpan dan
             // jadi pegawai "yatim" tanpa profile yang bikin halaman lain error null pointer.
-            $pegawai = DB::transaction(function () use ($data, $profileData) {
+            // Foto disimpan DI DALAM transaction ini (setelah User::create()) supaya nama
+            // filenya bisa pakai id pegawai yang sebenarnya, bukan uniqid() sementara.
+            $pegawai = DB::transaction(function () use ($data, $profileData, $fotoProfile) {
                 $pegawai = User::create([
                     'nama' => $data['nama'],
                     'email' => $data['email'],
                     'password' => bcrypt($data['password']),
                     'must_change_password' => true,
                 ]);
+
+                if ($fotoProfile) {
+                    $stored = $this->photoService->store($fotoProfile, $pegawai->id);
+                    $profileData['foto_profile_path'] = $stored['path'];
+                    $profileData['disk'] = $stored['disk'];
+                }
 
                 $pegawai->profile()->create($profileData);
 
@@ -221,21 +213,11 @@ class MasterPegawaiController extends Controller
             unset($data['password']);
 
             if ($request->hasFile('foto_profile')) {
-                if ($pegawai->profile?->foto_profile_path && file_exists(public_path($pegawai->profile->foto_profile_path))) {
-                    unlink(public_path($pegawai->profile->foto_profile_path));
-                }
+                $this->photoService->delete($pegawai->profile?->foto_profile_path, $pegawai->profile?->disk);
 
-                $file = $request->file('foto_profile');
-                $filename = time().'_'.$pegawai->id.'.'.$file->getClientOriginalExtension();
-                $path = 'uploads/pegawai/photos/'.$filename;
-
-                $directory = public_path('uploads/pegawai/photos');
-                if (! file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-
-                $file->move($directory, $filename);
-                $data['foto_profile_path'] = $path;
+                $stored = $this->photoService->store($request->file('foto_profile'), $pegawai->id);
+                $data['foto_profile_path'] = $stored['path'];
+                $data['disk'] = $stored['disk'];
             }
             unset($data['foto_profile']);
 
@@ -289,9 +271,7 @@ class MasterPegawaiController extends Controller
 
             $this->authorize('delete', $pegawai);
 
-            if ($pegawai->profile?->foto_profile_path && file_exists(public_path($pegawai->profile->foto_profile_path))) {
-                unlink(public_path($pegawai->profile->foto_profile_path));
-            }
+            $this->photoService->delete($pegawai->profile?->foto_profile_path, $pegawai->profile?->disk);
 
             $pegawai->delete();
 

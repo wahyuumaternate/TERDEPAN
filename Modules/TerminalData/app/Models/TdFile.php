@@ -41,6 +41,7 @@ class TdFile extends Model
         'extension',
         'size',
         'storage_path',
+        'disk',
         'hash',
         'thumbnail_path',
         'document_number',
@@ -96,9 +97,13 @@ class TdFile extends Model
                 $model->id = (string) Str::uuid();
             }
 
-            // Generate hash if not exists
+            // Generate hash if not exists — disk-agnostic (bukan Storage::path(), yang
+            // rusak di disk non-lokal). Jalur ini tidak pernah tereksekusi lewat flow
+            // upload manapun sekarang (semua pemanggil TdFile::create() sudah kirim
+            // hash), tapi tetap dibuat aman kalau ada pemanggil baru di masa depan.
             if (empty($model->hash) && $model->storage_path) {
-                $model->hash = hash_file('sha256', Storage::path($model->storage_path));
+                $disk = $model->disk ?? config('filesystems.default');
+                $model->hash = hash('sha256', Storage::disk($disk)->get($model->storage_path));
             }
         });
 
@@ -110,15 +115,18 @@ class TdFile extends Model
         });
 
         static::deleting(function ($model) {
-            // Delete physical file
-            if ($model->storage_path && Storage::exists($model->storage_path)) {
-                Storage::delete($model->storage_path);
+            // Hapus file fisik HANYA saat force delete — model ini pakai SoftDeletes,
+            // dan hook `deleting` ikut fire saat soft delete (pindah ke sampah) juga.
+            // Sebelumnya file fisik langsung terhapus permanen begitu dipindah ke
+            // sampah, padahal restore() cuma mengembalikan baris DB — hasilnya record
+            // yang di-restore menunjuk ke file yang sudah tidak ada.
+            if (! $model->isForceDeleting()) {
+                return;
             }
 
-            // Delete thumbnail
-            if ($model->thumbnail_path && Storage::exists($model->thumbnail_path)) {
-                Storage::delete($model->thumbnail_path);
-            }
+            $disk = $model->disk ?? config('filesystems.default');
+            app(\Modules\TerminalData\Services\FileManagerService::class)->deletePhysical($model->storage_path, $disk);
+            app(\Modules\TerminalData\Services\FileManagerService::class)->deletePhysical($model->thumbnail_path, $disk);
         });
 
         static::deleted(function ($model) {
@@ -431,7 +439,7 @@ class TdFile extends Model
 
     public function getDownloadUrl()
     {
-        return route('td.files.download', $this->id);
+        return route('terminaldata.filesData.download', $this->id);
     }
 
     public function getPreviewUrl()
@@ -506,10 +514,18 @@ class TdFile extends Model
             }
         }
 
-        // Copy physical file
-        $newPath = str_replace($this->id, $newFile->id, $this->storage_path);
-        Storage::copy($this->storage_path, $newPath);
-        $newFile->storage_path = $newPath;
+        // Copy physical file ke path baru yang benar-benar berbeda — sebelumnya
+        // dihasilkan lewat str_replace($this->id, ...) yang tidak pernah match (UUID
+        // file tidak pernah muncul di storage_path, path dibangun dari folder_id/
+        // bidang_id), jadi dua baris DB berbeda berakhir menunjuk ke satu file fisik
+        // yang sama — hapus salah satu ikut menghapus yang lain.
+        $disk = $this->disk ?? config('filesystems.default');
+        $newPathPrefix = dirname($this->storage_path);
+        $newFilename = Str::uuid().'_'.basename($this->storage_path);
+
+        $newFile->storage_path = app(\Modules\TerminalData\Services\FileManagerService::class)
+            ->copyPhysical($disk, $this->storage_path, $newPathPrefix, $newFilename);
+        $newFile->disk = $disk;
 
         $newFile->save();
 

@@ -58,8 +58,8 @@
                         </div>
                         <div class="card-body text-center">
                             <div class="profile-photo-container mb-3 mt-2">
-                                @if ($pegawai->profile?->foto_profile_path)
-                                    <img src="{{ asset($pegawai->profile?->foto_profile_path) }}" alt="{{ $pegawai->nama }}"
+                                @if ($pegawai->profile?->foto_profile_url)
+                                    <img src="{{ $pegawai->profile->foto_profile_url }}" alt="{{ $pegawai->nama }}"
                                         class="rounded-circle shadow" id="profilePhoto"
                                         style="width: 120px; height: 120px; object-fit: cover;">
                                 @else
@@ -646,8 +646,8 @@
                 $('#formPegawai')[0].reset();
 
                 // Reset photo preview
-                @if ($pegawai->profile?->foto_profile_path)
-                    $('#profilePhoto').attr('src', '{{ asset($pegawai->profile?->foto_profile_path) }}');
+                @if ($pegawai->profile?->foto_profile_url)
+                    $('#profilePhoto').attr('src', '{{ $pegawai->profile->foto_profile_url }}');
                 @else
                     $('#profilePhoto').html('<i class="bi bi-person text-primary" style="font-size: 3rem;"></i>');
                 @endif

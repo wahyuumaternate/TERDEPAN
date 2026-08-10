@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class UserProfile extends Model
 {
@@ -54,5 +55,27 @@ class UserProfile extends Model
     public function bawahanLangsung(): HasMany
     {
         return $this->hasMany(self::class, 'atasan_langsung_id', 'user_id');
+    }
+
+    /**
+     * URL foto profil, disk-agnostic — satu-satunya tempat yang tahu cara membangun URL
+     * dari foto_profile_path, supaya Blade tidak perlu asset('storage/'...) manual lagi
+     * (docs/plan/09-audit-storage.md). Null (bukan error) kalau path kosong atau file-nya
+     * sudah tidak ada di disk yang tercatat — termasuk foto lama era public_path() yang
+     * fisiknya di luar jangkauan Storage disk 'public'.
+     */
+    public function getFotoProfileUrlAttribute(): ?string
+    {
+        if (! $this->foto_profile_path) {
+            return null;
+        }
+
+        $disk = $this->disk ?? 'public';
+
+        if (! Storage::disk($disk)->exists($this->foto_profile_path)) {
+            return null;
+        }
+
+        return Storage::disk($disk)->url($this->foto_profile_path);
     }
 }

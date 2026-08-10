@@ -10,7 +10,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Modules\Penugasan\Models\Penugasan;
 use Modules\Penugasan\Models\PenugasanEviden;
@@ -19,6 +18,7 @@ use Modules\Penugasan\Services\AtasanMandiriEligibility;
 use Modules\Penugasan\Services\EvidenFolderResolver;
 use Modules\Penugasan\Services\PenugasanActionService;
 use Modules\TerminalData\Models\TdFile;
+use Modules\TerminalData\Services\FileManagerService;
 
 /**
  * PenugasanController (web)
@@ -36,6 +36,7 @@ class PenugasanController extends Controller
     public function __construct(
         private readonly PenugasanActionService $actionService,
         private readonly EvidenFolderResolver $evidenFolderResolver,
+        private readonly FileManagerService $fileManager,
     ) {}
 
     /**
@@ -673,11 +674,7 @@ class PenugasanController extends Controller
 
         $uploadedFile = $request->file('file');
         $originalName = $uploadedFile->getClientOriginalName();
-        $extension = $uploadedFile->getClientOriginalExtension();
-        $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)).'_'.time().'.'.$extension;
-        $storagePath = 'terminal-data/eviden-kinerja/'.$folder->id;
-        $path = $uploadedFile->storeAs($storagePath, $filename);
-        $hash = hash_file('sha256', $uploadedFile->getRealPath());
+        $stored = $this->fileManager->store($uploadedFile, 'terminal-data/eviden-kinerja/'.$folder->id);
 
         $atributFile = [
             'folder_id' => $folder->id,
@@ -685,11 +682,12 @@ class PenugasanController extends Controller
             'sub_bidang_id' => $folder->sub_bidang_id,
             'name' => pathinfo($originalName, PATHINFO_FILENAME),
             'original_name' => $originalName,
-            'storage_path' => $path,
-            'extension' => $extension,
-            'mime_type' => $uploadedFile->getMimeType(),
-            'size' => $uploadedFile->getSize(),
-            'hash' => $hash,
+            'storage_path' => $stored['path'],
+            'disk' => $stored['disk'],
+            'extension' => $stored['extension'],
+            'mime_type' => $stored['mime_type'],
+            'size' => $stored['size'],
+            'hash' => $stored['hash'],
             'version' => 1,
             'is_latest_version' => true,
             'created_by' => $request->user()->id,

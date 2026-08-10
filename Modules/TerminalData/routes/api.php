@@ -4,6 +4,15 @@ use Illuminate\Support\Facades\Route;
 use Modules\TerminalData\Http\Controllers\Api\TdFileController;
 use Modules\TerminalData\Http\Controllers\Api\TdFolderController;
 
+// Rute bertanda tangan (signed URL) — akses sementara ke file privat TANPA sesi
+// terautentikasi. Tanda tangan itu sendiri sudah jadi bukti otorisasi (dibuat lewat
+// FileManagerService::signedUrlFor() untuk pemanggil yang sudah diauthorize saat
+// generate), jadi sengaja di luar middleware auth:sanctum.
+Route::middleware(['signed'])->prefix('v1/files')->name('files.')->group(function () {
+    Route::get('/{file}/serve-signed', [TdFileController::class, 'serve'])->name('serve.signed');
+    Route::get('/{file}/download-signed', [TdFileController::class, 'download'])->name('download.signed');
+});
+
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
     // Route statis/aksi tambahan didaftarkan sebelum apiResource supaya tidak tertimpa
     // wildcard {folder} dari show()/update()/destroy().

@@ -56,8 +56,8 @@
                         </div>
                         <div class="card-body text-center">
                             <div class="profile-photo-container mb-3 mt-2">
-                                @if ($pegawai->profile?->foto_profile_path)
-                                    <img src="{{ asset('storage/' . $pegawai->profile?->foto_profile_path) }}"
+                                @if ($pegawai->profile?->foto_profile_url)
+                                    <img src="{{ $pegawai->profile->foto_profile_url }}"
                                         alt="{{ $pegawai->nama }}" class="rounded-circle shadow" id="profilePhoto"
                                         style="width: 120px; height: 120px; object-fit: cover;">
                                 @else
@@ -527,8 +527,8 @@
                 $('#current_password, #password, #password_confirmation').val('');
 
                 // Reset photo preview
-                @if ($pegawai->profile?->foto_profile_path)
-                    $('#profilePhoto').attr('src', '{{ asset($pegawai->profile?->foto_profile_path) }}');
+                @if ($pegawai->profile?->foto_profile_url)
+                    $('#profilePhoto').attr('src', '{{ $pegawai->profile->foto_profile_url }}');
                 @else
                     @if ($pegawai->profile?->jenis_kelamin == 'L')
                         $('#profilePhoto').attr('src', '{{ asset('assets/img/avatar-laki-laki.webp') }}');

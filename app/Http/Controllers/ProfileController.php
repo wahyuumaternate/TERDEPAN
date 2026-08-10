@@ -4,16 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\ProfilePhotoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly ProfilePhotoService $photoService) {}
+
     /**
      * Display the user's profile form.
      */
@@ -42,16 +44,11 @@ class ProfileController extends Controller
 
         // Handle foto profile upload
         if ($request->hasFile('foto_profile')) {
-            // Delete old photo if exists
-            if ($profile?->foto_profile_path && Storage::disk('public')->exists($profile->foto_profile_path)) {
-                Storage::disk('public')->delete($profile->foto_profile_path);
-            }
+            $this->photoService->delete($profile?->foto_profile_path, $profile?->disk);
 
-            // Store new photo
-            $file = $request->file('foto_profile');
-            $filename = 'profile_'.$pegawai->id.'_'.time().'.'.$file->getClientOriginalExtension();
-            $path = $file->storeAs('uploads/pegawai/foto', $filename, 'public');
-            $data['foto_profile_path'] = $path;
+            $stored = $this->photoService->store($request->file('foto_profile'), $pegawai->id);
+            $data['foto_profile_path'] = $stored['path'];
+            $data['disk'] = $stored['disk'];
         }
 
         // 'nama' & 'email' are identity fields on the users table

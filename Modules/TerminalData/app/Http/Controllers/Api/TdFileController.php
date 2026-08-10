@@ -6,13 +6,11 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Modules\TerminalData\Classes\Services\TdActivityService;
 use Modules\TerminalData\Http\Resources\TdFileResource;
 use Modules\TerminalData\Models\TdFile;
 use Modules\TerminalData\Models\TdFolder;
+use Modules\TerminalData\Services\FileManagerService;
 
 /**
  * @OA\Tag(
@@ -173,7 +171,8 @@ class TdFileController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected TdActivityService $activityService
+        protected TdActivityService $activityService,
+        protected FileManagerService $fileManager
     ) {
         $this->middleware('auth:sanctum');
     }
@@ -208,24 +207,10 @@ class TdFileController extends Controller
 
             // Get uploaded file
             $uploadedFile = $request->file('file');
-
-            // Get file info BEFORE moving (important!)
             $originalName = $uploadedFile->getClientOriginalName();
-            $fileSize = $uploadedFile->getSize();
-            $mimeType = $uploadedFile->getMimeType();
-            $extension = $uploadedFile->getClientOriginalExtension();
 
-            // Generate unique filename
-            $filename = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)).'_'.time().'.'.$extension;
-
-            // Define storage path
             $storagePath = "terminal-data/{$folder->bidang_id}/{$folder->id}";
-
-            // Store file directly
-            $path = $uploadedFile->storeAs($storagePath, $filename);
-
-            // Calculate file hash
-            $hash = hash_file('sha256', $uploadedFile->getRealPath());
+            $stored = $this->fileManager->store($uploadedFile, $storagePath);
 
             // Create file record
             $file = TdFile::create([
@@ -234,11 +219,12 @@ class TdFileController extends Controller
                 'sub_bidang_id' => $folder->sub_bidang_id,
                 'name' => pathinfo($originalName, PATHINFO_FILENAME),
                 'original_name' => $originalName,
-                'storage_path' => $path,
-                'extension' => $extension,
-                'mime_type' => $mimeType,
-                'size' => $fileSize,
-                'hash' => $hash,
+                'storage_path' => $stored['path'],
+                'disk' => $stored['disk'],
+                'extension' => $stored['extension'],
+                'mime_type' => $stored['mime_type'],
+                'size' => $stored['size'],
+                'hash' => $stored['hash'],
                 'version' => 1,
                 'is_latest_version' => true,
                 'created_by' => $user->id,
@@ -275,23 +261,21 @@ class TdFileController extends Controller
     /**
      * Download file
      */
-    public function download($fileId)
+    public function download(Request $request, $fileId)
     {
         try {
             $file = TdFile::findOrFail($fileId);
 
-            // Authorize download
-            $this->authorize('download', $file);
-
-            // Check if file exists in storage
-            if (! $file->storage_path || ! Storage::exists($file->storage_path)) {
-                abort(404, 'File tidak ditemukan');
+            if (! $request->hasValidSignature()) {
+                $this->authorize('download', $file);
             }
 
-            $this->activityService->log($file, 'downloaded', request()->user(), "mengunduh \"{$file->original_name}\"");
+            if ($request->user()) {
+                $this->activityService->log($file, 'downloaded', $request->user(), "mengunduh \"{$file->original_name}\"");
+            }
 
             // Use original_name for download to preserve extension and full name
-            return Storage::download($file->storage_path, $file->original_name);
+            return $this->fileManager->download($file->disk ?? config('filesystems.default'), $file->storage_path, $file->original_name);
         } catch (\Exception $e) {
             abort(500, 'Gagal mendownload file: '.$e->getMessage());
         }
@@ -346,57 +330,20 @@ class TdFileController extends Controller
     /**
      * Serve file from private storage
      */
-    public function serve($fileId)
+    public function serve(Request $request, $fileId)
     {
-        try {
-            $file = TdFile::findOrFail($fileId);
+        $file = TdFile::findOrFail($fileId);
 
-            // Authorize view
+        if (! $request->hasValidSignature()) {
             $this->authorize('view', $file);
-
-            // Check if file exists in storage (local disk = storage/app/private)
-            if (! Storage::exists($file->storage_path)) {
-                abort(404, 'File tidak ditemukan di storage');
-            }
-
-            // Get file from private storage
-            $filePath = Storage::path($file->storage_path);
-
-            // Check if file physically exists
-            if (! file_exists($filePath)) {
-                abort(404, 'File tidak ditemukan');
-            }
-
-            // Get mime type from extension
-            $extension = strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION));
-            $mimeTypes = [
-                'jpg' => 'image/jpeg',
-                'jpeg' => 'image/jpeg',
-                'png' => 'image/png',
-                'gif' => 'image/gif',
-                'bmp' => 'image/bmp',
-                'webp' => 'image/webp',
-                'pdf' => 'application/pdf',
-                'doc' => 'application/msword',
-                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'xls' => 'application/vnd.ms-excel',
-                'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'ppt' => 'application/vnd.ms-powerpoint',
-                'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            ];
-
-            $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
-
-            // Return file response with appropriate headers
-            return response()->file($filePath, [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="'.$file->original_name.'"',
-                'Cache-Control' => 'public, max-age=31536000',
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error serving file: '.$e->getMessage());
-            abort(404, 'File tidak dapat diakses: '.$e->getMessage());
         }
+
+        return $this->fileManager->serveInline(
+            $file->disk ?? config('filesystems.default'),
+            $file->storage_path,
+            $file->original_name,
+            $file->mime_type
+        );
     }
 
     /**
@@ -489,15 +436,9 @@ class TdFileController extends Controller
 
             $this->activityService->log($file, 'force_deleted', request()->user(), "menghapus permanen \"{$file->original_name}\"");
 
-            // Delete physical file from storage
-            if (Storage::exists($file->storage_path)) {
-                Storage::delete($file->storage_path);
-            }
-
-            // Delete thumbnail if exists
-            if ($file->thumbnail_path && Storage::exists($file->thumbnail_path)) {
-                Storage::delete($file->thumbnail_path);
-            }
+            $disk = $file->disk ?? config('filesystems.default');
+            $this->fileManager->deletePhysical($file->storage_path, $disk);
+            $this->fileManager->deletePhysical($file->thumbnail_path, $disk);
 
             // Permanently delete from database
             $file->forceDelete();
@@ -533,13 +474,9 @@ class TdFileController extends Controller
                 if ($item['type'] === 'file') {
                     $file = TdFile::onlyTrashed()->find($item['id']);
                     if ($file) {
-                        // Delete physical file
-                        if (Storage::exists($file->storage_path)) {
-                            Storage::delete($file->storage_path);
-                        }
-                        if ($file->thumbnail_path && Storage::exists($file->thumbnail_path)) {
-                            Storage::delete($file->thumbnail_path);
-                        }
+                        $disk = $file->disk ?? config('filesystems.default');
+                        $this->fileManager->deletePhysical($file->storage_path, $disk);
+                        $this->fileManager->deletePhysical($file->thumbnail_path, $disk);
                         $file->forceDelete();
                         $deletedFiles++;
                     }

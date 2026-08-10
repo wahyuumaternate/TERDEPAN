@@ -190,8 +190,8 @@
                                             </td>
                                             <td>{{ $index + 1 }}</td>
                                             <td class="text-center">
-                                                @if ($pegawai->profile?->foto_profile_path)
-                                                    <img src="{{ asset("storage/" . $pegawai->profile->foto_profile_path) }}"
+                                                @if ($pegawai->profile?->foto_profile_url)
+                                                    <img src="{{ $pegawai->profile->foto_profile_url }}"
                                                         alt="{{ $pegawai->nama }}" class="rounded-circle d-flex align-items-center justify-content-center"
                                                         style="width: 40px; height: 40px; object-fit: cover;">
                                                 @else
