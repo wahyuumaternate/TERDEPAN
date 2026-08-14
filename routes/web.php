@@ -8,6 +8,7 @@ use App\Http\Controllers\Master\MasterSubBidangController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Testing\WhatsappTestController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'must_change_password'])->group(function () {
@@ -87,6 +88,11 @@ Route::middleware(['auth', 'must_change_password'])->prefix('panduan')->name('pa
     Route::get('/{panduan}/edit', [PanduanController::class, 'edit'])->name('edit');
     Route::put('/{panduan}', [PanduanController::class, 'update'])->name('update');
     Route::delete('/{panduan}', [PanduanController::class, 'destroy'])->name('destroy');
+});
+
+Route::middleware(['auth', 'must_change_password'])->prefix('testing')->name('testing.')->group(function () {
+    Route::get('/whatsapp', [WhatsappTestController::class, 'index'])->name('whatsapp');
+    Route::post('/whatsapp', [WhatsappTestController::class, 'send'])->name('whatsapp.send');
 });
 
 Route::middleware(['auth', 'must_change_password'])->group(function () {
