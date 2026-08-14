@@ -39,13 +39,23 @@ class MasterPegawaiController extends Controller
         try {
             $this->authorize('viewAny', User::class);
 
-            $data = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])
+            $query = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])
                 ->leftJoin('user_profiles', 'user_profiles.user_id', '=', 'users.id')
                 ->leftJoin('master_jabatan', 'master_jabatan.id', '=', 'user_profiles.jabatan_id')
                 ->orderBy('master_jabatan.level', 'asc')
                 ->orderBy('user_profiles.nomor_identitas', 'asc')
-                ->select('users.*')
-                ->get();
+                ->select('users.*');
+
+            // Admin Sistem cuma tampil di daftar untuk sesama Admin Sistem — pegawai/atasan
+            // lain yang buka Master Data Pegawai tidak perlu (dan tidak semestinya) melihat
+            // akun admin sistem di daftar ini.
+            if (auth()->user()->profile?->jabatan?->kode !== 'ADMIN') {
+                $query->where(function ($q) {
+                    $q->whereNull('master_jabatan.kode')->orWhere('master_jabatan.kode', '!=', 'ADMIN');
+                });
+            }
+
+            $data = $query->get();
 
             return view('master-data.index-pegawai', compact('data'));
         } catch (AuthorizationException $e) {
