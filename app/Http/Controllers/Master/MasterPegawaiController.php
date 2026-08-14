@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rule;
+use Modules\Penugasan\Services\AtasanMandiriEligibility;
 
 class MasterPegawaiController extends Controller
 {
@@ -26,7 +28,10 @@ class MasterPegawaiController extends Controller
         'pendidikan_terakhir', 'jenjang_pendidikan', 'jabatan_asli',
     ];
 
-    public function __construct(private readonly ProfilePhotoService $photoService) {}
+    public function __construct(
+        private readonly ProfilePhotoService $photoService,
+        private readonly AtasanMandiriEligibility $atasanEligibility,
+    ) {}
 
     public function index()
     {
@@ -61,6 +66,7 @@ class MasterPegawaiController extends Controller
                 'nama' => 'required|string|max:100',
                 'jabatan_id' => 'required|exists:master_jabatan,id',
                 'bidang_id' => 'required|exists:master_bidang,id',
+                'sub_bidang_id' => ['nullable', Rule::exists('master_sub', 'id')->where('bidang_id', $request->input('bidang_id'))],
                 'jenis_kelamin' => 'required|in:L,P',
                 'status_kepegawaian' => 'required|in:PNS,CPNS,PPPK,Kontrak',
                 'status_aktif' => 'required|in:Aktif,Nonaktif,Cuti,Pensiun',
@@ -143,9 +149,13 @@ class MasterPegawaiController extends Controller
     public function show($id)
     {
         try {
-            $pegawai = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])->findOrFail($id);
+            $pegawai = User::with(['profile.jabatan', 'profile.bidang', 'profile.subBidang', 'profile.atasanLangsung'])->findOrFail($id);
+            $atasanCandidates = $this->atasanEligibility->kandidatUntuk($pegawai);
+            if ($atasanCandidates->isNotEmpty()) {
+                $atasanCandidates->load('profile.jabatan');
+            }
 
-            return view('master-data.show-edit-pegawai', compact('pegawai'));
+            return view('master-data.show-edit-pegawai', compact('pegawai', 'atasanCandidates'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Pegawai tidak ditemukan');
         } catch (\Exception $e) {
@@ -156,9 +166,13 @@ class MasterPegawaiController extends Controller
     public function edit($id)
     {
         try {
-            $pegawai = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])->findOrFail($id);
+            $pegawai = User::with(['profile.jabatan', 'profile.bidang', 'profile.subBidang', 'profile.atasanLangsung'])->findOrFail($id);
+            $atasanCandidates = $this->atasanEligibility->kandidatUntuk($pegawai);
+            if ($atasanCandidates->isNotEmpty()) {
+                $atasanCandidates->load('profile.jabatan');
+            }
 
-            return view('master-data.show-edit-pegawai', compact('pegawai'));
+            return view('master-data.show-edit-pegawai', compact('pegawai', 'atasanCandidates'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Pegawai tidak ditemukan');
         } catch (\Exception $e) {
@@ -179,6 +193,7 @@ class MasterPegawaiController extends Controller
                 'nama' => 'required|string|max:100',
                 'jabatan_id' => 'required|exists:master_jabatan,id',
                 'bidang_id' => 'required|exists:master_bidang,id',
+                'sub_bidang_id' => ['nullable', Rule::exists('master_sub', 'id')->where('bidang_id', $request->input('bidang_id'))],
                 'jenis_kelamin' => 'required|in:L,P',
                 'status_kepegawaian' => 'required|in:PNS,CPNS,PPPK,Kontrak',
                 'status_aktif' => 'required|in:Aktif,Nonaktif,Cuti,Pensiun',

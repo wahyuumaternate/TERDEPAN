@@ -319,18 +319,44 @@
                                         </select>
                                     </div>
                                 </div>
+                                @php
+                                    $bidangDenganSubBidang = \App\Models\MasterBidang::with('subBidang')->get();
+                                    $bidangSaatIniPunyaSubBidang = $bidangDenganSubBidang
+                                        ->firstWhere('id', $pegawai->profile?->bidang_id)
+                                        ?->subBidang
+                                        ?->isNotEmpty() ?? false;
+                                @endphp
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Bidang</label>
                                     <div class="view-mode">
                                         <div class="form-control-plaintext">{{ $pegawai->profile?->bidang->nama ?? '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
-                                        <select class="form-select" name="bidang_id" required>
+                                        <select class="form-select" name="bidang_id" id="bidang_id" required>
                                             <option value="">Pilih Bidang</option>
-                                            @foreach (\App\Models\MasterBidang::all() as $bidang)
+                                            @foreach ($bidangDenganSubBidang as $bidang)
                                                 <option value="{{ $bidang->id }}"
+                                                    data-has-sub-bidang="{{ $bidang->subBidang->isNotEmpty() ? '1' : '0' }}"
                                                     {{ $pegawai->profile?->bidang_id == $bidang->id ? 'selected' : '' }}>
                                                     {{ $bidang->nama }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3 {{ $bidangSaatIniPunyaSubBidang ? '' : 'd-none' }}"
+                                    id="subBidangField">
+                                    <label class="form-label">Sub Bidang</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->subBidang->nama ?? '-' }}</div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <select class="form-select" name="sub_bidang_id" id="sub_bidang_id">
+                                            <option value="">Pilih Sub Bidang</option>
+                                            @foreach (\App\Models\MasterSubBidang::all() as $sub)
+                                                <option value="{{ $sub->id }}" data-bidang-id="{{ $sub->bidang_id }}"
+                                                    {{ $pegawai->profile?->sub_bidang_id == $sub->id ? 'selected' : '' }}>
+                                                    {{ $sub->nama }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -497,13 +523,16 @@
                                     <div class="edit-mode d-none">
                                         <select class="form-select" name="atasan_langsung_id">
                                             <option value="">Pilih Atasan Langsung</option>
-                                            @foreach (\App\Models\User::where('id', '!=', $pegawai->id)->with('profile.jabatan')->get() as $atasan)
+                                            @forelse ($atasanCandidates as $atasan)
                                                 <option value="{{ $atasan->id }}"
                                                     {{ $pegawai->profile?->atasan_langsung_id == $atasan->id ? 'selected' : '' }}>
                                                     {{ $atasan->nama }} - {{ $atasan->profile?->jabatan?->nama ?? '' }}
                                                 </option>
-                                            @endforeach
+                                            @empty
+                                                <option value="" disabled>Tidak ada kandidat atasan untuk jabatan/bidang ini</option>
+                                            @endforelse
                                         </select>
+                                        <small class="text-muted">Opsi disesuaikan dengan jabatan dan bidang pegawai ini.</small>
                                     </div>
                                 </div>
                             </div>
@@ -625,6 +654,34 @@
                 }
             });
 
+            // Tampilkan field Sub Bidang hanya untuk Bidang yang punya sub bidang (Sekretariat),
+            // dan filter opsi Sub Bidang supaya hanya menampilkan milik Bidang yang dipilih.
+            $('#bidang_id').on('change', function() {
+                toggleSubBidangField();
+            });
+
+            function toggleSubBidangField() {
+                const selectedOption = $('#bidang_id option:selected');
+                const punyaSubBidang = selectedOption.data('has-sub-bidang') == 1;
+
+                $('#subBidangField').toggleClass('d-none', !punyaSubBidang);
+
+                if (!punyaSubBidang) {
+                    $('#sub_bidang_id').val('');
+                    return;
+                }
+
+                const bidangId = selectedOption.val();
+                $('#sub_bidang_id option').each(function() {
+                    const cocok = $(this).val() === '' || String($(this).data('bidang-id')) === String(bidangId);
+                    $(this).toggle(cocok);
+                });
+
+                if (!$('#sub_bidang_id option:selected').is(':visible')) {
+                    $('#sub_bidang_id').val('');
+                }
+            }
+
             function toggleEditMode(enable) {
                 editMode = enable;
 
@@ -633,6 +690,7 @@
                     $('.edit-mode').removeClass('d-none');
                     $('#btnEdit').addClass('d-none');
                     $('#btnSave, #btnCancel').removeClass('d-none');
+                    toggleSubBidangField();
                 } else {
                     $('.edit-mode').addClass('d-none');
                     $('.view-mode').removeClass('d-none');

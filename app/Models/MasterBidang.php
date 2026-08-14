@@ -20,4 +20,9 @@ class MasterBidang extends Model
     {
         return $this->hasMany(UserProfile::class, 'bidang_id');
     }
+
+    public function subBidang()
+    {
+        return $this->hasMany(MasterSubBidang::class, 'bidang_id');
+    }
 }
