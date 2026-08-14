@@ -41,6 +41,8 @@ class MasterPegawaiController extends Controller
 
             $data = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])
                 ->leftJoin('user_profiles', 'user_profiles.user_id', '=', 'users.id')
+                ->leftJoin('master_jabatan', 'master_jabatan.id', '=', 'user_profiles.jabatan_id')
+                ->orderBy('master_jabatan.level', 'asc')
                 ->orderBy('user_profiles.nomor_identitas', 'asc')
                 ->select('users.*')
                 ->get();
