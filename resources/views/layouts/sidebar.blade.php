@@ -42,6 +42,13 @@
              $canAccessMasterData = in_array($kodeJabatan, ['ADMIN']);
              $canAccessMonitoring = in_array($kodeJabatan, ['ADMIN']);
              $canAccessSistem = in_array($kodeJabatan, ['ADMIN']);
+
+             // Kasubag Umum dan Kepegawaian: boleh kelola Master Data Pegawai saja (lihat
+             // UserPolicy::bolehKelolaMasterDataPegawai()), bukan Bidang/Sub Bidang/Jabatan
+             // yang tetap khusus ADMIN.
+             $isKasubagKepegawaian = $kodeJabatan === 'KASUBAG'
+                 && auth()->user()->profile?->subBidang?->nama === 'Sub Bagian Umum dan Kepegawaian';
+             $canAccessMasterDataPegawai = $canAccessMasterData || $isKasubagKepegawaian;
          @endphp
 
          {{-- Perjanjian Kinerja Nav — modul untuk sementara dinonaktifkan (lihat modules_statuses.json).
@@ -154,7 +161,7 @@
          </li><!-- End Penugasan Nav -->
 
          <!-- Master Data -->
-         @if ($canAccessMasterData)
+         @if ($canAccessMasterDataPegawai)
              <li class="nav-heading">Master Data</li>
 
              <!-- Master Data Nav -->
@@ -168,21 +175,23 @@
                              <i class="bi bi-circle"></i><span>Pegawai</span>
                          </a>
                      </li>
-                     <li>
-                         <a href="{{ route('master.bidang.index') }}">
-                             <i class="bi bi-circle"></i><span>Bidang</span>
-                         </a>
-                     </li>
-                     <li>
-                         <a href="{{ route('master.sub-bidang.index') }}">
-                             <i class="bi bi-circle"></i><span>Sub Bidang</span>
-                         </a>
-                     </li>
-                     <li>
-                         <a href="{{ route('master.jabatan.index') }}">
-                             <i class="bi bi-circle"></i><span>Jabatan</span>
-                         </a>
-                     </li>
+                     @if ($canAccessMasterData)
+                         <li>
+                             <a href="{{ route('master.bidang.index') }}">
+                                 <i class="bi bi-circle"></i><span>Bidang</span>
+                             </a>
+                         </li>
+                         <li>
+                             <a href="{{ route('master.sub-bidang.index') }}">
+                                 <i class="bi bi-circle"></i><span>Sub Bidang</span>
+                             </a>
+                         </li>
+                         <li>
+                             <a href="{{ route('master.jabatan.index') }}">
+                                 <i class="bi bi-circle"></i><span>Jabatan</span>
+                             </a>
+                         </li>
+                     @endif
                  </ul>
              </li><!-- End Master Data Nav -->
          @endif

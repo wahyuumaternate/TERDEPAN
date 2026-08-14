@@ -58,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(TdFile::class, TdFilePolicy::class);
         Gate::policy(Panduan::class, PanduanPolicy::class);
 
+        // App\Listeners\SimpanEmailTerkirimKeSentFolder didaftarkan otomatis oleh Laravel
+        // (auto-discovery event berdasarkan type-hint parameter handle()) — TIDAK didaftarkan
+        // manual lagi di sini, karena itu menyebabkan listener terpanggil dua kali per email.
+
         // Hitung total & penggunaan storage di disk 'public'
         $used = StorageHelper::getFolderSize(); // tanpa argumen, default ke public
         $total = 1000 * 1024 * 1024 * 1024; //  total kapasitas: 800 GB
