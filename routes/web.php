@@ -27,6 +27,7 @@ Route::middleware(['auth', 'must_change_password'])->prefix('master')->name('mas
     Route::get('pegawai/import', [MasterPegawaiController::class, 'import'])->name('pegawai.import');
     Route::post('pegawai/import', [MasterPegawaiController::class, 'importStore'])->name('pegawai.import.store');
     Route::post('pegawai/kirim-email-login', [MasterPegawaiController::class, 'kirimEmailLogin'])->name('pegawai.kirim-email-login');
+    Route::get('pegawai/atasan-candidates', [MasterPegawaiController::class, 'atasanCandidates'])->name('pegawai.atasan-candidates');
 
     Route::resource('pegawai', MasterPegawaiController::class)->names([
         'index' => 'pegawai.index',

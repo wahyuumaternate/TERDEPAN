@@ -302,13 +302,35 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Atasan Langsung</label>
+                                    <div class="view-mode">
+                                        <div class="form-control-plaintext">{{ $pegawai->profile?->atasanLangsung->nama ?? '-' }}
+                                        </div>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <select class="form-select" name="atasan_langsung_id" id="atasan_langsung_id">
+                                            <option value="">Pilih Atasan Langsung</option>
+                                            @forelse ($atasanCandidates as $atasan)
+                                                <option value="{{ $atasan->id }}"
+                                                    {{ $pegawai->profile?->atasan_langsung_id == $atasan->id ? 'selected' : '' }}>
+                                                    {{ $atasan->nama }} - {{ $atasan->profile?->jabatan?->nama ?? '' }}
+                                                </option>
+                                            @empty
+                                                <option value="" disabled>Tidak ada kandidat atasan untuk jabatan/bidang ini</option>
+                                            @endforelse
+                                        </select>
+                                        <small class="text-muted">Opsi menyesuaikan otomatis mengikuti Jabatan dan Bidang di
+                                            bawah.</small>
+                                    </div>
+                                </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Jabatan</label>
                                     <div class="view-mode">
                                         <div class="form-control-plaintext">{{ $pegawai->profile?->jabatan->nama ?? '-' }}</div>
                                     </div>
                                     <div class="edit-mode d-none">
-                                        <select class="form-select" name="jabatan_id" required>
+                                        <select class="form-select" name="jabatan_id" id="jabatan_id" required>
                                             <option value="">Pilih Jabatan</option>
                                             @foreach (\App\Models\MasterJabatan::all() as $jabatan)
                                                 <option value="{{ $jabatan->id }}"
@@ -514,27 +536,6 @@
                                             value="{{ $pegawai->profile?->tanggal_keluar }}">
                                     </div>
                                 </div>
-                                <div class="col-12 mb-3">
-                                    <label class="form-label">Atasan Langsung</label>
-                                    <div class="view-mode">
-                                        <div class="form-control-plaintext">{{ $pegawai->profile?->atasanLangsung->nama ?? '-' }}
-                                        </div>
-                                    </div>
-                                    <div class="edit-mode d-none">
-                                        <select class="form-select" name="atasan_langsung_id">
-                                            <option value="">Pilih Atasan Langsung</option>
-                                            @forelse ($atasanCandidates as $atasan)
-                                                <option value="{{ $atasan->id }}"
-                                                    {{ $pegawai->profile?->atasan_langsung_id == $atasan->id ? 'selected' : '' }}>
-                                                    {{ $atasan->nama }} - {{ $atasan->profile?->jabatan?->nama ?? '' }}
-                                                </option>
-                                            @empty
-                                                <option value="" disabled>Tidak ada kandidat atasan untuk jabatan/bidang ini</option>
-                                            @endforelse
-                                        </select>
-                                        <small class="text-muted">Opsi disesuaikan dengan jabatan dan bidang pegawai ini.</small>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -658,7 +659,49 @@
             // dan filter opsi Sub Bidang supaya hanya menampilkan milik Bidang yang dipilih.
             $('#bidang_id').on('change', function() {
                 toggleSubBidangField();
+                refreshAtasanCandidates();
             });
+
+            // Opsi Atasan Langsung bergantung pada Jabatan + Bidang (lihat
+            // Modules\Penugasan\Services\AtasanMandiriEligibility) — kalau salah satu diganti
+            // saat mode edit, ambil ulang kandidatnya lewat AJAX supaya tidak perlu simpan dulu
+            // baru opsinya benar.
+            $('#jabatan_id').on('change', function() {
+                refreshAtasanCandidates();
+            });
+
+            function refreshAtasanCandidates() {
+                const jabatanId = $('#jabatan_id').val();
+                const bidangId = $('#bidang_id').val();
+                const $select = $('#atasan_langsung_id');
+                const nilaiTerpilih = $select.val();
+
+                if (!jabatanId) {
+                    $select.html('<option value="">Pilih Atasan Langsung</option>');
+                    return;
+                }
+
+                $.getJSON("{{ route('master.pegawai.atasan-candidates') }}", {
+                    jabatan_id: jabatanId,
+                    bidang_id: bidangId,
+                    exclude: {{ $pegawai->id }}
+                }).done(function(kandidat) {
+                    let options = '<option value="">Pilih Atasan Langsung</option>';
+
+                    if (kandidat.length === 0) {
+                        options +=
+                            '<option value="" disabled>Tidak ada kandidat atasan untuk jabatan/bidang ini</option>';
+                    } else {
+                        kandidat.forEach(function(atasan) {
+                            const terpilih = String(atasan.id) === String(nilaiTerpilih) ? 'selected' : '';
+                            options +=
+                                `<option value="${atasan.id}" ${terpilih}>${atasan.nama} - ${atasan.jabatan ?? ''}</option>`;
+                        });
+                    }
+
+                    $select.html(options);
+                });
+            }
 
             function toggleSubBidangField() {
                 const selectedOption = $('#bidang_id option:selected');

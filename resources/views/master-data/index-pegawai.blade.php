@@ -123,7 +123,7 @@
 
                         <!-- Search and Filter -->
                         <div class="row mb-4">
-                            <div class="col-lg-6 mb-3">
+                            <div class="col-lg-3 mb-3">
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="bi bi-search"></i>
@@ -132,7 +132,7 @@
                                         placeholder="Cari nama, email, atau nomor identitas...">
                                 </div>
                             </div>
-                            <div class="col-lg-2 mb-3">
+                            <div class="col-lg-3 mb-3">
                                 <select class="form-select" id="filterBidang">
                                     <option value="">Semua Bidang</option>
                                     @foreach ($data->pluck('profile.bidang')->unique() as $bidang)
@@ -142,7 +142,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-lg-2 mb-3">
+                            <div class="col-lg-3 mb-3">
                                 <select class="form-select" id="filterJabatan">
                                     <option value="">Semua Jabatan</option>
                                     @foreach ($data->pluck('profile.jabatan')->unique() as $jabatan)
@@ -152,7 +152,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-lg-2 mb-3">
+                            <div class="col-lg-3 mb-3">
                                 <select class="form-select" id="filterStatus">
                                     <option value="">Semua Status</option>
                                     <option value="Aktif">Aktif</option>

@@ -169,4 +169,47 @@ class MasterPegawaiFormTest extends TestCase
 
         $response->assertSessionHasErrors('sub_bidang_id');
     }
+
+    public function test_endpoint_atasan_candidates_mengikuti_kombinasi_jabatan_bidang_yang_dikirim(): void
+    {
+        $kaban = $this->buatPegawai('KABAN', $this->sekretariat);
+        $kabidIpw = $this->buatPegawai('KABID', $this->ipw);
+        $kasubagSekretariat = $this->buatPegawai('KASUBAG', $this->sekretariat);
+        $pegawai = $this->buatPegawai('PELAKSANA', $this->sekretariat);
+
+        // Simulasi form sedang diedit: jabatan tetap PELAKSANA tapi bidang baru saja
+        // diganti ke IPW (belum disimpan) — kandidat harus ikut kandidat IPW, bukan
+        // kandidat Sekretariat yang tersimpan di profile pegawai.
+        $response = $this->actingAs($this->admin)->getJson(route('master.pegawai.atasan-candidates', [
+            'jabatan_id' => $pegawai->profile->jabatan_id,
+            'bidang_id' => $this->ipw->id,
+            'exclude' => $pegawai->id,
+        ]));
+
+        $response->assertOk();
+        $nama = collect($response->json())->pluck('nama')->all();
+        $this->assertContains($kaban->nama, $nama);
+        $this->assertContains($kabidIpw->nama, $nama);
+        $this->assertNotContains($kasubagSekretariat->nama, $nama);
+    }
+
+    public function test_endpoint_atasan_candidates_kosong_kalau_jabatan_belum_dipilih(): void
+    {
+        $response = $this->actingAs($this->admin)->getJson(route('master.pegawai.atasan-candidates', [
+            'jabatan_id' => '',
+            'bidang_id' => $this->sekretariat->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertJson([]);
+    }
+
+    public function test_endpoint_atasan_candidates_butuh_login(): void
+    {
+        $response = $this->getJson(route('master.pegawai.atasan-candidates', [
+            'jabatan_id' => 1,
+        ]));
+
+        $response->assertUnauthorized();
+    }
 }

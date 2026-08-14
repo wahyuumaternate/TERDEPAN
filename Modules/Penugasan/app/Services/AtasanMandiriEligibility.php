@@ -2,12 +2,16 @@
 
 namespace Modules\Penugasan\Services;
 
+use App\Models\MasterBidang;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
  * Menentukan kandidat atasan yang boleh dipilih pegawai saat mengajukan tugas mandiri,
  * mengikuti tabel B "Membuat Tugas Mandiri" pada docs/analysis/aturan-penugasan-&-penilaian.md.
+ * Juga dipakai untuk field "Atasan Langsung" di form Master Data Pegawai — konsep hierarki
+ * organisasinya sama, cuma sumber datanya beda (User tersimpan vs kombinasi jabatan/bidang
+ * yang sedang dipilih di form, lihat kandidatUntukKombinasi()).
  */
 class AtasanMandiriEligibility
 {
@@ -21,6 +25,20 @@ class AtasanMandiriEligibility
         $kodeJabatan = $user->profile?->jabatan?->kode;
         $bidangId = $user->profile?->bidang_id;
         $isSekretariat = $user->profile?->bidang?->kode === self::KODE_SEKRETARIAT;
+
+        return $this->kandidatUntukKombinasi($kodeJabatan, $bidangId, $isSekretariat);
+    }
+
+    /**
+     * Sama seperti kandidatUntuk(), tapi menerima kode jabatan & bidang_id secara langsung —
+     * dipakai saat kombinasi jabatan/bidang belum tersimpan ke database (mis. form yang sedang
+     * diedit, sebelum disimpan). $isSekretariat dihitung otomatis dari $bidangId kalau tidak
+     * diberikan eksplisit.
+     */
+    public function kandidatUntukKombinasi(?string $kodeJabatan, ?int $bidangId, ?bool $isSekretariat = null): Collection
+    {
+        $isSekretariat ??= $bidangId !== null
+            && MasterBidang::where('id', $bidangId)->where('kode', self::KODE_SEKRETARIAT)->exists();
 
         return match (true) {
             in_array($kodeJabatan, ['SEKBAN', 'KABID']) => $this->cariUser(['KABAN']),

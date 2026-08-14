@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\MasterJabatan;
 use App\Models\User;
 use App\Services\PegawaiCsvImporter;
 use App\Services\ProfilePhotoService;
@@ -38,13 +39,53 @@ class MasterPegawaiController extends Controller
         try {
             $this->authorize('viewAny', User::class);
 
-            $data = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])->get();
+            $data = User::with(['profile.jabatan', 'profile.bidang', 'profile.atasanLangsung'])
+                ->leftJoin('user_profiles', 'user_profiles.user_id', '=', 'users.id')
+                ->orderBy('user_profiles.nomor_identitas', 'asc')
+                ->select('users.*')
+                ->get();
 
             return view('master-data.index-pegawai', compact('data'));
         } catch (AuthorizationException $e) {
             abort(403, 'Unauthorized');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Kandidat Atasan Langsung untuk kombinasi jabatan+bidang yang SEDANG dipilih di form
+     * (belum tentu tersimpan) — dipanggil lewat AJAX saat admin mengganti Jabatan/Bidang di
+     * mode edit, supaya opsi Atasan Langsung ikut update tanpa perlu simpan dulu.
+     */
+    public function atasanCandidates(Request $request)
+    {
+        try {
+            $this->authorize('viewAny', User::class);
+
+            $jabatanId = $request->query('jabatan_id');
+            $bidangId = $request->query('bidang_id');
+            $excludeId = $request->query('exclude');
+
+            $kodeJabatan = $jabatanId ? MasterJabatan::find($jabatanId)?->kode : null;
+
+            $kandidat = $this->atasanEligibility->kandidatUntukKombinasi($kodeJabatan, $bidangId ? (int) $bidangId : null);
+
+            if ($kandidat->isNotEmpty()) {
+                $kandidat->load('profile.jabatan');
+            }
+
+            return response()->json(
+                $kandidat->reject(fn ($user) => $excludeId && (int) $user->id === (int) $excludeId)
+                    ->map(fn ($user) => [
+                        'id' => $user->id,
+                        'nama' => $user->nama,
+                        'jabatan' => $user->profile?->jabatan?->nama,
+                    ])
+                    ->values()
+            );
+        } catch (AuthorizationException $e) {
+            abort(403, 'Unauthorized');
         }
     }
 
