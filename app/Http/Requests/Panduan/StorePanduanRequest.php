@@ -24,7 +24,7 @@ class StorePanduanRequest extends FormRequest
         return [
             'judul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf|max:10240',
+            'file' => 'required|file|mimes:pdf|max:102400',
         ];
     }
 
@@ -37,7 +37,7 @@ class StorePanduanRequest extends FormRequest
             'judul.required' => 'Judul panduan wajib diisi',
             'file.required' => 'File PDF wajib diunggah',
             'file.mimes' => 'File harus berformat PDF',
-            'file.max' => 'Ukuran file maksimal 10MB',
+            'file.max' => 'Ukuran file maksimal 100MB',
         ];
     }
 }

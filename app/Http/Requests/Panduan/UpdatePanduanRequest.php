@@ -24,7 +24,7 @@ class UpdatePanduanRequest extends FormRequest
         return [
             'judul' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
-            'file' => 'nullable|file|mimes:pdf|max:10240',
+            'file' => 'nullable|file|mimes:pdf|max:102400',
         ];
     }
 
@@ -36,7 +36,7 @@ class UpdatePanduanRequest extends FormRequest
         return [
             'judul.required' => 'Judul panduan wajib diisi',
             'file.mimes' => 'File harus berformat PDF',
-            'file.max' => 'Ukuran file maksimal 10MB',
+            'file.max' => 'Ukuran file maksimal 100MB',
         ];
     }
 }
