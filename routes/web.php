@@ -11,6 +11,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Testing\WhatsappTestController;
 use Illuminate\Support\Facades\Route;
 
+Route::view('/kebijakan-privasi', 'privacy-policy')->name('privacy-policy');
+
 Route::middleware(['auth', 'verified', 'must_change_password'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     // Alias lama, dipertahankan supaya link/bookmark yang ada tidak putus.

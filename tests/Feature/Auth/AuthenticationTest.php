@@ -17,6 +17,16 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_privacy_policy_can_be_rendered_by_guests(): void
+    {
+        $response = $this->get(route('privacy-policy'));
+
+        $response->assertOk()
+            ->assertSee('Kebijakan Privasi')
+            ->assertSee('WhatsApp Cloud API')
+            ->assertSee(route('privacy-policy', absolute: false));
+    }
+
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->create();

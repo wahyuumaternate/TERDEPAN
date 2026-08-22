@@ -324,7 +324,8 @@
                         </button>
                     </div>
 
-                    <a href="#" class="text-xs text-primary-600 hover:text-primary-700">Perlu Bantuan?</a>
+                    <a href="{{ route('privacy-policy') }}"
+                        class="text-xs text-primary-600 hover:text-primary-700">Kebijakan Privasi</a>
                 </div>
             </div>
 
@@ -517,7 +518,8 @@
                         </button>
                     </div>
 
-                    <a href="#" class="text-sm text-primary-600 hover:text-primary-700">Perlu Bantuan?</a>
+                    <a href="{{ route('privacy-policy') }}"
+                        class="text-sm text-primary-600 hover:text-primary-700">Kebijakan Privasi</a>
                 </div>
 
                 <!-- FOOTER -->
